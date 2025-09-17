@@ -1,0 +1,25 @@
+{
+  "name": "amayo",
+  "version": "0.0.1",
+  "description": "",
+  "main": "src/main.ts",
+  "scripts": {
+    "dev": "npx tsx watch src/main.ts"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "@prisma/client": "6.16.2",
+    "discord-api-types": "0.38.24",
+    "discord.js": "14.22.1",
+    "prisma": "6.16.2",
+    "redis": "5.8.2"
+  },
+  "devDependencies": {
+    "@types/node": "24.3.1",
+    "ts-node": "10.9.2",
+    "typescript": "5.9.2"
+  }
+}

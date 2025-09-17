@@ -1,0 +1,133 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para el Servidor (Guild)
+ * -----------------------------------------------------------------------------
+*/
+model Guild {
+  id        String   @id
+  name      String
+  prefix    String   @default("!")
+
+  // Relaciones
+  alliances         Alliance[]
+  partnerStats      PartnershipStats[]
+
+  // ✅ CAMBIO: Ahora un Guild puede tener MÚLTIPLES configuraciones de embed.
+  embedConfigs      EmbedConfig[]
+}
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para el Usuario
+ * -----------------------------------------------------------------------------
+ * Representa a un usuario de Discord de manera global.
+*/
+model User {
+  id                 String @id
+
+  // Relaciones
+  partnerStats       PartnershipStats[]
+  createdAlliances   Alliance[]
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para las Estadísticas de Alianza (Leaderboard)
+ * -----------------------------------------------------------------------------
+ * Almacena los puntos de un usuario EN UN SERVIDOR específico.
+ * Se gana 1 punto por mensaje en los canales registrados.
+*/
+model PartnershipStats {
+  // Puntos acumulados totales.
+  totalPoints     Int      @default(0)
+
+  // Puntos para la tabla de clasificación semanal.
+  weeklyPoints    Int      @default(0)
+
+  // Puntos para la tabla de clasificación mensual.
+  monthlyPoints   Int      @default(0)
+
+  // Fecha del último reinicio para controlar los contadores.
+  lastWeeklyReset DateTime @default(now())
+  lastMonthlyReset DateTime @default(now())
+
+  // --- Relaciones y Clave Primaria ---
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+  guild           Guild    @relation(fields: [guildId], references: [id])
+  guildId         String
+
+  // Un usuario solo puede tener un registro de estadísticas por servidor.
+  @@id([userId, guildId])
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para la Alianza (El mensaje publicado)
+ * -----------------------------------------------------------------------------
+ * Guarda la referencia al mensaje de alianza, pero no su contenido.
+ * El contenido se construye dinámicamente usando EmbedConfig y PartnershipStats.
+*/
+model Alliance {
+  id          String   @id @default(cuid())
+  channelId   String
+  messageId   String   @unique
+  createdAt   DateTime @default(now())
+
+  // --- Relaciones ---
+  guild       Guild    @relation(fields: [guildId], references: [id])
+  guildId     String
+  creator     User     @relation(fields: [creatorId], references: [id])
+  creatorId   String
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para la Configuración del Embed
+ * -----------------------------------------------------------------------------
+*/
+model EmbedConfig {
+  id              String  @id @default(cuid())
+
+  // ✅ NUEVO: Un nombre único para identificar este embed dentro del servidor.
+  // Ejemplos: "alianza", "bienvenida", "reglas"
+  name            String
+
+  // Campos del Embed (título, descripción, color, etc.)
+  color           String?
+  title           String?
+  url             String?
+  authorName      String?
+  authorIconURL   String?
+  authorURL       String?
+  description     String?
+  thumbnailURL    String?
+  imageURL        String?
+  footerText      String?
+  footerIconURL   String?
+  fields          String? @default("[]")
+
+  // --- Relación ---
+  guild           Guild    @relation(fields: [guildId], references: [id])
+
+  // ✅ CAMBIO: Quitamos '@unique' para permitir que un guildId aparezca múltiples veces.
+  guildId         String
+
+  // ✅ NUEVO: Asegura que el 'name' sea único por cada servidor.
+  // No puedes tener dos embeds llamados "alianza" en el mismo servidor.
+  @@unique([guildId, name])
+}
