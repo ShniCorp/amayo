@@ -6,8 +6,17 @@ import {commands} from "../core/loader";
 
 bot.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
-    const server = await bot.prisma.guild.findFirst({ where: { id: message.guild!.id } }) || "!";
-    const PREFIX = server.prefix
+    const server = await bot.prisma.guild.upsert({
+        where: {
+            id: message.guildId
+        },
+        create: {
+            id: message.guildId,
+            name: message.guild!.name
+        },
+        update: {}
+    })
+    const PREFIX = server.prefix || "!"
     if (!message.content.startsWith(PREFIX)) return;
 
     const [cmdName, ...args] = message.content.slice(PREFIX.length).trim().split(/\s+/);

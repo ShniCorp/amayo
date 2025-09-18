@@ -24,7 +24,7 @@ export const command: CommandMessage = {
             return message.reply("❌ No tienes permisos de Administrador.");
         }
 
-        const embeds = await client.prisma.embedConfig.findMany({
+        const embeds = await client.prisma.blockV2Config.findMany({
             where: { guildId: message.guildId! },
         });
 

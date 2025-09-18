@@ -17,7 +17,7 @@ export const command: CommandMessage = {
         }
 
         try {
-            await client.prisma.embedConfig.delete({
+            await client.prisma.blockV2Config.delete({
                 where: {
                     guildId_name: {
                         guildId: message.guildId!,

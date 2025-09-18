@@ -1,9 +1,9 @@
-import { CommandMessage } from "../../../core/types/commands";
+import { CommandMessage } from "../core/types/commands";
 // @ts-ignore
 import { EmbedBuilder, ActionRowBuilder, ButtonBuilder, TextChannel, ChannelType } from "discord.js";
 //@ts-ignore
 import { ButtonStyle, ComponentType } from "discord.js";
-import { replaceVars } from "../../../core/lib/vars";
+import { replaceVars } from "../core/lib/vars";
 
 export const command: CommandMessage = {
     name: "editembed",

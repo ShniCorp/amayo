@@ -29,6 +29,7 @@ model Guild {
 
   // ✅ CAMBIO: Ahora un Guild puede tener MÚLTIPLES configuraciones de embed.
   embedConfigs      EmbedConfig[]
+  BlockV2Config     BlockV2Config[]
 }
 /*
  * -----------------------------------------------------------------------------
@@ -129,5 +130,28 @@ model EmbedConfig {
 
   // ✅ NUEVO: Asegura que el 'name' sea único por cada servidor.
   // No puedes tener dos embeds llamados "alianza" en el mismo servidor.
+  @@unique([guildId, name])
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para la Configuración de Bloques V2
+ * -----------------------------------------------------------------------------
+*/
+model BlockV2Config {
+  id        String   @id @default(cuid())
+
+  // ✅ Nombre único dentro de cada servidor
+  name      String
+
+  // Configuración en JSON (embed + componentes, botones, etc.)
+  config    Json
+
+
+  // Relación con el servidor
+  guild     Guild    @relation(fields: [guildId], references: [id])
+  guildId   String
+
+  // 🔒 Asegura que un nombre no se repita dentro del mismo servidor
   @@unique([guildId, name])
 }
