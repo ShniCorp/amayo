@@ -1,7 +1,7 @@
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags } from "discord.js";
-import { replaceVars, isValidUrlOrVariable } from "../../../core/lib/vars";
+import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
 
 /**
  * Botones de edición - VERSIÓN MEJORADA
@@ -23,6 +23,7 @@ const btns = (disabled = false) => ([
             { style: ButtonStyle.Secondary, type: 2, label: "🖼️ Imagen", disabled, custom_id: "add_image" },
             { style: ButtonStyle.Secondary, type: 2, label: "🖼️ Portada", disabled, custom_id: "cover_image" },
             { style: ButtonStyle.Secondary, type: 2, label: "📎 Thumbnail", disabled, custom_id: "edit_thumbnail" },
+            { style: ButtonStyle.Secondary, type: 2, label: "🔗 Crear Botón Link", disabled, custom_id: "edit_link_button" },
             { style: ButtonStyle.Primary, type: 2, label: "🔄 Mover", disabled, custom_id: "move_block" },
             { style: ButtonStyle.Danger, type: 2, label: "🗑️ Eliminar", disabled, custom_id: "delete_block" }
         ]
@@ -73,6 +74,55 @@ const validateContent = (content: string): string => {
     return cleaned;
 };
 
+// Validación y parseo de emoji (unicode o personalizado <a:name:id> / <:name:id>)
+const parseEmojiInput = (input?: string): any | null => {
+    if (!input) return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+
+    const match = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
+    if (match) {
+        const animated = match[1] === 'a';
+        const name = match[2];
+        const id = match[3];
+        return { id, name, animated };
+    }
+    // Asumimos unicode si no es formato de emoji personalizado
+    return { name: trimmed };
+};
+
+/**
+ * Construye un accesorio de botón link para Display Components
+ */
+const buildLinkAccessory = async (link: any, member: any, guild: any) => {
+    if (!link || !link.url) return null;
+    // @ts-ignore
+    const processedUrl = await replaceVars(link.url, member, guild);
+    if (!isValidUrl(processedUrl)) return null;
+
+    const accessory: any = {
+        type: 2,
+        style: ButtonStyle.Link,
+        url: processedUrl
+    };
+
+    if (link.label && typeof link.label === 'string' && link.label.trim().length > 0) {
+        accessory.label = link.label.trim().slice(0, 80);
+    }
+
+    if (link.emoji && typeof link.emoji === 'string') {
+        const parsed = parseEmojiInput(link.emoji);
+        if (parsed) accessory.emoji = parsed;
+    }
+
+    // Debe tener al menos label o emoji
+    if (!accessory.label && !accessory.emoji) {
+        return null;
+    }
+
+    return accessory;
+};
+
 /**
  * Generar vista previa
  */
@@ -102,15 +152,26 @@ const renderPreview = async (blockState: any, member: any, guild: any) => {
     // Procesar componentes en orden
     for (const c of blockState.components) {
         if (c.type === 10) {
-            // Componente de texto con thumbnail opcional
+            // Componente de texto con accessory opcional (thumbnail o botón link)
             //@ts-ignore
             const processedThumbnail = c.thumbnail ? await replaceVars(c.thumbnail, member, guild) : null;
             //@ts-ignore
             const processedContent = await replaceVars(c.content || "Sin contenido", member, guild);
             const validatedContent = validateContent(processedContent);
 
-            if (processedThumbnail && isValidUrl(processedThumbnail)) {
-                // Si tiene thumbnail válido, usar contenedor tipo 9 con accessory
+            // Construir accessory según prioridad: linkButton > thumbnail
+            let accessory: any = null;
+            if (c.linkButton) {
+                accessory = await buildLinkAccessory(c.linkButton, member, guild);
+            }
+            if (!accessory && processedThumbnail && isValidUrl(processedThumbnail)) {
+                accessory = {
+                    type: 11,
+                    media: { url: processedThumbnail }
+                };
+            }
+
+            if (accessory) {
                 previewComponents.push({
                     type: 9,
                     components: [
@@ -119,13 +180,10 @@ const renderPreview = async (blockState: any, member: any, guild: any) => {
                             content: validatedContent
                         }
                     ],
-                    accessory: {
-                        type: 11,
-                        media: { url: processedThumbnail }
-                    }
+                    accessory
                 });
             } else {
-                // Sin thumbnail o thumbnail inválido, componente normal
+                // Sin accessory válido
                 previewComponents.push({
                     type: 10,
                     content: validatedContent
@@ -213,7 +271,7 @@ export const command: CommandMessage = {
         //@ts-ignore
         await editorMessage.edit({
             content: null,
-            flags: 32768,
+            flags: 4096,
             components: [
                 await renderPreview(blockState, message.member, message.guild),
                 ...btns(false)
@@ -473,8 +531,8 @@ export const command: CommandMessage = {
                                             : `Componente ${c.type}`,
                             value: idx.toString(),
                             description:
-                                c.type === 10 && c.thumbnail
-                                    ? "Con thumbnail"
+                                c.type === 10 && (c.thumbnail || c.linkButton)
+                                    ? (c.thumbnail ? "Con thumbnail" : "Con botón link")
                                     : undefined
                         }));
 
@@ -557,7 +615,7 @@ export const command: CommandMessage = {
                     }
                     case "delete_block": {
                         // Incluir portada en las opciones si existe
-                        const options = [];
+                        const options = [] as any[];
 
                         // Añadir portada como opción si existe
                         if (blockState.coverImage) {
@@ -575,14 +633,14 @@ export const command: CommandMessage = {
                                     c.type === 10
                                         ? `Texto: ${c.content?.slice(0, 30) || "..."}`
                                         : c.type === 14
-                                            ? `Separador ${c.divider ? '(Visible)' : '(Invisible)'}`
+                                            ? `Separador ${c.divider ? '(Visible)' : '(Invisible)'}` // <-- Arreglado aquí
                                             : c.type === 12
                                                 ? `Imagen: ${c.url?.slice(-30) || "..."}`
                                                 : `Componente ${c.type}`,
                                 value: idx.toString(),
                                 description:
-                                    c.type === 10 && c.thumbnail
-                                        ? "Con thumbnail"
+                                    c.type === 10 && (c.thumbnail || c.linkButton)
+                                        ? (c.thumbnail ? "Con thumbnail" : "Con botón link")
                                         : undefined
                             });
                         });
@@ -641,27 +699,36 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "show_variables": {
-                        await i.deferReply({ flags: 64 }); // MessageFlags.Ephemeral
-                        //@ts-ignore
-                        await i.editReply({
-                            content: "📋 **Variables Disponibles:**\n\n" +
-                                "**👤 Usuario:**\n" +
-                                "`user.name` - Nombre del usuario\n" +
-                                "`user.id` - ID del usuario\n" +
-                                "`user.mention` - Mención del usuario\n" +
-                                "`user.avatar` - Avatar del usuario\n\n" +
-                                "**📊 Estadísticas:**\n" +
-                                "`user.pointsAll` - Puntos totales\n" +
-                                "`user.pointsWeekly` - Puntos semanales\n" +
-                                "`user.pointsMonthly` - Puntos mensuales\n\n" +
-                                "**🏠 Servidor:**\n" +
-                                "`guild.name` - Nombre del servidor\n" +
-                                "`guild.icon` - Ícono del servidor\n\n" +
-                                "**🔗 Invitación:**\n" +
-                                "`invite.name` - Nombre del servidor invitado\n" +
-                                "`invite.icon` - Ícono del servidor invitado\n\n" +
-                                "💡 **Nota:** Las variables se usan SIN llaves `{}` en los campos de URL/imagen."
-                        });
+                        // Construir lista de variables dinámicamente desde var.ts
+                        const vars = listVariables();
+                        const chunked: string[] = [];
+                        let current = "";
+                        for (const v of vars) {
+                            const line = `• ${v}\n`;
+                            if ((current + line).length > 1800) {
+                                chunked.push(current);
+                                current = line;
+                            } else {
+                                current += line;
+                            }
+                        }
+                        if (current) chunked.push(current);
+
+                        // Responder en uno o varios mensajes efímeros según el tamaño
+                        if (chunked.length === 0) {
+                            await i.deferReply({ flags: 64 });
+                            //@ts-ignore
+                            await i.editReply({ content: "No hay variables registradas." });
+                        } else {
+                            // Primer bloque
+                            //@ts-ignore
+                            await i.reply({ flags: 64, content: `📋 **Variables Disponibles:**\n\n${chunked[0]}` });
+                            // Bloques adicionales si hiciera falta
+                            for (let idx = 1; idx < chunked.length; idx++) {
+                                //@ts-ignore
+                                await i.followUp({ flags: 64, content: chunked[idx] });
+                            }
+                        }
                         break;
                     }
                     case "duplicate_block": {
@@ -671,7 +738,7 @@ export const command: CommandMessage = {
                                  : c.type === 12 ? `Imagen: ${c.url?.slice(-30) || "..."}`
                                  : `Componente ${c.type}`,
                             value: idx.toString(),
-                            description: c.type === 10 && c.thumbnail ? "Con thumbnail" : undefined
+                            description: c.type === 10 && (c.thumbnail || c.linkButton) ? (c.thumbnail ? "Con thumbnail" : "Con botón link") : undefined
                         }));
 
                         if (options.length === 0) {
@@ -726,7 +793,7 @@ export const command: CommandMessage = {
                         //@ts-ignore
                         await i.reply({
                             flags: 64, // MessageFlags.Ephemeral
-                            content: `\`\`\`json\n${truncated}\`\`\``
+                            content: `\`\`\`json\n${truncated}\n\`\`\``
                         });
                         break;
                     }
@@ -759,7 +826,7 @@ export const command: CommandMessage = {
                         //@ts-ignore
                         await i.reply({
                             flags: 64, // MessageFlags.Ephemeral
-                            content: `📤 **JSON Exportado:**\n\`\`\`json\n${truncatedJson}\`\`\`\n\n💡 **Tip:** Copia el JSON de arriba manualmente y pégalo donde necesites.`
+                            content: `📤 **JSON Exportado:**\n\`\`\`json\n${truncatedJson}\n\`\`\`\n\n💡 **Tip:** Copia el JSON de arriba manualmente y pégalo donde necesites.`
                         });
                         break;
                     }
@@ -795,36 +862,224 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "edit_thumbnail": {
-                        // Buscar el primer componente de texto para añadir/editar thumbnail
-                        const textComp = blockState.components.find((c: any) => c.type === 10);
+                        // Construir listado de TextDisplays
+                        const textDisplays = blockState.components
+                            .map((c: any, idx: number) => ({ c, idx }))
+                            .filter(({ c }: any) => c.type === 10);
 
-                        if (!textComp) {
-                            await i.deferReply({ flags: 64 }); // MessageFlags.Ephemeral
-                            //@ts-ignore
-                            await i.editReply({
-                                content: "❌ Necesitas al menos un componente de texto para añadir thumbnail."
-                            });
+                        if (textDisplays.length === 0) {
+                            await i.deferReply({ flags: 64 });
+                            // @ts-ignore
+                            await i.editReply({ content: "❌ No hay bloques de texto para editar thumbnail." });
                             break;
                         }
 
-                        const modal = new ModalBuilder()
-                            .setCustomId('edit_thumbnail_modal')
-                            .setTitle('📎 Editar Thumbnail');
+                        const options = textDisplays.map(({ c, idx }: any) => ({
+                            label: `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`,
+                            value: String(idx),
+                            description: c.thumbnail ? 'Con thumbnail' : c.linkButton ? 'Con botón link' : 'Sin accesorio'
+                        }));
 
-                        const thumbnailInput = new TextInputBuilder()
-                            .setCustomId('thumbnail_input')
-                            .setLabel('URL del Thumbnail')
-                            .setStyle(TextInputStyle.Short)
-                            .setPlaceholder('https://ejemplo.com/thumbnail.png o dejar vacío para eliminar')
-                            .setValue(textComp.thumbnail || '')
-                            .setMaxLength(2000)
-                            .setRequired(false);
+                        // @ts-ignore
+                        const reply = await i.reply({
+                            flags: 64,
+                            content: "Elige el TextDisplay a editar su thumbnail:",
+                            components: [
+                                { type: 1, components: [ { type: 3, custom_id: 'choose_text_for_thumbnail', placeholder: 'Selecciona un bloque de texto', options } ] }
+                            ],
+                            fetchReply: true
+                        });
 
-                        const firstRow = new ActionRowBuilder().addComponents(thumbnailInput);
-                        modal.addComponents(firstRow);
+                        // @ts-ignore
+                        const selCollector = reply.createMessageComponentCollector({
+                            componentType: ComponentType.StringSelect,
+                            max: 1,
+                            time: 60000,
+                            filter: (it: any) => it.user.id === message.author.id
+                        });
 
-                        //@ts-ignore
-                        await i.showModal(modal);
+                        selCollector.on('collect', async (sel: any) => {
+                            const idx = parseInt(sel.values[0]);
+                            const textComp = blockState.components[idx];
+
+                            const modal = new ModalBuilder()
+                                .setCustomId(`edit_thumbnail_modal_${idx}`)
+                                .setTitle('📎 Editar Thumbnail');
+
+                            const thumbnailInput = new TextInputBuilder()
+                                .setCustomId('thumbnail_input')
+                                .setLabel('URL del Thumbnail')
+                                .setStyle(TextInputStyle.Short)
+                                .setPlaceholder('https://ejemplo.com/thumbnail.png o dejar vacío para eliminar')
+                                .setValue(textComp?.thumbnail || '')
+                                .setMaxLength(2000)
+                                .setRequired(false);
+
+                            const firstRow = new ActionRowBuilder().addComponents(thumbnailInput);
+                            modal.addComponents(firstRow);
+
+                            await sel.update({ content: 'Abriendo modal…', components: [] });
+                            // @ts-ignore
+                            await i.showModal(modal);
+                        });
+                        break;
+                    }
+                    case "edit_link_button": {
+                        // Elegir a qué TextDisplay aplicar
+                        const textDisplays = blockState.components
+                            .map((c: any, idx: number) => ({ c, idx }))
+                            .filter(({ c }: any) => c.type === 10);
+
+                        if (textDisplays.length === 0) {
+                            await i.deferReply({ flags: 64 });
+                            // @ts-ignore
+                            await i.editReply({ content: "❌ Necesitas al menos un componente de texto para añadir un botón link." });
+                            break;
+                        }
+
+                        const options = textDisplays.map(({ c, idx }: any) => ({
+                            label: `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`,
+                            value: String(idx),
+                            description: c.linkButton ? 'Con botón link' : c.thumbnail ? 'Con thumbnail' : 'Sin accesorio'
+                        }));
+
+                        // @ts-ignore
+                        const reply = await i.reply({
+                            flags: 64,
+                            content: "Elige el TextDisplay donde agregar/editar el botón link:",
+                            components: [
+                                { type: 1, components: [ { type: 3, custom_id: 'choose_text_for_linkbtn', placeholder: 'Selecciona un bloque de texto', options } ] }
+                            ],
+                            fetchReply: true
+                        });
+
+                        // @ts-ignore
+                        const selCollector = reply.createMessageComponentCollector({
+                            componentType: ComponentType.StringSelect,
+                            max: 1,
+                            time: 60000,
+                            filter: (it: any) => it.user.id === message.author.id
+                        });
+
+                        selCollector.on('collect', async (sel: any) => {
+                            const idx = parseInt(sel.values[0]);
+                            const textComp = blockState.components[idx];
+
+                            // Regla de exclusividad
+                            if (textComp.thumbnail) {
+                                await sel.update({ content: '❌ Este bloque ya tiene un thumbnail. Elimínalo antes de añadir un botón link.', components: [] });
+                                return;
+                            }
+
+                            if (textComp.linkButton) {
+                                // @ts-ignore
+                                const sub = await i.followUp({
+                                    flags: 64,
+                                    content: `Texto #${idx + 1}: ya tiene botón link. ¿Qué deseas hacer?`,
+                                    components: [
+                                        { type: 1, components: [
+                                            { type: 2, style: ButtonStyle.Primary, label: '✏️ Editar', custom_id: `edit_link_button_modal_${idx}` },
+                                            { type: 2, style: ButtonStyle.Danger, label: '🗑️ Eliminar', custom_id: `delete_link_button_${idx}` }
+                                        ]}
+                                    ],
+                                    fetchReply: true
+                                });
+
+                                // @ts-ignore
+                                const btnCollector = sub.createMessageComponentCollector({
+                                    componentType: ComponentType.Button,
+                                    max: 1,
+                                    time: 60000,
+                                    filter: (b: any) => b.user.id === message.author.id
+                                });
+
+                                btnCollector.on('collect', async (b: any) => {
+                                    if (b.customId.startsWith('edit_link_button_modal_')) {
+                                        const modal = new ModalBuilder()
+                                            .setCustomId(`edit_link_button_modal_${idx}`)
+                                            .setTitle('🔗 Editar Botón Link');
+
+                                        const urlInput = new TextInputBuilder()
+                                            .setCustomId('link_url_input')
+                                            .setLabel('URL del botón (obligatoria)')
+                                            .setStyle(TextInputStyle.Short)
+                                            .setPlaceholder('https://ejemplo.com')
+                                            .setValue(textComp.linkButton?.url || '')
+                                            .setMaxLength(2000)
+                                            .setRequired(true);
+
+                                        const labelInput = new TextInputBuilder()
+                                            .setCustomId('link_label_input')
+                                            .setLabel('Etiqueta (opcional)')
+                                            .setStyle(TextInputStyle.Short)
+                                            .setPlaceholder('Texto del botón o vacío para usar solo emoji')
+                                            .setValue(textComp.linkButton?.label || '')
+                                            .setMaxLength(80)
+                                            .setRequired(false);
+
+                                        const emojiInput = new TextInputBuilder()
+                                            .setCustomId('link_emoji_input')
+                                            .setLabel('Emoji (opcional)')
+                                            .setStyle(TextInputStyle.Short)
+                                            .setPlaceholder('Ej: 🔗 o <:name:id>')
+                                            .setValue(textComp.linkButton?.emoji || '')
+                                            .setMaxLength(64)
+                                            .setRequired(false);
+
+                                        const r1 = new ActionRowBuilder().addComponents(urlInput);
+                                        const r2 = new ActionRowBuilder().addComponents(labelInput);
+                                        const r3 = new ActionRowBuilder().addComponents(emojiInput);
+                                        modal.addComponents(r1, r2, r3);
+
+                                        await b.update({ content: 'Abriendo modal…', components: [] });
+                                        // @ts-ignore
+                                        await i.showModal(modal);
+                                    } else if (b.customId.startsWith('delete_link_button_')) {
+                                        delete textComp.linkButton;
+                                        await b.update({ content: '✅ Botón link eliminado.', components: [] });
+                                        await editorMessage.edit({ components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)] });
+                                    }
+                                });
+                            } else {
+                                const modal = new ModalBuilder()
+                                    .setCustomId(`create_link_button_modal_${idx}`)
+                                    .setTitle('🔗 Crear Botón Link');
+
+                                const urlInput = new TextInputBuilder()
+                                    .setCustomId('link_url_input')
+                                    .setLabel('URL del botón (obligatoria)')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setPlaceholder('https://ejemplo.com')
+                                    .setMaxLength(2000)
+                                    .setRequired(true);
+
+                                const labelInput = new TextInputBuilder()
+                                    .setCustomId('link_label_input')
+                                    .setLabel('Etiqueta (opcional)')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setPlaceholder('Texto del botón o vacío para usar solo emoji')
+                                    .setMaxLength(80)
+                                    .setRequired(false);
+
+                                const emojiInput = new TextInputBuilder()
+                                    .setCustomId('link_emoji_input')
+                                    .setLabel('Emoji (opcional)')
+                                    .setStyle(TextInputStyle.Short)
+                                    .setPlaceholder('Ej: 🔗 o <:name:id>')
+                                    .setMaxLength(64)
+                                    .setRequired(false);
+
+                                const r1 = new ActionRowBuilder().addComponents(urlInput);
+                                const r2 = new ActionRowBuilder().addComponents(labelInput);
+                                const r3 = new ActionRowBuilder().addComponents(emojiInput);
+                                modal.addComponents(r1, r2, r3);
+
+                                await sel.update({ content: 'Abriendo modal…', components: [] });
+                                // @ts-ignore
+                                await i.showModal(modal);
+                            }
+                        });
+
                         break;
                     }
                 }
@@ -841,150 +1096,151 @@ export const command: CommandMessage = {
         const modalHandler = async (interaction: any) => {
             if (!interaction.isModalSubmit()) return;
             if (interaction.user.id !== message.author.id) return;
-            if (!interaction.customId.endsWith('_modal')) return;
+            // Quitamos la restricción de endsWith('_modal') para permitir IDs dinámicos con índice
             if (!modalHandlerActive) return; // Evitar procesar si ya no está activo
 
             try {
-                switch (interaction.customId) {
-                    case 'edit_title_modal': {
-                        blockState.title = interaction.fields.getTextInputValue('title_input');
-                        await interaction.reply({ content: '✅ Título actualizado.', flags: MessageFlags.Ephemeral });
-                        break;
-                    }
-                    case 'edit_description_modal': {
-                        const newDescription = interaction.fields.getTextInputValue('description_input');
-                        const descComp = blockState.components.find((c: any) => c.type === 10);
-                        if (descComp) {
-                            descComp.content = newDescription;
+                const id = interaction.customId as string;
+                if (id === 'edit_title_modal') {
+                    blockState.title = interaction.fields.getTextInputValue('title_input');
+                    await interaction.reply({ content: '✅ Título actualizado.', flags: 64 });
+                } else if (id === 'edit_description_modal') {
+                    const newDescription = interaction.fields.getTextInputValue('description_input');
+                    const firstText = blockState.components.find((c: any) => c.type === 10);
+                    if (firstText) firstText.content = newDescription; else blockState.components.push({ type: 10, content: newDescription, thumbnail: null });
+                    await interaction.reply({ content: '✅ Descripción actualizada.', flags: 64 });
+                } else if (id === 'edit_color_modal') {
+                    const colorInput = interaction.fields.getTextInputValue('color_input');
+                    if (colorInput.trim() === '') {
+                        blockState.color = null;
+                    } else {
+                        let hexColor = colorInput.replace('#', '');
+                        if (/^[0-9A-F]{6}$/i.test(hexColor)) {
+                            blockState.color = parseInt(hexColor, 16);
                         } else {
-                            blockState.components.push({ type: 10, content: newDescription, thumbnail: null });
-                        }
-                        await interaction.reply({ content: '✅ Descripción actualizada.', flags: MessageFlags.Ephemeral });
-                        break;
-                    }
-                    case 'edit_color_modal': {
-                        const colorInput = interaction.fields.getTextInputValue('color_input');
-                        if (colorInput.trim() === '') {
-                            blockState.color = null;
-                        } else {
-                            let hexColor = colorInput.replace('#', '');
-                            if (/^[0-9A-F]{6}$/i.test(hexColor)) {
-                                blockState.color = parseInt(hexColor, 16);
-                            } else {
-                                await interaction.reply({ content: '❌ Color inválido. Usa formato HEX (#FF5733)', flags: MessageFlags.Ephemeral });
-                                return;
-                            }
-                        }
-                        await interaction.reply({ content: '✅ Color actualizado.', flags: MessageFlags.Ephemeral });
-                        break;
-                    }
-                    case 'add_content_modal': {
-                        const newContent = interaction.fields.getTextInputValue('content_input');
-                        blockState.components.push({ type: 10, content: newContent, thumbnail: null });
-                        await interaction.reply({ content: '✅ Contenido añadido.', flags: MessageFlags.Ephemeral });
-                        break;
-                    }
-                    case 'add_image_modal': {
-                        const imageUrl = interaction.fields.getTextInputValue('image_url_input');
-                        if (isValidUrl(imageUrl)) {
-                            blockState.components.push({ type: 12, url: imageUrl });
-                            await interaction.reply({ content: '✅ Imagen añadida.', flags: MessageFlags.Ephemeral });
-                        } else {
-                            await interaction.reply({ content: '❌ URL de imagen inválida.', flags: MessageFlags.Ephemeral });
+                            await interaction.reply({ content: '❌ Color inválido. Usa formato HEX (#FF5733)', flags: 64 });
                             return;
                         }
-                        break;
                     }
-                    case 'add_cover_modal':
-                    case 'edit_cover_modal': {
-                        const coverUrl = interaction.fields.getTextInputValue('cover_input');
-                        if (isValidUrl(coverUrl)) {
-                            blockState.coverImage = coverUrl;
-                            await interaction.reply({ content: '✅ Imagen de portada actualizada.', flags: MessageFlags.Ephemeral });
-                        } else {
-                            await interaction.reply({ content: '❌ URL de portada inválida.', flags: MessageFlags.Ephemeral });
-                            return;
-                        }
-                        break;
-                    }
-                    case 'add_separator_modal': {
-                        const visibleStr = interaction.fields.getTextInputValue('separator_visible').toLowerCase();
-                        const spacingStr = interaction.fields.getTextInputValue('separator_spacing') || '1';
-
-                        const divider = visibleStr === 'true' || visibleStr === '1' || visibleStr === 'si' || visibleStr === 'sí';
-                        const spacing = Math.min(3, Math.max(1, parseInt(spacingStr) || 1));
-
-                        blockState.components.push({ type: 14, divider, spacing });
-                        await interaction.reply({ content: '✅ Separador añadido.', flags: MessageFlags.Ephemeral });
-                        break;
-                    }
-                    case 'edit_thumbnail_modal': {
-                        const thumbnailUrl = interaction.fields.getTextInputValue('thumbnail_input');
-                        const textComp = blockState.components.find((c: any) => c.type === 10);
-
-                        if (textComp) {
-                            if (thumbnailUrl.trim() === '') {
-                                // Si está vacío, eliminar thumbnail
-                                textComp.thumbnail = null;
-                                await interaction.reply({ content: '✅ Thumbnail eliminado.', flags: MessageFlags.Ephemeral });
-                            } else if (!isValidUrl(thumbnailUrl)) {
-                                // Si no es una URL válida, mostrar error
-                                await interaction.reply({ content: '❌ URL de thumbnail inválida.', flags: MessageFlags.Ephemeral });
-                                return;
-                            } else {
-                                // Si es una URL válida, añadir thumbnail
-                                textComp.thumbnail = thumbnailUrl;
-                                await interaction.reply({ content: '✅ Thumbnail actualizado.', flags: MessageFlags.Ephemeral });
-                            }
-                        }
-                        break;
-                    }
-                    case 'import_json_modal': {
-                        try {
-                            const jsonString = interaction.fields.getTextInputValue('json_input');
-                            const importedData = JSON.parse(jsonString);
-
-                            // Validar estructura básica
-                            if (importedData && typeof importedData === 'object') {
-                                blockState = {
-                                    title: importedData.title || blockState.title,
-                                    color: importedData.color || blockState.color,
-                                    coverImage: importedData.coverImage || blockState.coverImage,
-                                    components: Array.isArray(importedData.components) ? importedData.components : blockState.components
-                                };
-
-                                await interaction.reply({ content: '✅ JSON importado correctamente.', flags: MessageFlags.Ephemeral });
-                            } else {
-                                await interaction.reply({ content: '❌ Estructura JSON inválida.', flags: MessageFlags.Ephemeral });
-                                return;
-                            }
-                        } catch (error) {
-                            await interaction.reply({ content: '❌ JSON inválido. Verifica el formato.', flags: MessageFlags.Ephemeral });
-                            return;
-                        }
-                        break;
-                    }
-                    default:
+                    await interaction.reply({ content: '✅ Color actualizado.', flags: 64 });
+                } else if (id === 'add_content_modal') {
+                    const newContent = interaction.fields.getTextInputValue('content_input');
+                    blockState.components.push({ type: 10, content: newContent, thumbnail: null });
+                    await interaction.reply({ content: '✅ Contenido añadido.', flags: 64 });
+                } else if (id === 'add_image_modal') {
+                    const imageUrl = interaction.fields.getTextInputValue('image_url_input');
+                    if (isValidUrl(imageUrl)) {
+                        blockState.components.push({ type: 12, url: imageUrl });
+                        await interaction.reply({ content: '✅ Imagen añadida.', flags: 64 });
+                    } else {
+                        await interaction.reply({ content: '❌ URL de imagen inválida.', flags: 64 });
                         return;
+                    }
+                } else if (id === 'add_cover_modal' || id === 'edit_cover_modal') {
+                    const coverUrl = interaction.fields.getTextInputValue('cover_input');
+                    if (isValidUrl(coverUrl)) {
+                        blockState.coverImage = coverUrl;
+                        await interaction.reply({ content: '✅ Imagen de portada actualizada.', flags: 64 });
+                    } else {
+                        await interaction.reply({ content: '❌ URL de portada inválida.', flags: 64 });
+                        return;
+                    }
+                } else if (id === 'add_separator_modal') {
+                    const visibleStr = interaction.fields.getTextInputValue('separator_visible').toLowerCase();
+                    const spacingStr = interaction.fields.getTextInputValue('separator_spacing') || '1';
+                    const divider = visibleStr === 'true' || visibleStr === '1' || visibleStr === 'si' || visibleStr === 'sí';
+                    const spacing = Math.min(3, Math.max(1, parseInt(spacingStr) || 1));
+                    blockState.components.push({ type: 14, divider, spacing });
+                    await interaction.reply({ content: '✅ Separador añadido.', flags: 64 });
+                } else if (id.startsWith('edit_thumbnail_modal_')) {
+                    const idx = parseInt(id.replace('edit_thumbnail_modal_', ''));
+                    const textComp = blockState.components[idx];
+                    if (!textComp || textComp.type !== 10) return;
+                    const thumbnailUrl = interaction.fields.getTextInputValue('thumbnail_input');
+                    if (thumbnailUrl.trim() === '') {
+                        textComp.thumbnail = null;
+                        await interaction.reply({ content: '✅ Thumbnail eliminado.', flags: 64 });
+                    } else if (!isValidUrl(thumbnailUrl)) {
+                        await interaction.reply({ content: '❌ URL de thumbnail inválida.', flags: 64 });
+                        return;
+                    } else {
+                        if (textComp.linkButton) {
+                            await interaction.reply({ content: '❌ Este bloque ya tiene un botón link. Elimina el botón antes de añadir thumbnail.', flags: 64 });
+                            return;
+                        }
+                        textComp.thumbnail = thumbnailUrl;
+                        await interaction.reply({ content: '✅ Thumbnail actualizado.', flags: 64 });
+                    }
+                } else if (id.startsWith('create_link_button_modal_') || id.startsWith('edit_link_button_modal_')) {
+                    const idx = parseInt(id.replace('create_link_button_modal_', '').replace('edit_link_button_modal_', ''));
+                    const textComp = blockState.components[idx];
+                    if (!textComp || textComp.type !== 10) return;
+
+                    const url = interaction.fields.getTextInputValue('link_url_input');
+                    const label = (interaction.fields.getTextInputValue('link_label_input') || '').trim();
+                    const emojiStr = (interaction.fields.getTextInputValue('link_emoji_input') || '').trim();
+
+                    if (!isValidUrl(url)) {
+                        await interaction.reply({ content: '❌ URL inválida para el botón.', flags: 64 });
+                        return;
+                    }
+
+                    const parsedEmoji = parseEmojiInput(emojiStr || undefined);
+                    if (!label && !parsedEmoji) {
+                        await interaction.reply({ content: '❌ Debes proporcionar al menos una etiqueta o un emoji.', flags: 64 });
+                        return;
+                    }
+
+                    if (textComp.thumbnail) {
+                        await interaction.reply({ content: '❌ Este bloque tiene thumbnail. Elimínalo antes de añadir un botón link.', flags: 64 });
+                        return;
+                    }
+
+                    textComp.linkButton = {
+                        url,
+                        label: label || undefined,
+                        // Guardamos el string original; se parsea en render/build
+                        emoji: emojiStr || undefined
+                    };
+
+                    await interaction.reply({ content: '✅ Botón link actualizado.', flags: 64 });
+                } else if (id === 'import_json_modal') {
+                    try {
+                        const jsonString = interaction.fields.getTextInputValue('json_input');
+                        const importedData = JSON.parse(jsonString);
+                        if (importedData && typeof importedData === 'object') {
+                            blockState = {
+                                title: importedData.title || blockState.title,
+                                color: importedData.color || blockState.color,
+                                coverImage: importedData.coverImage || blockState.coverImage,
+                                components: Array.isArray(importedData.components) ? importedData.components : blockState.components
+                            };
+                            for (const comp of blockState.components) {
+                                if (comp?.type === 10 && comp.linkButton && comp.thumbnail) {
+                                    delete comp.thumbnail; // priorizamos linkButton
+                                }
+                            }
+                            await interaction.reply({ content: '✅ JSON importado correctamente.', flags: 64 });
+                        } else {
+                            await interaction.reply({ content: '❌ Estructura JSON inválida.', flags: 64 });
+                            return;
+                        }
+                    } catch {
+                        await interaction.reply({ content: '❌ JSON inválido. Verifica el formato.', flags: 64 });
+                        return;
+                    }
+                } else {
+                    return;
                 }
 
-                // Actualizar la vista previa después de cada cambio en el modal con mejor manejo de errores
+                // Actualizar vista previa tras cada modal
                 setTimeout(async () => {
-                    if (!modalHandlerActive) return; // Evitar actualizar si ya no está activo
-
+                    if (!modalHandlerActive) return;
                     try {
-                        // Verificar si el mensaje aún existe antes de intentar editarlo
                         const messageExists = await editorMessage.fetch().catch(() => null);
-                        if (!messageExists) {
-                            console.log('El mensaje del editor ya no existe');
-                            return;
-                        }
-
-                        await editorMessage.edit({
-                            components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)]
-                        });
+                        if (!messageExists) return;
+                        await editorMessage.edit({ components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)] });
                     } catch (error: any) {
-                        // Manejar diferentes tipos de errores
                         if (error.code === 10008) {
                             console.log('Mensaje del editor eliminado');
                         } else if (error.code === 10062) {
@@ -993,18 +1249,15 @@ export const command: CommandMessage = {
                             console.error('Error actualizando preview:', error.message || error);
                         }
                     }
-                }, 1000);
+                }, 500);
 
             } catch (error: any) {
                 console.error('Error en modal:', error);
                 try {
-                    // Solo intentar responder si la interacción no ha expirado
                     if (error.code !== 10062 && !interaction.replied && !interaction.deferred) {
-                        await interaction.reply({ content: '❌ Error procesando el modal.', flags: MessageFlags.Ephemeral });
+                        await interaction.reply({ content: '❌ Error procesando el modal.', flags: 64 });
                     }
-                } catch (replyError) {
-                    console.log('No se pudo responder a la interacción (probablemente expirada)');
-                }
+                } catch {}
             }
         };
 

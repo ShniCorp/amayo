@@ -144,7 +144,9 @@ export const command: CommandMessage = {
         );
 
         // Agrupar por estado
+        //@ts-ignore
         const activeChannels = channelDetails.filter(c => c.status.includes("Activo"));
+        //@ts-ignore
         const inactiveChannels = channelDetails.filter(c => c.status.includes("Inactivo"));
 
         // Construir embed principal
@@ -161,6 +163,7 @@ export const command: CommandMessage = {
 
         // Añadir campos de canales activos
         if (activeChannels.length > 0) {
+            //@ts-ignore
             const activeList = activeChannels.slice(0, 10).map(c => 
                 `**${c.index}.** ${c.channelName}\n` +
                 `└ \`${c.blockName}\` • ${c.blockStatus}\n` +
@@ -179,6 +182,7 @@ export const command: CommandMessage = {
 
         // Añadir campos de canales inactivos (si los hay)
         if (inactiveChannels.length > 0) {
+            //@ts-ignore
             const inactiveList = inactiveChannels.slice(0, 5).map(c => 
                 `**${c.index}.** ${c.channelName}\n` +
                 `└ \`${c.blockName}\` • ${c.blockStatus}`
@@ -197,6 +201,7 @@ export const command: CommandMessage = {
         mainEmbed.addFields([
             {
                 name: "📊 Estadísticas del Servidor",
+                //@ts-ignore
                 value: `🧩 **Bloques disponibles:** ${availableBlocks}\n📈 **Total puntos otorgados:** ${totalPointsHistory}\n⚡ **Canales más activos:** ${channelDetails.sort((a, b) => b.pointsCount - a.pointsCount).slice(0, 3).map((c, i) => `${i + 1}. ${c.channelName.replace(/[#❌*]/g, '').trim()}`).join(', ') || 'N/A'}`,
                 inline: false
             }
@@ -292,6 +297,7 @@ export const command: CommandMessage = {
                     break;
 
                 case "show_stats":
+                    //@ts-ignore
                     const detailedStats = channelDetails.map(c => 
                         `• ${c.channelName}: **${c.pointsCount}** puntos`
                     ).join('\n');

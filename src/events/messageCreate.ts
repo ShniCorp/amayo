@@ -22,7 +22,6 @@ bot.on(Events.MessageCreate, async (message) => {
     if (!message.content.startsWith(PREFIX)) return;
 
     const [cmdName, ...args] = message.content.slice(PREFIX.length).trim().split(/\s+/);
-    console.log(cmdName);
     const command = commands.get(cmdName);
     if (!command) return;
 
