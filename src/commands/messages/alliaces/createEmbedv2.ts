@@ -24,8 +24,7 @@ const btns = (disabled = false) => ([
             { style: ButtonStyle.Secondary, type: 2, label: "🖼️ Portada", disabled, custom_id: "cover_image" },
             { style: ButtonStyle.Secondary, type: 2, label: "📎 Thumbnail", disabled, custom_id: "edit_thumbnail" },
             { style: ButtonStyle.Secondary, type: 2, label: "🔗 Crear Botón Link", disabled, custom_id: "edit_link_button" },
-            { style: ButtonStyle.Primary, type: 2, label: "🔄 Mover", disabled, custom_id: "move_block" },
-            { style: ButtonStyle.Danger, type: 2, label: "🗑️ Eliminar", disabled, custom_id: "delete_block" }
+            { style: ButtonStyle.Primary, type: 2, label: "🔄 Mover", disabled, custom_id: "move_block" }
         ]
     },
     {
@@ -42,7 +41,8 @@ const btns = (disabled = false) => ([
         type: 1,
         components: [
             { style: ButtonStyle.Success, type: 2, label: "💾 Guardar", disabled, custom_id: "save_block" },
-            { style: ButtonStyle.Danger, type: 2, label: "❌ Cancelar", disabled, custom_id: "cancel_block" }
+            { style: ButtonStyle.Danger, type: 2, label: "❌ Cancelar", disabled, custom_id: "cancel_block" },
+            { style: ButtonStyle.Danger, type: 2, label: "🗑️ Eliminar", disabled, custom_id: "delete_block" }
         ]
     }
 ]);
@@ -272,10 +272,9 @@ export const command: CommandMessage = {
         await editorMessage.edit({
             content: null,
             flags: 4096,
-            components: [
-                await renderPreview(blockState, message.member, message.guild),
-                ...btns(false)
-            ]
+            // @ts-ignore - display (Display Components)
+            display: await renderPreview(blockState, message.member, message.guild),
+            components: btns(false)
         });
 
         const collector = editorMessage.createMessageComponentCollector({
@@ -311,16 +310,16 @@ export const command: CommandMessage = {
                             }
                         });
                         await editorMessage.edit({
-                            components: [
-                                {
-                                    type: 17,
-                                    accent_color: blockState.color ?? null,
-                                    components: [
-                                        { type: 10, content: `✅ Guardado: ${blockName}` },
-                                        { type: 10, content: "Configuración guardada en la base de datos (JSON)." }
-                                    ]
-                                }
-                            ]
+                            // @ts-ignore
+                            display: {
+                                type: 17,
+                                accent_color: blockState.color ?? null,
+                                components: [
+                                    { type: 10, content: `✅ Guardado: ${blockName}` },
+                                    { type: 10, content: "Configuración guardada en la base de datos (JSON)." }
+                                ]
+                            },
+                            components: []
                         });
                         collector.stop();
                         return;
@@ -492,7 +491,9 @@ export const command: CommandMessage = {
                                     blockState.coverImage = null;
                                     await b.update({ content: "✅ Imagen de portada eliminada.", components: [] });
                                     await editorMessage.edit({
-                                        components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)]
+                                        // @ts-ignore
+                                        display: await renderPreview(blockState, message.member, message.guild),
+                                        components: btns(false)
                                     });
                                 }
                                 coverCollector.stop();
@@ -603,7 +604,9 @@ export const command: CommandMessage = {
                                 }
 
                                 await editorMessage.edit({
-                                    components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)]
+                                    // @ts-ignore
+                                    display: await renderPreview(blockState, message.member, message.guild),
+                                    components: btns(false)
                                 });
 
                                 btnCollector.stop();
@@ -690,7 +693,9 @@ export const command: CommandMessage = {
                             }
 
                             await editorMessage.edit({
-                                components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)]
+                                // @ts-ignore
+                                display: await renderPreview(blockState, message.member, message.guild),
+                                components: btns(false)
                             });
 
                             selCollector.stop();
@@ -781,7 +786,9 @@ export const command: CommandMessage = {
 
                             await sel.update({ content: "✅ Elemento duplicado.", components: [] });
                             await editorMessage.edit({
-                                components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)]
+                                // @ts-ignore
+                                display: await renderPreview(blockState, message.member, message.guild),
+                                components: btns(false)
                             });
                         });
                         break;
@@ -1085,7 +1092,9 @@ export const command: CommandMessage = {
                 }
 
                 await editorMessage.edit({
-                    components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)]
+                    // @ts-ignore
+                    display: await renderPreview(blockState, message.member, message.guild),
+                    components: btns(false)
                 });
             }
         });
@@ -1239,7 +1248,10 @@ export const command: CommandMessage = {
                     try {
                         const messageExists = await editorMessage.fetch().catch(() => null);
                         if (!messageExists) return;
-                        await editorMessage.edit({ components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)] });
+                        await editorMessage.edit({ // @ts-ignore
+                            display: await renderPreview(blockState, message.member, message.guild),
+                            components: btns(false)
+                        });
                     } catch (error: any) {
                         if (error.code === 10008) {
                             console.log('Mensaje del editor eliminado');
@@ -1275,9 +1287,12 @@ export const command: CommandMessage = {
                     const messageExists = await editorMessage.fetch().catch(() => null);
                     if (messageExists) {
                         await editorMessage.edit({
-                            components: [
-                                { type: 17, components: [{ type: 10, content: "⏰ Editor finalizado por inactividad." }] }
-                            ]
+                            // @ts-ignore
+                            display: {
+                                type: 17,
+                                components: [{ type: 10, content: "⏰ Editor finalizado por inactividad." }]
+                            },
+                            components: []
                         });
                     }
                 } catch (error) {
