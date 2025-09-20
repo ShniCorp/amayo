@@ -260,9 +260,11 @@ export const command: CommandMessage = {
                             const reply = await i.reply({ flags: 64, content: "Ya tienes una imagen de portada. ¿Qué quieres hacer?", components: [{ type: 1, components: [
                                 { type: 2, style: ButtonStyle.Primary, label: "✏️ Editar", custom_id: "edit_cover_modal" },
                                 { type: 2, style: ButtonStyle.Danger, label: "🗑️ Eliminar", custom_id: "delete_cover" }
-                            ] }], fetchReply: true });
+                            ] }] });
                             // @ts-ignore
-                            const coverCollector = reply.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
+                            const replyMsg = await i.fetchReply();
+                            // @ts-ignore
+                            const coverCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
                             coverCollector.on('collect', async (b: any) => {
                                 if (b.customId === 'edit_cover_modal') {
                                     const modal = new ModalBuilder().setCustomId('edit_cover_modal').setTitle('🖼️ Editar Imagen de Portada');
@@ -298,9 +300,11 @@ export const command: CommandMessage = {
                             description: c.type === 10 && (c.thumbnail || c.linkButton) ? (c.thumbnail ? 'Con thumbnail' : 'Con botón link') : undefined
                         }));
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Selecciona el bloque que quieres mover:', components: [{ type: 1, components: [ { type: 3, custom_id: 'move_block_select', placeholder: 'Elige un bloque', options } ] }], fetchReply: true });
+                        const reply = await i.reply({ flags: 64, content: 'Selecciona el bloque que quieres mover:', components: [{ type: 1, components: [ { type: 3, custom_id: 'move_block_select', placeholder: 'Elige un bloque', options } ] }] });
                         // @ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
                         selCollector.on('collect', async (sel: any) => {
                             const idx = parseInt(sel.values[0]);
                             await sel.update({ content: '¿Quieres mover este bloque?', components: [{ type: 1, components: [
@@ -308,7 +312,7 @@ export const command: CommandMessage = {
                                 { type: 2, style: ButtonStyle.Secondary, label: '⬇️ Bajar', custom_id: `move_down_${idx}`, disabled: idx === blockState.components.length - 1 }
                             ] }] });
                             // @ts-ignore
-                            const btnCollector = reply.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
+                            const btnCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
                             btnCollector.on('collect', async (b: any) => {
                                 if (b.customId.startsWith('move_up_')) {
                                     const i2 = parseInt(b.customId.replace('move_up_', ''));
@@ -352,9 +356,11 @@ export const command: CommandMessage = {
                             break;
                         }
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Selecciona el elemento que quieres eliminar:', components: [{ type: 1, components: [ { type: 3, custom_id: 'delete_block_select', placeholder: 'Elige un elemento', options } ] }], fetchReply: true });
+                        const reply = await i.reply({ flags: 64, content: 'Selecciona el elemento que quieres eliminar:', components: [{ type: 1, components: [ { type: 3, custom_id: 'delete_block_select', placeholder: 'Elige un elemento', options } ] }] });
                         // @ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
                         selCollector.on('collect', async (sel: any) => {
                             const selectedValue = sel.values[0];
                             if (selectedValue === 'cover_image') {
@@ -412,7 +418,9 @@ export const command: CommandMessage = {
                         // @ts-ignore
                         const reply = await i.reply({ flags: 64, content: 'Selecciona el elemento que quieres duplicar:', components: [{ type: 1, components: [{ type: 3, custom_id: 'duplicate_select', placeholder: 'Elige un elemento', options }] }], fetchReply: true });
                         // @ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (sel: any) => sel.user.id === message.author.id });
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (sel: any) => sel.user.id === message.author.id });
                         selCollector.on('collect', async (sel: any) => {
                             const idx = parseInt(sel.values[0]);
                             const originalComponent = blockState.components[idx];
@@ -470,9 +478,11 @@ export const command: CommandMessage = {
                         }
                         const options = textDisplays.map(({ c, idx }: any) => ({ label: `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`, value: String(idx), description: c.thumbnail ? 'Con thumbnail' : c.linkButton ? 'Con botón link' : 'Sin accesorio' }));
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Elige el TextDisplay a editar su thumbnail:', components: [{ type: 1, components: [ { type: 3, custom_id: 'choose_text_for_thumbnail', placeholder: 'Selecciona un bloque de texto', options } ] }], fetchReply: true });
+                        const reply = await i.reply({ flags: 64, content: 'Elige el TextDisplay a editar su thumbnail:', components: [{ type: 1, components: [ { type: 3, custom_id: 'choose_text_for_thumbnail', placeholder: 'Selecciona un bloque de texto', options } ] }] });
                         // @ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
                         selCollector.on('collect', async (sel: any) => {
                             const idx = parseInt(sel.values[0]);
                             const textComp = blockState.components[idx];
@@ -496,9 +506,11 @@ export const command: CommandMessage = {
                         }
                         const options = textDisplays.map(({ c, idx }: any) => ({ label: `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`, value: String(idx), description: c.linkButton ? 'Con botón link' : c.thumbnail ? 'Con thumbnail' : 'Sin accesorio' }));
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Elige el TextDisplay donde agregar/editar el botón link:', components: [{ type: 1, components: [ { type: 3, custom_id: 'choose_text_for_linkbtn', placeholder: 'Selecciona un bloque de texto', options } ] }], fetchReply: true });
+                        const reply = await i.reply({ flags: 64, content: 'Elige el TextDisplay donde agregar/editar el botón link:', components: [{ type: 1, components: [ { type: 3, custom_id: 'choose_text_for_linkbtn', placeholder: 'Selecciona un bloque de texto', options } ] }] });
                         // @ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
                         selCollector.on('collect', async (sel: any) => {
                             const idx = parseInt(sel.values[0]);
                             const textComp = blockState.components[idx];
@@ -511,7 +523,7 @@ export const command: CommandMessage = {
                                 const sub = await i.followUp({ flags: 64, content: `Texto #${idx + 1}: ya tiene botón link. ¿Qué deseas hacer?`, components: [{ type: 1, components: [
                                     { type: 2, style: ButtonStyle.Primary, label: '✏️ Editar', custom_id: `edit_link_button_modal_${idx}` },
                                     { type: 2, style: ButtonStyle.Danger, label: '🗑️ Eliminar', custom_id: `delete_link_button_${idx}` }
-                                ] }], fetchReply: true });
+                                ] }] });
                                 // @ts-ignore
                                 const btnCollector = sub.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
                                 btnCollector.on('collect', async (b: any) => {
@@ -547,7 +559,7 @@ export const command: CommandMessage = {
                                 modal.addComponents(r1, r2, r3);
                                 await sel.update({ content: 'Abriendo modal…', components: [] });
                                 // @ts-ignore
-                                await i.showModal(modal);
+                                await sel.showModal(modal);
                             }
                         });
                         break;

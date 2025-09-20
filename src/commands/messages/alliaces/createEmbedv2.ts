@@ -454,7 +454,7 @@ export const command: CommandMessage = {
                         if (blockState.coverImage) {
                             // Si ya tiene portada, preguntar si editar o eliminar
                             //@ts-ignore
-                            const reply = await i.reply({
+                            await i.reply({
                                 flags: 64, // MessageFlags.Ephemeral
                                 content: "Ya tienes una imagen de portada. ¿Qué quieres hacer?",
                                 components: [
@@ -465,12 +465,14 @@ export const command: CommandMessage = {
                                             { type: 2, style: ButtonStyle.Danger, label: "🗑️ Eliminar", custom_id: "delete_cover" }
                                         ]
                                     }
-                                ],
-                                fetchReply: true
+                                ]
                             });
 
+                            // @ts-ignore
+                            const replyMsg = await i.fetchReply();
+
                             //@ts-ignore
-                            const coverCollector = reply.createMessageComponentCollector({
+                            const coverCollector = replyMsg.createMessageComponentCollector({
                                 componentType: ComponentType.Button,
                                 max: 1,
                                 time: 60000,
@@ -558,12 +560,14 @@ export const command: CommandMessage = {
                                         { type: 3, custom_id: "move_block_select", placeholder: "Elige un bloque", options }
                                     ]
                                 }
-                            ],
-                            fetchReply: true
+                            ]
                         });
+                        // Obtener el mensaje asociado (compatibilidad con djs)
+                        // @ts-ignore
+                        const replyMsg = await i.fetchReply();
 
-                        //@ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({
                             componentType: ComponentType.StringSelect,
                             max: 1,
                             time: 60000,
@@ -587,7 +591,7 @@ export const command: CommandMessage = {
                             });
 
                             //@ts-ignore
-                            const btnCollector = reply.createMessageComponentCollector({
+                            const btnCollector = replyMsg.createMessageComponentCollector({
                                 componentType: ComponentType.Button,
                                 max: 1,
                                 time: 60000,
@@ -674,15 +678,15 @@ export const command: CommandMessage = {
                                 {
                                     type: 1,
                                     components: [
-                                        { type: 3, custom_id: "delete_block_select", placeholder: "Elige un elemento", options }
+                                            { type: 3, custom_id: "delete_block_select", placeholder: "Elige un elemento", options }
                                     ]
                                 }
-                            ],
-                            fetchReply: true
+                            ]
                         });
-
-                        //@ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({
+                        // @ts-ignore
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({
                             componentType: ComponentType.StringSelect,
                             max: 1,
                             time: 60000,
@@ -773,12 +777,12 @@ export const command: CommandMessage = {
                                     placeholder: "Elige un elemento",
                                     options
                                 }]
-                            }],
-                            fetchReply: true
+                            }]
                         });
-
-                        //@ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({
+                        // @ts-ignore
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({
                             componentType: ComponentType.StringSelect,
                             max: 1,
                             time: 60000,
@@ -900,12 +904,12 @@ export const command: CommandMessage = {
                             content: "Elige el TextDisplay a editar su thumbnail:",
                             components: [
                                 { type: 1, components: [ { type: 3, custom_id: 'choose_text_for_thumbnail', placeholder: 'Selecciona un bloque de texto', options } ] }
-                            ],
-                            fetchReply: true
+                            ]
                         });
-
                         // @ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({
                             componentType: ComponentType.StringSelect,
                             max: 1,
                             time: 60000,
@@ -934,7 +938,7 @@ export const command: CommandMessage = {
 
                             await sel.update({ content: 'Abriendo modal…', components: [] });
                             // @ts-ignore
-                            await i.showModal(modal);
+                            await sel.showModal(modal);
                         });
                         break;
                     }
@@ -963,17 +967,12 @@ export const command: CommandMessage = {
                             content: "Elige el TextDisplay donde agregar/editar el botón link:",
                             components: [
                                 { type: 1, components: [ { type: 3, custom_id: 'choose_text_for_linkbtn', placeholder: 'Selecciona un bloque de texto', options } ] }
-                            ],
-                            fetchReply: true
+                            ]
                         });
-
                         // @ts-ignore
-                        const selCollector = reply.createMessageComponentCollector({
-                            componentType: ComponentType.StringSelect,
-                            max: 1,
-                            time: 60000,
-                            filter: (it: any) => it.user.id === message.author.id
-                        });
+                        const replyMsg = await i.fetchReply();
+                        // @ts-ignore
+                        const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
 
                         selCollector.on('collect', async (sel: any) => {
                             const idx = parseInt(sel.values[0]);
@@ -995,17 +994,10 @@ export const command: CommandMessage = {
                                             { type: 2, style: ButtonStyle.Primary, label: '✏️ Editar', custom_id: `edit_link_button_modal_${idx}` },
                                             { type: 2, style: ButtonStyle.Danger, label: '🗑️ Eliminar', custom_id: `delete_link_button_${idx}` }
                                         ]}
-                                    ],
-                                    fetchReply: true
+                                    ]
                                 });
-
                                 // @ts-ignore
-                                const btnCollector = sub.createMessageComponentCollector({
-                                    componentType: ComponentType.Button,
-                                    max: 1,
-                                    time: 60000,
-                                    filter: (b: any) => b.user.id === message.author.id
-                                });
+                                const btnCollector = sub.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
 
                                 btnCollector.on('collect', async (b: any) => {
                                     if (b.customId.startsWith('edit_link_button_modal_')) {
@@ -1047,7 +1039,7 @@ export const command: CommandMessage = {
 
                                         await b.update({ content: 'Abriendo modal…', components: [] });
                                         // @ts-ignore
-                                        await i.showModal(modal);
+                                        await b.showModal(modal);
                                     } else if (b.customId.startsWith('delete_link_button_')) {
                                         delete textComp.linkButton;
                                         await b.update({ content: '✅ Botón link eliminado.', components: [] });
@@ -1093,7 +1085,7 @@ export const command: CommandMessage = {
 
                                 await sel.update({ content: 'Abriendo modal…', components: [] });
                                 // @ts-ignore
-                                await i.showModal(modal);
+                                await sel.showModal(modal);
                             }
                         });
 
