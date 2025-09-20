@@ -44,7 +44,7 @@ export const command: CommandMessage = {
                     name: "canal-alianza",
                     aliases: ["configurar-canal", "setup-canal"],
                     description: "Configurar canales para sistema de alianzas",
-                    usage: `${prefix}canal-alianza`
+                    usage: `${prefix}canal-alianza {canal}`
                 },
                 {
                     name: "eliminar-canal-alianza",

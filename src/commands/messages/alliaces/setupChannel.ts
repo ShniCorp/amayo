@@ -3,7 +3,7 @@ import { CommandMessage } from "../../../core/types/commands";
 import { ComponentType, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
 
 export const command: CommandMessage = {
-    name: "setchannel-alliance",
+    name: "canal-alianza",
     type: "message",
     aliases: ["alchannel", "channelally"],
     cooldown: 10,
@@ -13,10 +13,9 @@ export const command: CommandMessage = {
             return message.reply("❌ No tienes permisos de Administrador.");
         }
 
-        // Obtener canales configurados existentes y bloques disponibles
+        // Obtener canales configurados existentes
         const existingChannels = await client.prisma.allianceChannel.findMany({
-            where: { guildId: message.guildId! },
-            include: { blockConfig: true }
+            where: { guildId: message.guildId! }
         });
 
         const availableBlocks = await client.prisma.blockV2Config.findMany({

@@ -15,8 +15,7 @@ export const command: CommandMessage = {
 
         // Obtener canales configurados existentes
         const existingChannels = await client.prisma.allianceChannel.findMany({
-            where: { guildId: message.guildId! },
-            include: { blockConfig: true }
+            where: { guildId: message.guildId! }
         });
 
         if (existingChannels.length === 0) {
