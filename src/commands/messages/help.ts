@@ -47,6 +47,18 @@ export const command: CommandMessage = {
                     usage: `${prefix}canal-alianza`
                 },
                 {
+                    name: "eliminar-canal-alianza",
+                    aliases: ["removechannel-alliance", "removealchannel", "delalchannel"],
+                    description: "Eliminar canales de la configuración de alianzas",
+                    usage: `${prefix}removechannel-alliance`
+                },
+                {
+                    name: "listar-canales-alianza",
+                    aliases: ["listchannels-alliance", "listalchannel", "channelsally"],
+                    description: "Ver lista detallada de canales configurados para alianzas",
+                    usage: `${prefix}listchannels-alliance`
+                },
+                {
                     name: "demo-componentes",
                     aliases: ["demo", "prueba-componentes"],
                     description: "Demostración de DisplayComponents con accesorios",
@@ -307,7 +319,7 @@ export const command: CommandMessage = {
                 case "category_network":
                     const networkPanel = {
                         type: 17,
-                        accent_color: 0x5865f2,
+                        accent_color: 05865f2,
                         components: [
                             {
                                 type: 10,
