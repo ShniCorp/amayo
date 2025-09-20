@@ -3,6 +3,9 @@ import { REST } from "discord.js";
 import { Routes } from "discord-api-types/v10";
 import { commands } from "../loader";
 
+// Reutilizamos una instancia REST singleton
+const rest = new REST({ version: '10' }).setToken(process.env.TOKEN ?? "");
+
 export async function registeringCommands(): Promise<void> {
     const commandsToRegister: any[] = [];
 
@@ -19,8 +22,6 @@ export async function registeringCommands(): Promise<void> {
             console.log(`✅ Preparado para registrar: ${cmd.name}`);
         }
     }
-
-    const rest = new REST().setToken(process.env.TOKEN ?? "");
 
     try {
         console.log(`🧹 Limpiando comandos antiguos/residuales...`);
@@ -61,8 +62,6 @@ export async function registeringCommands(): Promise<void> {
  * Función específica para eliminar TODOS los comandos slash (útil para limpieza)
  */
 export async function clearAllCommands(): Promise<void> {
-    const rest = new REST().setToken(process.env.TOKEN ?? "");
-
     try {
         console.log(`🧹 Eliminando TODOS los comandos slash...`);
 
@@ -84,8 +83,6 @@ export async function clearAllCommands(): Promise<void> {
  * Función para limpiar comandos globales (si los hay)
  */
 export async function clearGlobalCommands(): Promise<void> {
-    const rest = new REST().setToken(process.env.TOKEN ?? "");
-
     try {
         console.log(`🌍 Eliminando comandos globales...`);
 
@@ -98,4 +95,9 @@ export async function clearGlobalCommands(): Promise<void> {
     } catch (error) {
         console.error("❌ Error eliminando comandos globales:", error);
     }
+}
+
+export async function patchMessageWithDisplay(channelId: string, messageId: string, data: any): Promise<void> {
+    // data puede incluir: content, flags, display (container), components (action rows), etc.
+    await rest.patch(Routes.channelMessage(channelId, messageId), { body: data });
 }

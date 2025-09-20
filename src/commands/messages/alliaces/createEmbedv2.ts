@@ -2,6 +2,7 @@ import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags } from "discord.js";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
+import { patchMessageWithDisplay } from "../../../core/api/discordAPI";
 
 /**
  * Botones de edición - VERSIÓN MEJORADA
@@ -217,6 +218,11 @@ const renderPreview = async (blockState: any, member: any, guild: any) => {
     };
 };
 
+// Helper para actualizar el editor vía REST y no filtrar display
+const updateEditor = async (msg: any, data: any) => {
+    await patchMessageWithDisplay(msg.channelId, msg.id, data);
+};
+
 export const command: CommandMessage = {
     name: "crear-embed",
     type: "message",
@@ -269,10 +275,9 @@ export const command: CommandMessage = {
         await new Promise(resolve => setTimeout(resolve, 5000));
 
         //@ts-ignore
-        await editorMessage.edit({
+        await updateEditor(editorMessage, {
             content: null,
             flags: 4096,
-            // @ts-ignore - display (Display Components)
             display: await renderPreview(blockState, message.member, message.guild),
             components: btns(false)
         });
@@ -309,8 +314,7 @@ export const command: CommandMessage = {
                                 }
                             }
                         });
-                        await editorMessage.edit({
-                            // @ts-ignore
+                        await updateEditor(editorMessage, {
                             display: {
                                 type: 17,
                                 accent_color: blockState.color ?? null,
@@ -490,8 +494,7 @@ export const command: CommandMessage = {
                                 } else if (b.customId === "delete_cover") {
                                     blockState.coverImage = null;
                                     await b.update({ content: "✅ Imagen de portada eliminada.", components: [] });
-                                    await editorMessage.edit({
-                                        // @ts-ignore
+                                    await updateEditor(editorMessage, {
                                         display: await renderPreview(blockState, message.member, message.guild),
                                         components: btns(false)
                                     });
@@ -603,8 +606,7 @@ export const command: CommandMessage = {
                                     await b.update({ content: "✅ Bloque movido abajo.", components: [] });
                                 }
 
-                                await editorMessage.edit({
-                                    // @ts-ignore
+                                await updateEditor(editorMessage, {
                                     display: await renderPreview(blockState, message.member, message.guild),
                                     components: btns(false)
                                 });
@@ -692,8 +694,7 @@ export const command: CommandMessage = {
                                 await sel.update({ content: "✅ Elemento eliminado.", components: [] });
                             }
 
-                            await editorMessage.edit({
-                                // @ts-ignore
+                            await updateEditor(editorMessage, {
                                 display: await renderPreview(blockState, message.member, message.guild),
                                 components: btns(false)
                             });
@@ -785,8 +786,7 @@ export const command: CommandMessage = {
                             blockState.components.splice(idx + 1, 0, duplicatedComponent);
 
                             await sel.update({ content: "✅ Elemento duplicado.", components: [] });
-                            await editorMessage.edit({
-                                // @ts-ignore
+                            await updateEditor(editorMessage, {
                                 display: await renderPreview(blockState, message.member, message.guild),
                                 components: btns(false)
                             });
@@ -1044,7 +1044,7 @@ export const command: CommandMessage = {
                                     } else if (b.customId.startsWith('delete_link_button_')) {
                                         delete textComp.linkButton;
                                         await b.update({ content: '✅ Botón link eliminado.', components: [] });
-                                        await editorMessage.edit({ components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)] });
+                                        await updateEditor(editorMessage, { components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)] });
                                     }
                                 });
                             } else {
@@ -1091,8 +1091,7 @@ export const command: CommandMessage = {
                     }
                 }
 
-                await editorMessage.edit({
-                    // @ts-ignore
+                await updateEditor(editorMessage, {
                     display: await renderPreview(blockState, message.member, message.guild),
                     components: btns(false)
                 });
@@ -1248,7 +1247,7 @@ export const command: CommandMessage = {
                     try {
                         const messageExists = await editorMessage.fetch().catch(() => null);
                         if (!messageExists) return;
-                        await editorMessage.edit({ // @ts-ignore
+                        await updateEditor(editorMessage, { // @ts-ignore
                             display: await renderPreview(blockState, message.member, message.guild),
                             components: btns(false)
                         });
@@ -1286,7 +1285,7 @@ export const command: CommandMessage = {
                 try {
                     const messageExists = await editorMessage.fetch().catch(() => null);
                     if (messageExists) {
-                        await editorMessage.edit({
+                        await updateEditor(editorMessage, {
                             // @ts-ignore
                             display: {
                                 type: 17,
