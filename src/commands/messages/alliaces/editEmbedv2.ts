@@ -1,7 +1,7 @@
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags } from "discord.js";
-import { replaceVars } from "../../../core/lib/vars";
+import { replaceVars, isValidUrlOrVariable } from "../../../core/lib/vars";
 
 /**
  * Botones de edición - VERSIÓN MEJORADA
@@ -47,17 +47,9 @@ const btns = (disabled = false) => ([
 ]);
 
 /**
- * Validar si una URL es válida
+ * Validar si una URL es válida o es una variable del sistema
  */
-const isValidUrl = (url: string): boolean => {
-    if (!url) return false;
-    try {
-        new URL(url);
-        return url.startsWith('http://') || url.startsWith('https://');
-    } catch {
-        return false;
-    }
-};
+const isValidUrl = isValidUrlOrVariable;
 
 /**
  * Validar y limpiar contenido para Discord
@@ -704,20 +696,21 @@ export const command: CommandMessage = {
                         await i.editReply({
                             content: "📋 **Variables Disponibles:**\n\n" +
                                 "**👤 Usuario:**\n" +
-                                "`{user.name}` - Nombre del usuario\n" +
-                                "`{user.id}` - ID del usuario\n" +
-                                "`{user.mention}` - Mención del usuario\n" +
-                                "`{user.avatar}` - Avatar del usuario\n\n" +
+                                "`user.name` - Nombre del usuario\n" +
+                                "`user.id` - ID del usuario\n" +
+                                "`user.mention` - Mención del usuario\n" +
+                                "`user.avatar` - Avatar del usuario\n\n" +
                                 "**📊 Estadísticas:**\n" +
-                                "`{user.pointsAll}` - Puntos totales\n" +
-                                "`{user.pointsWeekly}` - Puntos semanales\n" +
-                                "`{user.pointsMonthly}` - Puntos mensuales\n\n" +
+                                "`user.pointsAll` - Puntos totales\n" +
+                                "`user.pointsWeekly` - Puntos semanales\n" +
+                                "`user.pointsMonthly` - Puntos mensuales\n\n" +
                                 "**🏠 Servidor:**\n" +
-                                "`{guild.name}` - Nombre del servidor\n" +
-                                "`{guild.icon}` - Ícono del servidor\n\n" +
+                                "`guild.name` - Nombre del servidor\n" +
+                                "`guild.icon` - Ícono del servidor\n\n" +
                                 "**🔗 Invitación:**\n" +
-                                "`{invite.name}` - Nombre del servidor invitado\n" +
-                                "`{invite.icon}` - Ícono del servidor invitado"
+                                "`invite.name` - Nombre del servidor invitado\n" +
+                                "`invite.icon` - Ícono del servidor invitado\n\n" +
+                                "💡 **Nota:** Las variables se usan SIN llaves `{}` en los campos de URL/imagen."
                         });
                         break;
                     }

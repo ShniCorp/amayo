@@ -1,8 +1,19 @@
 import { createClient } from "redis";
 
+/**
+* export const redis = createClient({
+*     url: process.env.REDIS_URL,
+* })
+**/
+
 export const redis = createClient({
-    url: process.env.REDIS_URL,
-})
+    username: 'default',
+    password: process.env.REDIS_PASS,
+    socket: {
+        host: process.env.REDIS_URL,
+        port: 17965
+    }
+});
 
 redis.on("error", (err: any) => console.error("Redis error:", err));
 redis.on("connect", () => console.log("✅ Conectado a Redis"));
