@@ -420,8 +420,8 @@ export const command: CommandMessage = {
                         // @ts-ignore
                         const replyMsg = await i.fetchReply();
                         // @ts-ignore
-                        const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (sel: any) => sel.user.id === message.author.id });
-                        selCollector.on('collect', async (sel: any) => {
+                        const selCollector2 = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (sel: any) => sel.user.id === message.author.id });
+                        selCollector2.on('collect', async (sel: any) => {
                             const idx = parseInt(sel.values[0]);
                             const originalComponent = blockState.components[idx];
                             const duplicatedComponent = JSON.parse(JSON.stringify(originalComponent));
@@ -490,9 +490,9 @@ export const command: CommandMessage = {
                             const thumbnailInput = new TextInputBuilder().setCustomId('thumbnail_input').setLabel('URL del Thumbnail').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/thumbnail.png o dejar vacío para eliminar').setValue(textComp?.thumbnail || '').setMaxLength(2000).setRequired(false);
                             const row = new ActionRowBuilder().addComponents(thumbnailInput);
                             modal.addComponents(row);
-                            await sel.update({ content: 'Abriendo modal…', components: [] });
+                            // Abrir modal directamente sin update previo
                             // @ts-ignore
-                            await i.showModal(modal);
+                            await sel.showModal(modal);
                         });
                         break;
                     }
@@ -536,9 +536,9 @@ export const command: CommandMessage = {
                                         const r2 = new ActionRowBuilder().addComponents(labelInput);
                                         const r3 = new ActionRowBuilder().addComponents(emojiInput);
                                         modal.addComponents(r1, r2, r3);
-                                        await b.update({ content: 'Abriendo modal…', components: [] });
+                                        // Abrir modal directamente sobre el botón sin update previo
                                         // @ts-ignore
-                                        await i.showModal(modal);
+                                        await b.showModal(modal);
                                     } else if (b.customId.startsWith('delete_link_button_')) {
                                         delete textComp.linkButton;
                                         await b.update({ content: '✅ Botón link eliminado.', components: [] });
@@ -557,7 +557,7 @@ export const command: CommandMessage = {
                                 const r2 = new ActionRowBuilder().addComponents(labelInput);
                                 const r3 = new ActionRowBuilder().addComponents(emojiInput);
                                 modal.addComponents(r1, r2, r3);
-                                await sel.update({ content: 'Abriendo modal…', components: [] });
+                                // Abrir modal directamente sin update previo
                                 // @ts-ignore
                                 await sel.showModal(modal);
                             }

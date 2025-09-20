@@ -936,7 +936,7 @@ export const command: CommandMessage = {
                             const firstRow = new ActionRowBuilder().addComponents(thumbnailInput);
                             modal.addComponents(firstRow);
 
-                            await sel.update({ content: 'Abriendo modal…', components: [] });
+                            // Abrir modal directamente sin update previo
                             // @ts-ignore
                             await sel.showModal(modal);
                         });
@@ -1037,7 +1037,7 @@ export const command: CommandMessage = {
                                         const r3 = new ActionRowBuilder().addComponents(emojiInput);
                                         modal.addComponents(r1, r2, r3);
 
-                                        await b.update({ content: 'Abriendo modal…', components: [] });
+                                        // Abrir modal directamente en la misma interacción del botón
                                         // @ts-ignore
                                         await b.showModal(modal);
                                     } else if (b.customId.startsWith('delete_link_button_')) {
@@ -1083,7 +1083,7 @@ export const command: CommandMessage = {
                                 const r3 = new ActionRowBuilder().addComponents(emojiInput);
                                 modal.addComponents(r1, r2, r3);
 
-                                await sel.update({ content: 'Abriendo modal…', components: [] });
+                                // Abrir modal directamente sin update previo
                                 // @ts-ignore
                                 await sel.showModal(modal);
                             }
