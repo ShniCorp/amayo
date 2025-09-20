@@ -1044,7 +1044,10 @@ export const command: CommandMessage = {
                                     } else if (b.customId.startsWith('delete_link_button_')) {
                                         delete textComp.linkButton;
                                         await b.update({ content: '✅ Botón link eliminado.', components: [] });
-                                        await updateEditor(editorMessage, { components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)] });
+                                        await updateEditor(editorMessage, {
+                                            display: await renderPreview(blockState, message.member, message.guild),
+                                            components: btns(false)
+                                        });
                                     }
                                 });
                             } else {
