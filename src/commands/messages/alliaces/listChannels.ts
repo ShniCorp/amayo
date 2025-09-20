@@ -3,9 +3,9 @@ import { CommandMessage } from "../../../core/types/commands";
 import { EmbedBuilder, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
 
 export const command: CommandMessage = {
-    name: "listchannels-alliance",
+    name: "listar-canales-alianza",
     type: "message",
-    aliases: ["listalchannel", "channelsally", "alliancechannels"],
+    aliases: ["listchannels-alliance", "listalchannel", "channelsally", "alliancechannels"],
     cooldown: 5,
     // @ts-ignore
     run: async (message, args, client) => {

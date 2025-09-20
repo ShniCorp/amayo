@@ -1,11 +1,11 @@
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
-import { ComponentType, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
+import { EmbedBuilder, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
 
 export const command: CommandMessage = {
-    name: "removechannel-alliance",
+    name: "eliminar-canal-alianza",
     type: "message",
-    aliases: ["removealchannel", "removechannelally", "delalchannel"],
+    aliases: ["removechannel-alliance", "removealchannel", "delalchannel"],
     cooldown: 10,
     // @ts-ignore
     run: async (message, args, client) => {
@@ -19,52 +19,23 @@ export const command: CommandMessage = {
         });
 
         if (existingChannels.length === 0) {
-            const noChannelsPanel = {
-                type: 17,
-                accent_color: 0xf04747,
-                components: [
-                    {
-                        type: 10,
-                        content: "# 🗑️ **Eliminar Canal de Alianzas**"
-                    },
-                    {
-                        type: 14,
-                        spacing: 2,
-                        divider: true
-                    },
-                    {
-                        type: 10,
-                        content: "📭 **No hay canales configurados**\n\nNo existen canales de alianza configurados en este servidor para eliminar.\n\n💡 **Sugerencia:** Usa `!setchannel-alliance` para configurar canales primero."
-                    }
-                ]
-            };
+            const noChannelsEmbed = new EmbedBuilder()
+                .setTitle("🗑️ Eliminar Canal de Alianzas")
+                .setDescription("📭 **No hay canales configurados**\n\nNo existen canales de alianza configurados en este servidor para eliminar.\n\n💡 **Sugerencia:** Usa `!setchannel-alliance` para configurar canales primero.")
+                .setColor(0xf04747)
+                .setTimestamp();
 
             return message.reply({
-                flags: MessageFlags.SuppressEmbeds,
-                components: [noChannelsPanel]
+                embeds: [noChannelsEmbed]
             });
         }
 
-        // Panel principal de eliminación
-        const removePanel = {
-            type: 17,
-            accent_color: 0xf04747, // Rojo para eliminación
-            components: [
-                {
-                    type: 10,
-                    content: "# 🗑️ **Eliminar Canal de Alianzas**"
-                },
-                {
-                    type: 14,
-                    spacing: 2,
-                    divider: true
-                },
-                {
-                    type: 10,
-                    content: `⚠️ **Atención:** Estás a punto de eliminar la configuración de alianzas de un canal.\n\n📊 **Estado actual:**\n• **${existingChannels.length}** canal(es) configurado(s)\n• **${existingChannels.filter((c: any) => c.isActive).length}** canal(es) activo(s)\n\n🎯 Selecciona el canal que deseas eliminar de la configuración:`
-                }
-            ]
-        };
+        // Embed principal
+        const removeEmbed = new EmbedBuilder()
+            .setTitle("🗑️ Eliminar Canal de Alianzas")
+            .setDescription(`⚠️ **Atención:** Estás a punto de eliminar la configuración de alianzas de un canal.\n\n📊 **Estado actual:**\n• **${existingChannels.length}** canal(es) configurado(s)\n• **${existingChannels.filter((c: any) => c.isActive).length}** canal(es) activo(s)\n\n🎯 Selecciona el canal que deseas eliminar:`)
+            .setColor(0xf04747)
+            .setTimestamp();
 
         // Crear opciones para el selector de canales
         const channelOptions = existingChannels.map((config: any) => {
@@ -73,10 +44,10 @@ export const command: CommandMessage = {
             const status = config.isActive ? "🟢 Activo" : "🔴 Inactivo";
             
             return {
-                label: channelName,
+                label: channelName.length > 100 ? channelName.substring(0, 97) + "..." : channelName,
                 value: config.channelId,
                 description: `${config.blockConfigName} • ${status}`,
-                emoji: { name: channel ? "💬" : "⚠️" }
+                emoji: channel ? "💬" : "⚠️"
             };
         }).slice(0, 25);
 
@@ -111,8 +82,8 @@ export const command: CommandMessage = {
         };
 
         const panelMessage = await message.reply({
-            flags: MessageFlags.SuppressEmbeds,
-            components: [removePanel, channelSelectRow, cancelRow]
+            embeds: [removeEmbed],
+            components: [channelSelectRow, cancelRow]
         });
 
         const collector = panelMessage.createMessageComponentCollector({
@@ -129,33 +100,12 @@ export const command: CommandMessage = {
                         const selectedChannel = message.guild!.channels.cache.get(selectedChannelId);
                         const channelName = selectedChannel ? `#${selectedChannel.name}` : "Canal Eliminado";
 
-                        // Panel de confirmación
-                        const confirmPanel = {
-                            type: 17,
-                            accent_color: 0xff6b6b,
-                            components: [
-                                {
-                                    type: 10,
-                                    content: "⚠️ **Confirmar Eliminación**"
-                                },
-                                {
-                                    type: 14,
-                                    divider: true,
-                                    spacing: 2
-                                },
-                                {
-                                    type: 10,
-                                    content: `🎯 **Canal seleccionado:** ${channelName}\n` +
-                                             `🧩 **Configuración:** \`${selectedConfig?.blockConfigName}\`\n` +
-                                             `📊 **Estado:** ${selectedConfig?.isActive ? "🟢 Activo" : "🔴 Inactivo"}\n\n` +
-                                             `❗ **¿Estás seguro de eliminar esta configuración?**\n\n` +
-                                             `📝 **Efectos:**\n` +
-                                             `• Los usuarios ya no ganarán puntos en este canal\n` +
-                                             `• El historial de puntos se mantendrá\n` +
-                                             `• Esta acción NO se puede deshacer`
-                                }
-                            ]
-                        };
+                        // Embed de confirmación
+                        const confirmEmbed = new EmbedBuilder()
+                            .setTitle("⚠️ Confirmar Eliminación")
+                            .setDescription(`🎯 **Canal seleccionado:** ${channelName}\n🧩 **Configuración:** \`${selectedConfig?.blockConfigName}\`\n📊 **Estado:** ${selectedConfig?.isActive ? "🟢 Activo" : "🔴 Inactivo"}\n\n❗ **¿Estás seguro de eliminar esta configuración?**\n\n📝 **Efectos:**\n• Los usuarios ya no ganarán puntos en este canal\n• El historial de puntos se mantendrá\n• Esta acción NO se puede deshacer`)
+                            .setColor(0xff6b6b)
+                            .setTimestamp();
 
                         const confirmRow = {
                             type: 1,
@@ -164,8 +114,7 @@ export const command: CommandMessage = {
                                     type: 2,
                                     style: ButtonStyle.Danger,
                                     label: "✅ Sí, Eliminar",
-                                    custom_id: `confirm_remove_${selectedChannelId}`,
-                                    emoji: { name: "🗑️" }
+                                    custom_id: `confirm_remove_${selectedChannelId}`
                                 },
                                 {
                                     type: 2,
@@ -177,46 +126,36 @@ export const command: CommandMessage = {
                         };
 
                         await interaction.update({
-                            components: [confirmPanel, confirmRow]
+                            embeds: [confirmEmbed],
+                            components: [confirmRow]
                         });
                     }
                     break;
 
                 case "cancel_removal":
-                    const cancelPanel = {
-                        type: 17,
-                        accent_color: 0x36393f,
-                        components: [
-                            {
-                                type: 10,
-                                content: "❌ **Operación Cancelada**"
-                            },
-                            {
-                                type: 14,
-                                divider: true,
-                                spacing: 1
-                            },
-                            {
-                                type: 10,
-                                content: "La eliminación ha sido cancelada.\nNingún canal fue modificado."
-                            }
-                        ]
-                    };
+                    const cancelEmbed = new EmbedBuilder()
+                        .setTitle("❌ Operación Cancelada")
+                        .setDescription("La eliminación ha sido cancelada.\nNingún canal fue modificado.")
+                        .setColor(0x36393f)
+                        .setTimestamp();
 
                     await interaction.update({
-                        components: [cancelPanel]
+                        embeds: [cancelEmbed],
+                        components: []
                     });
                     collector.stop();
                     break;
 
                 case "view_all_channels":
+                    const channelsList = existingChannels.map((config: any, index: number) => {
+                        const channel = message.guild!.channels.cache.get(config.channelId);
+                        const channelName = channel ? `#${channel.name}` : "Canal Eliminado";
+                        const status = config.isActive ? "🟢 Activo" : "🔴 Inactivo";
+                        return `**${index + 1}.** ${channelName} - \`${config.blockConfigName}\` • ${status}`;
+                    }).join('\n');
+
                     await interaction.reply({
-                        content: `📋 **Canales Configurados**\n\n${existingChannels.map((config: any, index: number) => {
-                            const channel = message.guild!.channels.cache.get(config.channelId);
-                            const channelName = channel ? `#${channel.name}` : "Canal Eliminado";
-                            const status = config.isActive ? "🟢 Activo" : "🔴 Inactivo";
-                            return `**${index + 1}.** ${channelName} - \`${config.blockConfigName}\` • ${status}`;
-                        }).join('\n')}`,
+                        content: `📋 **Canales Configurados**\n\n${channelsList}`,
                         flags: 64 // Ephemeral
                     });
                     break;
@@ -240,29 +179,11 @@ export const command: CommandMessage = {
                                 }
                             });
 
-                            const successPanel = {
-                                type: 17,
-                                accent_color: 0x57f287,
-                                components: [
-                                    {
-                                        type: 10,
-                                        content: "✅ **Eliminación Exitosa**"
-                                    },
-                                    {
-                                        type: 14,
-                                        divider: true,
-                                        spacing: 2
-                                    },
-                                    {
-                                        type: 10,
-                                        content: `🗑️ **Canal eliminado de la configuración:**\n\n` +
-                                                 `📺 **Canal:** ${channelName}\n` +
-                                                 `🧩 **Configuración eliminada:** \`${channelConfig?.blockConfigName}\`\n\n` +
-                                                 `✅ **Completado:** Los usuarios ya no ganarán puntos de alianza en este canal.\n\n` +
-                                                 `💡 **Nota:** El historial de puntos anterior se mantiene intacto.`
-                                    }
-                                ]
-                            };
+                            const successEmbed = new EmbedBuilder()
+                                .setTitle("✅ Eliminación Exitosa")
+                                .setDescription(`🗑️ **Canal eliminado de la configuración:**\n\n📺 **Canal:** ${channelName}\n🧩 **Configuración eliminada:** \`${channelConfig?.blockConfigName}\`\n\n✅ **Completado:** Los usuarios ya no ganarán puntos de alianza en este canal.\n\n💡 **Nota:** El historial de puntos anterior se mantiene intacto.`)
+                                .setColor(0x57f287)
+                                .setTimestamp();
 
                             const successActionsRow = {
                                 type: 1,
@@ -283,38 +204,27 @@ export const command: CommandMessage = {
                             };
 
                             await interaction.update({
-                                components: [successPanel, successActionsRow]
+                                embeds: [successEmbed],
+                                components: [successActionsRow]
                             });
 
                         } catch (error) {
-                            const errorPanel = {
-                                type: 17,
-                                accent_color: 0xf04747,
-                                components: [
-                                    {
-                                        type: 10,
-                                        content: "❌ **Error de Eliminación**"
-                                    },
-                                    {
-                                        type: 14,
-                                        divider: true,
-                                        spacing: 2
-                                    },
-                                    {
-                                        type: 10,
-                                        content: `💥 **Error al eliminar el canal:**\n\n` +
-                                                 `📺 Canal: ${channelName}\n` +
-                                                 `🧩 Configuración: \`${channelConfig?.blockConfigName}\`\n\n` +
-                                                 `🔍 **Posibles causas:**\n` +
-                                                 `• El canal ya fue eliminado\n` +
-                                                 `• Error de base de datos\n` +
-                                                 `• Permisos insuficientes\n\n` +
-                                                 `🔄 Intenta nuevamente.`
-                                    }
-                                ]
-                            };
+                            const errorEmbed = new EmbedBuilder()
+                                .setTitle("❌ Error de Eliminación")
+                                .setDescription(`💥 **Error al eliminar el canal:**\n\n📺 Canal: ${channelName}\n🧩 Configuración: \`${channelConfig?.blockConfigName}\`\n\n🔍 **Posibles causas:**\n• El canal ya fue eliminado\n• Error de base de datos\n• Permisos insuficientes\n\n🔄 Intenta nuevamente.`)
+                                .setColor(0xf04747)
+                                .setTimestamp();
 
-                            await interaction.update({ components: [errorPanel] });
+                            await interaction.update({
+                                embeds: [errorEmbed],
+                                components: []
+                            });
+                        }
+                    } else if (interaction.customId === "finish_removal" || interaction.customId === "remove_another") {
+                        collector.stop();
+                        if (interaction.customId === "remove_another") {
+                            // Reiniciar el comando
+                            return module.exports.command.run(message, args, client);
                         }
                     }
                     break;
@@ -323,29 +233,16 @@ export const command: CommandMessage = {
 
         collector.on("end", async (collected, reason) => {
             if (reason === "time") {
-                const timeoutPanel = {
-                    type: 17,
-                    accent_color: 0x36393f,
-                    components: [
-                        {
-                            type: 10,
-                            content: "⏰ **Sesión Expirada**"
-                        },
-                        {
-                            type: 14,
-                            divider: true,
-                            spacing: 1
-                        },
-                        {
-                            type: 10,
-                            content: "El panel de eliminación ha expirado.\nUsa el comando nuevamente para continuar."
-                        }
-                    ]
-                };
+                const timeoutEmbed = new EmbedBuilder()
+                    .setTitle("⏰ Sesión Expirada")
+                    .setDescription("El panel de eliminación ha expirado.\nUsa el comando nuevamente para continuar.")
+                    .setColor(0x36393f)
+                    .setTimestamp();
 
                 try {
                     await panelMessage.edit({
-                        components: [timeoutPanel]
+                        embeds: [timeoutEmbed],
+                        components: []
                     });
                 } catch (error) {
                     // Mensaje eliminado o error de edición
