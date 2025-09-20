@@ -319,7 +319,7 @@ export const command: CommandMessage = {
                 case "category_network":
                     const networkPanel = {
                         type: 17,
-                        accent_color: 05865f2,
+                        accent_color: 0x0099ff,
                         components: [
                             {
                                 type: 10,
