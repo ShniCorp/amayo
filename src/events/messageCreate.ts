@@ -2,10 +2,12 @@ import {bot} from "../main";
 import {Events} from "discord.js";
 import {redis} from "../core/redis";
 import {commands} from "../core/loader";
+import {alliance} from "./extras/alliace";
 
 
 bot.on(Events.MessageCreate, async (message) => {
     if (message.author.bot) return;
+    await alliance(message);
     const server = await bot.prisma.guild.upsert({
         where: {
             id: message.guildId

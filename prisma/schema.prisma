@@ -30,6 +30,9 @@ model Guild {
   // ✅ CAMBIO: Ahora un Guild puede tener MÚLTIPLES configuraciones de embed.
   embedConfigs      EmbedConfig[]
   BlockV2Config     BlockV2Config[]
+  // ✅ NUEVAS RELACIONES
+  allianceChannels  AllianceChannel[]
+  pointsHistory     PointHistory[]
 }
 /*
  * -----------------------------------------------------------------------------
@@ -43,6 +46,8 @@ model User {
   // Relaciones
   partnerStats       PartnershipStats[]
   createdAlliances   Alliance[]
+  // ✅ NUEVA RELACIÓN
+  pointsHistory      PointHistory[]
 }
 
 /*
@@ -95,6 +100,62 @@ model Alliance {
   creator     User     @relation(fields: [creatorId], references: [id])
   creatorId   String
 }
+
+
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para Canales de Alianza
+ * -----------------------------------------------------------------------------
+ * Gestiona qué canales están configurados para otorgar puntos y qué bloque enviar
+*/
+model AllianceChannel {
+  id              String   @id @default(cuid())
+  channelId       String   @unique // ID del canal de Discord
+
+  // Configuración del canal
+  blockConfigName String   // Nombre del BlockV2Config a enviar
+  isActive        Boolean  @default(true)
+
+  // Timestamps
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  // --- Relaciones ---
+  guild           Guild    @relation(fields: [guildId], references: [id])
+  guildId         String
+
+  // Historial de puntos otorgados en este canal
+  pointsHistory   PointHistory[]
+
+  // Un canal solo puede estar en un servidor
+  @@unique([guildId, channelId])
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * Modelo para Historial de Puntos
+ * -----------------------------------------------------------------------------
+ * Registra cada vez que un usuario gana puntos con fecha y hora
+*/
+model PointHistory {
+  id              String   @id @default(cuid())
+
+  // Información del punto otorgado
+  points          Int      @default(1)
+  timestamp       DateTime @default(now())
+  messageId       String   // ID del mensaje que generó el punto
+
+  // --- Relaciones ---
+  user            User     @relation(fields: [userId], references: [id])
+  userId          String
+
+  guild           Guild    @relation(fields: [guildId], references: [id])
+  guildId         String
+
+  allianceChannel AllianceChannel @relation(fields: [channelId], references: [id])
+  channelId       String
+}
+
 
 /*
  * -----------------------------------------------------------------------------
