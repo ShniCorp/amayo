@@ -98,6 +98,27 @@ export async function clearGlobalCommands(): Promise<void> {
 }
 
 export async function patchMessageWithDisplay(channelId: string, messageId: string, data: any): Promise<void> {
-    // data puede incluir: content, flags, display (container), components (action rows), etc.
-    await rest.patch(Routes.channelMessage(channelId, messageId), { body: data });
+    try {
+        // Validación mínima para ayudar a depurar
+        const dbg = {
+            hasDisplay: !!data?.display,
+            displayType: data?.display?.type,
+            compCount: Array.isArray(data?.display?.components) ? data.display.components.length : undefined,
+            hasComponents: Array.isArray(data?.components),
+        };
+        // eslint-disable-next-line no-console
+        if (!dbg.hasDisplay) console.warn('[patchMessageWithDisplay] Enviando PATCH sin display. data.keys=', Object.keys(data || {}));
+        await rest.patch(Routes.channelMessage(channelId, messageId), { body: data });
+    } catch (error: any) {
+        // eslint-disable-next-line no-console
+        console.error('[patchMessageWithDisplay] Error PATCH mensaje', {
+            channelId,
+            messageId,
+            status: error?.status,
+            code: error?.code,
+            message: error?.message,
+            rawError: error?.rawError,
+        });
+        throw error;
+    }
 }
