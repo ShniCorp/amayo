@@ -2,7 +2,6 @@ import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags } from "discord.js";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
-import { patchMessageWithDisplay } from "../../../core/api/discordAPI";
 
 /**
  * Botones de edición - VERSIÓN MEJORADA
@@ -218,9 +217,17 @@ const renderPreview = async (blockState: any, member: any, guild: any) => {
     };
 };
 
-// Helper para actualizar el editor vía REST y no filtrar display
+// Helper para actualizar el editor combinando Display Container dentro de components
 const updateEditor = async (msg: any, data: any) => {
-    await patchMessageWithDisplay(msg.channelId, msg.id, data);
+    const container = data?.display;
+    const rows = Array.isArray(data?.components) ? data.components : [];
+    const components = container ? [container, ...rows] : rows;
+    const payload: any = { ...data };
+    delete payload.display;
+    payload.components = components;
+    // Si no se pasa flags explícitos, usamos 32768 como en tu entorno
+    if (payload.flags === undefined) payload.flags = 32768;
+    await msg.edit(payload);
 };
 
 export const command: CommandMessage = {
@@ -277,7 +284,7 @@ export const command: CommandMessage = {
         //@ts-ignore
         await updateEditor(editorMessage, {
             content: null,
-            flags: 4096,
+            flags: 32768,
             display: await renderPreview(blockState, message.member, message.guild),
             components: btns(false)
         });
