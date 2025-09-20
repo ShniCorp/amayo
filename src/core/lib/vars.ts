@@ -6,10 +6,8 @@ export async function replaceVars(text: string, user: User | undefined, guild: G
 
     // Crear inviteObject solo si invite existe y tiene guild
     const inviteObject = invite?.guild ? {
-        guild: {
-            //@ts-ignore
-            icon: `https://cdn.discordapp.com/icons/${invite.guild.id}/${invite.guild.icon}.webp?size=256`
-        }
+        name: invite.guild.name,
+        icon: invite.guild.icon ? `https://cdn.discordapp.com/icons/${invite.guild.id}/${invite.guild.icon}.webp?size=256` : ''
     } : null;
 
     return text
@@ -37,7 +35,6 @@ export async function replaceVars(text: string, user: User | undefined, guild: G
         /**
          *  INVITE INFO
          */
-        .replace(/(invite\.name)/g, invite?.guild?.name ?? "")
-        .replace(/(invite\.icon)/g, inviteObject?.guild.icon ?? '0')
-
+        .replace(/(invite\.name)/g, inviteObject?.name ?? "")
+        .replace(/(invite\.icon)/g, inviteObject?.icon ?? '')
 }

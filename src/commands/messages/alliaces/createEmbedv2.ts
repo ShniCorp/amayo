@@ -1,6 +1,6 @@
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
-import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message } from "discord.js";
+import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags } from "discord.js";
 import { replaceVars } from "../../../core/lib/vars";
 
 /**
@@ -168,8 +168,9 @@ const renderPreview = async (blockState: any, member: any, guild: any) => {
 };
 
 export const command: CommandMessage = {
-    name: "blockcreatev2",
+    name: "crear-embed",
     type: "message",
+    aliases: ["embed-crear", "nuevo-embed", "blockcreatev2"],
     cooldown: 20,
     run: async (message, args, client) => {
         if (!message.member?.permissions.has("Administrator")) {
@@ -233,7 +234,7 @@ export const command: CommandMessage = {
 
         collector.on("collect", async (i: any) => {
             if (i.user.id !== message.author.id) {
-                await i.reply({ content: "No puedes usar este menú.", ephemeral: true });
+                await i.reply({ content: "No puedes usar este menú.", flags: MessageFlags.Ephemeral });
                 return;
             }
 
@@ -841,18 +842,20 @@ export const command: CommandMessage = {
             }
         });
 
-        // Agregar manejo de modales
-        //@ts-ignore
-        client.on('interactionCreate', async (interaction) => {
+        // Agregar manejo de modales mejorado con mejor gestión de errores
+        let modalHandlerActive = true;
+
+        const modalHandler = async (interaction: any) => {
             if (!interaction.isModalSubmit()) return;
             if (interaction.user.id !== message.author.id) return;
             if (!interaction.customId.endsWith('_modal')) return;
+            if (!modalHandlerActive) return; // Evitar procesar si ya no está activo
 
             try {
                 switch (interaction.customId) {
                     case 'edit_title_modal': {
                         blockState.title = interaction.fields.getTextInputValue('title_input');
-                        await interaction.reply({ content: '✅ Título actualizado.', ephemeral: true });
+                        await interaction.reply({ content: '✅ Título actualizado.', flags: MessageFlags.Ephemeral });
                         break;
                     }
                     case 'edit_description_modal': {
@@ -863,7 +866,7 @@ export const command: CommandMessage = {
                         } else {
                             blockState.components.push({ type: 10, content: newDescription, thumbnail: null });
                         }
-                        await interaction.reply({ content: '✅ Descripción actualizada.', ephemeral: true });
+                        await interaction.reply({ content: '✅ Descripción actualizada.', flags: MessageFlags.Ephemeral });
                         break;
                     }
                     case 'edit_color_modal': {
@@ -875,26 +878,26 @@ export const command: CommandMessage = {
                             if (/^[0-9A-F]{6}$/i.test(hexColor)) {
                                 blockState.color = parseInt(hexColor, 16);
                             } else {
-                                await interaction.reply({ content: '❌ Color inválido. Usa formato HEX (#FF5733)', ephemeral: true });
+                                await interaction.reply({ content: '❌ Color inválido. Usa formato HEX (#FF5733)', flags: MessageFlags.Ephemeral });
                                 return;
                             }
                         }
-                        await interaction.reply({ content: '✅ Color actualizado.', ephemeral: true });
+                        await interaction.reply({ content: '✅ Color actualizado.', flags: MessageFlags.Ephemeral });
                         break;
                     }
                     case 'add_content_modal': {
                         const newContent = interaction.fields.getTextInputValue('content_input');
                         blockState.components.push({ type: 10, content: newContent, thumbnail: null });
-                        await interaction.reply({ content: '✅ Contenido añadido.', ephemeral: true });
+                        await interaction.reply({ content: '✅ Contenido añadido.', flags: MessageFlags.Ephemeral });
                         break;
                     }
                     case 'add_image_modal': {
                         const imageUrl = interaction.fields.getTextInputValue('image_url_input');
                         if (isValidUrl(imageUrl)) {
                             blockState.components.push({ type: 12, url: imageUrl });
-                            await interaction.reply({ content: '✅ Imagen añadida.', ephemeral: true });
+                            await interaction.reply({ content: '✅ Imagen añadida.', flags: MessageFlags.Ephemeral });
                         } else {
-                            await interaction.reply({ content: '❌ URL de imagen inválida.', ephemeral: true });
+                            await interaction.reply({ content: '❌ URL de imagen inválida.', flags: MessageFlags.Ephemeral });
                             return;
                         }
                         break;
@@ -904,9 +907,9 @@ export const command: CommandMessage = {
                         const coverUrl = interaction.fields.getTextInputValue('cover_input');
                         if (isValidUrl(coverUrl)) {
                             blockState.coverImage = coverUrl;
-                            await interaction.reply({ content: '✅ Imagen de portada actualizada.', ephemeral: true });
+                            await interaction.reply({ content: '✅ Imagen de portada actualizada.', flags: MessageFlags.Ephemeral });
                         } else {
-                            await interaction.reply({ content: '❌ URL de portada inválida.', ephemeral: true });
+                            await interaction.reply({ content: '❌ URL de portada inválida.', flags: MessageFlags.Ephemeral });
                             return;
                         }
                         break;
@@ -919,7 +922,7 @@ export const command: CommandMessage = {
                         const spacing = Math.min(3, Math.max(1, parseInt(spacingStr) || 1));
 
                         blockState.components.push({ type: 14, divider, spacing });
-                        await interaction.reply({ content: '✅ Separador añadido.', ephemeral: true });
+                        await interaction.reply({ content: '✅ Separador añadido.', flags: MessageFlags.Ephemeral });
                         break;
                     }
                     case 'edit_thumbnail_modal': {
@@ -927,12 +930,18 @@ export const command: CommandMessage = {
                         const textComp = blockState.components.find((c: any) => c.type === 10);
 
                         if (textComp) {
-                            if (thumbnailUrl.trim() === '' || !isValidUrl(thumbnailUrl)) {
+                            if (thumbnailUrl.trim() === '') {
+                                // Si está vacío, eliminar thumbnail
                                 textComp.thumbnail = null;
-                                await interaction.reply({ content: '✅ Thumbnail eliminado.', ephemeral: true });
+                                await interaction.reply({ content: '✅ Thumbnail eliminado.', flags: MessageFlags.Ephemeral });
+                            } else if (!isValidUrl(thumbnailUrl)) {
+                                // Si no es una URL válida, mostrar error
+                                await interaction.reply({ content: '❌ URL de thumbnail inválida.', flags: MessageFlags.Ephemeral });
+                                return;
                             } else {
+                                // Si es una URL válida, añadir thumbnail
                                 textComp.thumbnail = thumbnailUrl;
-                                await interaction.reply({ content: '✅ Thumbnail actualizado.', ephemeral: true });
+                                await interaction.reply({ content: '✅ Thumbnail actualizado.', flags: MessageFlags.Ephemeral });
                             }
                         }
                         break;
@@ -951,13 +960,13 @@ export const command: CommandMessage = {
                                     components: Array.isArray(importedData.components) ? importedData.components : blockState.components
                                 };
 
-                                await interaction.reply({ content: '✅ JSON importado correctamente.', ephemeral: true });
+                                await interaction.reply({ content: '✅ JSON importado correctamente.', flags: MessageFlags.Ephemeral });
                             } else {
-                                await interaction.reply({ content: '❌ Estructura JSON inválida.', ephemeral: true });
+                                await interaction.reply({ content: '❌ Estructura JSON inválida.', flags: MessageFlags.Ephemeral });
                                 return;
                             }
                         } catch (error) {
-                            await interaction.reply({ content: '❌ JSON inválido. Verifica el formato.', ephemeral: true });
+                            await interaction.reply({ content: '❌ JSON inválido. Verifica el formato.', flags: MessageFlags.Ephemeral });
                             return;
                         }
                         break;
@@ -966,33 +975,68 @@ export const command: CommandMessage = {
                         return;
                 }
 
-                // Actualizar la vista previa después de cada cambio en el modal
+                // Actualizar la vista previa después de cada cambio en el modal con mejor manejo de errores
                 setTimeout(async () => {
+                    if (!modalHandlerActive) return; // Evitar actualizar si ya no está activo
+
                     try {
+                        // Verificar si el mensaje aún existe antes de intentar editarlo
+                        const messageExists = await editorMessage.fetch().catch(() => null);
+                        if (!messageExists) {
+                            console.log('El mensaje del editor ya no existe');
+                            return;
+                        }
+
                         await editorMessage.edit({
                             components: [await renderPreview(blockState, message.member, message.guild), ...btns(false)]
                         });
-                    } catch (error) {
-                        console.error('Error actualizando preview:', error);
+                    } catch (error: any) {
+                        // Manejar diferentes tipos de errores
+                        if (error.code === 10008) {
+                            console.log('Mensaje del editor eliminado');
+                        } else if (error.code === 10062) {
+                            console.log('Interacción expirada');
+                        } else {
+                            console.error('Error actualizando preview:', error.message || error);
+                        }
                     }
                 }, 1000);
 
-            } catch (error) {
+            } catch (error: any) {
                 console.error('Error en modal:', error);
                 try {
-                    await interaction.reply({ content: '❌ Error procesando el modal.', ephemeral: true });
-                } catch {}
+                    // Solo intentar responder si la interacción no ha expirado
+                    if (error.code !== 10062 && !interaction.replied && !interaction.deferred) {
+                        await interaction.reply({ content: '❌ Error procesando el modal.', flags: MessageFlags.Ephemeral });
+                    }
+                } catch (replyError) {
+                    console.log('No se pudo responder a la interacción (probablemente expirada)');
+                }
             }
-        });
+        };
+
+        // Registrar el manejador de modales
+        client.on('interactionCreate', modalHandler);
 
         //@ts-ignore
         collector.on("end", async (_, reason) => {
+            // Desactivar el manejador de modales cuando el collector termine
+            modalHandlerActive = false;
+            client.off('interactionCreate', modalHandler);
+
             if (reason === "time") {
-                await editorMessage.edit({
-                    components: [
-                        { type: 17, components: [{ type: 10, content: "⏰ Editor finalizado por inactividad." }] }
-                    ]
-                });
+                try {
+                    const messageExists = await editorMessage.fetch().catch(() => null);
+                    if (messageExists) {
+                        await editorMessage.edit({
+                            components: [
+                                { type: 17, components: [{ type: 10, content: "⏰ Editor finalizado por inactividad." }] }
+                            ]
+                        });
+                    }
+                } catch (error) {
+                    console.log('No se pudo actualizar el mensaje final');
+                }
             }
         });
     }
