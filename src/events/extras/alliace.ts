@@ -282,19 +282,55 @@ async function sendBlockConfigV2(message: Message, blockConfigName: string, guil
     }
 }
 
+// Helper: parsear emojis (unicode o personalizados <:name:id> / <a:name:id>)
+function parseEmojiInput(input?: string): any | null {
+    if (!input) return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    const match = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
+    if (match) {
+        const animated = match[1] === 'a';
+        const name = match[2];
+        const id = match[3];
+        return { id, name, animated };
+    }
+    // Asumimos unicode si no es formato de emoji personalizado
+    return { name: trimmed };
+}
+
+// Helper: construir accessory de Link Button para Display Components
+async function buildLinkAccessory(link: any, user: any, guild: any) {
+    try {
+        if (!link || !link.url) return null;
+        // @ts-ignore
+        const processedUrl = await replaceVars(link.url, user, guild);
+        if (!isValidUrl(processedUrl)) return null;
+        const accessory: any = { type: 2, style: 5, url: processedUrl };
+        if (link.label && typeof link.label === 'string' && link.label.trim()) {
+            accessory.label = link.label.trim().slice(0, 80);
+        }
+        if (link.emoji && typeof link.emoji === 'string') {
+            const parsed = parseEmojiInput(link.emoji);
+            if (parsed) accessory.emoji = parsed;
+        }
+        // Debe tener al menos label o emoji
+        if (!accessory.label && !accessory.emoji) return null;
+        return accessory;
+    } catch {
+        return null;
+    }
+}
+
 async function convertConfigToDisplayComponent(config: any, user: any, guild: any): Promise<any> {
     try {
-        const previewComponents = [];
+        const previewComponents: any[] = [];
 
         // Añadir imagen de portada primero si existe
         if (config.coverImage && isValidUrl(config.coverImage)) {
             // @ts-ignore
             const processedCoverUrl = await replaceVars(config.coverImage, user, guild);
             if (isValidUrl(processedCoverUrl)) {
-                previewComponents.push({
-                    type: 12,
-                    items: [{ media: { url: processedCoverUrl } }]
-                });
+                previewComponents.push({ type: 12, items: [{ media: { url: processedCoverUrl } }] });
             }
         }
 
@@ -311,74 +347,44 @@ async function convertConfigToDisplayComponent(config: any, user: any, guild: an
         if (config.components && Array.isArray(config.components)) {
             for (const c of config.components) {
                 if (c.type === 10) {
-                    // Componente de texto con thumbnail opcional
+                    // Texto con accessory opcional: priorizar linkButton > thumbnail
+                    // @ts-ignore
+                    const processedContent = await replaceVars(c.content || " ", user, guild);
                     // @ts-ignore
                     const processedThumbnail = c.thumbnail ? await replaceVars(c.thumbnail, user, guild) : null;
 
-                    if (processedThumbnail && isValidUrl(processedThumbnail)) {
-                        // Si tiene thumbnail válido, usar contenedor tipo 9 con accessory
-                        previewComponents.push({
-                            type: 9,
-                            components: [
-                                {
-                                    type: 10,
-                                    // @ts-ignore
-                                    content: await replaceVars(c.content || " ", user, guild)
-                                }
-                            ],
-                            accessory: {
-                                type: 11,
-                                media: { url: processedThumbnail }
-                            }
-                        });
+                    let accessory: any = null;
+                    if (c.linkButton) {
+                        accessory = await buildLinkAccessory(c.linkButton, user, guild);
+                    }
+                    if (!accessory && processedThumbnail && isValidUrl(processedThumbnail)) {
+                        accessory = { type: 11, media: { url: processedThumbnail } };
+                    }
+
+                    if (accessory) {
+                        previewComponents.push({ type: 9, components: [{ type: 10, content: processedContent }], accessory });
                     } else {
-                        // Sin thumbnail o thumbnail inválido, componente normal
-                        previewComponents.push({
-                            type: 10,
-                            // @ts-ignore
-                            content: await replaceVars(c.content || " ", user, guild)
-                        });
+                        previewComponents.push({ type: 10, content: processedContent });
                     }
                 } else if (c.type === 14) {
-                    // Separador
-                    previewComponents.push({
-                        type: 14,
-                        divider: c.divider ?? true,
-                        spacing: c.spacing ?? 1
-                    });
+                    previewComponents.push({ type: 14, divider: c.divider ?? true, spacing: c.spacing ?? 1 });
                 } else if (c.type === 12) {
                     // Imagen - validar URL también
                     // @ts-ignore
                     const processedImageUrl = await replaceVars(c.url, user, guild);
-
                     if (isValidUrl(processedImageUrl)) {
-                        previewComponents.push({
-                            type: 12,
-                            items: [{ media: { url: processedImageUrl } }]
-                        });
+                        previewComponents.push({ type: 12, items: [{ media: { url: processedImageUrl } }] });
                     }
                 }
             }
         }
 
         // Retornar la estructura exacta que usa el editor
-        return {
-            type: 17, // Container type
-            accent_color: config.color ?? null,
-            components: previewComponents
-        };
+        return { type: 17, accent_color: config.color ?? null, components: previewComponents };
 
     } catch (error) {
         console.error('Error convirtiendo configuración a Display Component:', error);
-
-        // Fallback: crear un componente básico
-        return {
-            type: 17,
-            accent_color: null,
-            components: [
-                { type: 10, content: 'Error al procesar la configuración del bloque.' }
-            ]
-        };
+        return { type: 17, accent_color: null, components: [ { type: 10, content: 'Error al procesar la configuración del bloque.' } ] };
     }
 }
 

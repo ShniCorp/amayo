@@ -416,7 +416,7 @@ export const command: CommandMessage = {
                             break;
                         }
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Selecciona el elemento que quieres duplicar:', components: [{ type: 1, components: [{ type: 3, custom_id: 'duplicate_select', placeholder: 'Elige un elemento', options }] }], fetchReply: true });
+                        await i.reply({ flags: 64, content: 'Selecciona el elemento que quieres duplicar:', components: [{ type: 1, components: [{ type: 3, custom_id: 'duplicate_select', placeholder: 'Elige un elemento', options }] }] });
                         // @ts-ignore
                         const replyMsg = await i.fetchReply();
                         // @ts-ignore
