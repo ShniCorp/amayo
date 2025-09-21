@@ -12,6 +12,8 @@
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
+    "@google/genai": "1.20.0",
+    "@google/generative-ai": "0.24.1",
     "@prisma/client": "6.16.2",
     "discord-api-types": "0.38.24",
     "discord.js": "14.22.1",
