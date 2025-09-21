@@ -100,8 +100,10 @@ export const command: CommandMessage = {
             ]
         };
 
+        // Importante: activar Display Components V2 (32768) y mantener SuppressEmbeds
         const panelMessage = await message.reply({
-            flags: MessageFlags.SuppressEmbeds,
+            // @ts-ignore - combinar flags numéricamente (V2 + SuppressEmbeds)
+            flags: (32768 | MessageFlags.SuppressEmbeds),
             components: [setupPanel, mainActionsRow, managementRow]
         });
 
