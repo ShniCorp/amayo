@@ -116,7 +116,8 @@ export const command: CommandMessage = {
         };
 
         const demoMessage = await message.reply({
-            flags: 4096, // SuppressEmbeds
+            // Activar Display Components V2 y mantener SuppressEmbeds
+            flags: (32768 | 4096),
             components: [mainPanel, actionRow]
         });
 

@@ -295,7 +295,17 @@ export const command: CommandMessage = {
 
                         await interaction.update({
                             // @ts-ignore
-                            components: [blockSelectPanel, blockSelectRow, backRow]
+                            components: [blockSelectPanel, blockSelectRow, {
+                                type: 1,
+                                components: [
+                                    {
+                                        type: 2,
+                                        style: ButtonStyle.Secondary,
+                                        label: "↩️ Volver al Inicio",
+                                        custom_id: "back_to_main"
+                                    }
+                                ]
+                            }]
                         });
                     }
                     break;
@@ -528,8 +538,7 @@ export const command: CommandMessage = {
                 case "refresh_status":
                     // Recargar datos y volver al panel principal
                     const refreshedChannels = await client.prisma.allianceChannel.findMany({
-                        where: { guildId: message.guildId! },
-                        include: { blockConfig: true }
+                        where: { guildId: message.guildId! }
                     });
 
                     const refreshedBlocks = await client.prisma.blockV2Config.findMany({
