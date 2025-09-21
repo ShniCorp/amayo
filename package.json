@@ -4,6 +4,7 @@
   "description": "",
   "main": "src/main.ts",
   "scripts": {
+    "start": "npx tsx watch src/main.ts",
     "dev": "npx tsx watch src/main.ts"
   },
   "keywords": [],
