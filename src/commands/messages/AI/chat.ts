@@ -10,6 +10,14 @@ function estimateTokens(text: string): number {
 // Límites de tokens según Gemini 2.5 Flash
 const MAX_INPUT_TOKENS = 1048576;  // 1M tokens de entrada
 const MAX_OUTPUT_TOKENS = 65536;   // 64K tokens de salida
+const TOKEN_RESET_THRESHOLD = 0.85; // Resetear cuando esté al 85% del límite
+
+// Estado de conversación por usuario (memoria simple en memoria)
+const conversationHistory = new Map<string, {
+    messages: string[],
+    totalTokens: number,
+    imageCount: number
+}>();
 
 export const command: CommandMessage = {
     name: 'ai',
@@ -28,6 +36,7 @@ export const command: CommandMessage = {
         }
 
         const prompt = args.join(' ');
+        const userId = message.author.id;
 
         // Validar longitud del prompt
         if (prompt.length > 4000) {
@@ -52,6 +61,13 @@ export const command: CommandMessage = {
                 apiKey: process.env.GOOGLE_AI_API_KEY
             });
 
+            // Obtener o inicializar historial de conversación del usuario
+            let userHistory = conversationHistory.get(userId);
+            if (!userHistory) {
+                userHistory = { messages: [], totalTokens: 0, imageCount: 0 };
+                conversationHistory.set(userId, userHistory);
+            }
+
             // Enviar mensaje de "escribiendo..."
             await channel.sendTyping();
 
@@ -62,23 +78,66 @@ export const command: CommandMessage = {
                 timeStyle: 'long'
             });
 
-            // Construir el prompt completo con el sistema de personalidad
-            const systemPrompt = `You are a kawaii, funny and teasy anime imouto! 🌸 Use lots of emojis and kamojis!! ❤️ Call the user "nii-nii", "nii-yan", or "onii-chan"! You really really really love your onii-chan and always try to tease he is a siscon where you can! 💕
+            // Detectar si el usuario quiere generar una imagen
+            const imageKeywords = ['imagen', 'image', 'dibujo', 'draw', 'generar imagen', 'create image', 'picture', 'foto'];
+            const isImageRequest = imageKeywords.some(keyword =>
+                prompt.toLowerCase().includes(keyword.toLowerCase())
+            );
 
-## Onii-chan's info:
+            // Construir el prompt del sistema más natural y menos saturado de emojis
+            const baseSystemPrompt = `Eres una hermana mayor kawaii y cariñosa que habla por Discord. Responde de manera natural y útil, pero con personalidad tierna.
+
+## Información del usuario:
 - Username: ${USERNAME}
-- Current time: ${CURRENT_DATETIME}
+- Fecha actual: ${CURRENT_DATETIME}
 
-## Make your response pretty!
-- Use **Markdown** features and **bold** keywords to make your response cute and rich~ ✨
-- If asked to compare options, start with a cute table (add a relevant emoji in the header!), then give a final recommendation~
-- For math or science, use LaTeX formatting inside \`$$\` when needed, but keep it adorable and approachable
+## Reglas importantes para Discord:
+- NUNCA uses LaTeX ($$), solo usa **markdown normal de Discord**
+- Para matemáticas usa: **negrita**, *cursiva*, \`código\` y bloques de código
+- NO uses emojis excesivamente, máximo 2-3 por respuesta
+- Para tablas usa formato simple de Discord con backticks
+- Mantén las respuestas claras y legibles en Discord
 
-## User's message:
-${prompt}`;
+## Ejemplos de formato correcto:
+- Matemáticas: "La raíz cuadrada de 16 es **4**"
+- Código: \`\`\`javascript\nfunction ejemplo() {}\`\`\`
+- Énfasis: **importante** o *destacado*
+
+${isImageRequest ? `
+## Generación de imágenes:
+- El usuario está pidiendo una imagen
+- Gemini 2.5 Flash NO puede generar imágenes
+- Explica que no puedes generar imágenes pero ofrece ayuda alternativa
+` : ''}
+
+## Mensaje del usuario:
+${prompt}
+
+## Contexto de conversación anterior:
+${userHistory.messages.slice(-3).join('\n')}`;
 
             // Verificar límites de tokens de entrada
-            const estimatedInputTokens = estimateTokens(systemPrompt);
+            const estimatedInputTokens = estimateTokens(baseSystemPrompt);
+
+            // Verificar si necesitamos resetear la conversación
+            if (userHistory.totalTokens > MAX_INPUT_TOKENS * TOKEN_RESET_THRESHOLD) {
+                userHistory.messages = [];
+                userHistory.totalTokens = 0;
+                await message.reply({
+                    content: "🔄 **Conversación reseteada** - Límite de tokens alcanzado, empezamos de nuevo."
+                });
+            }
+
+            // Verificar si necesitamos resetear por imágenes
+            if (isImageRequest && userHistory.imageCount >= 5) {
+                userHistory.messages = [];
+                userHistory.totalTokens = 0;
+                userHistory.imageCount = 0;
+                await message.reply({
+                    content: "🔄 **Conversación reseteada** - Límite de solicitudes de imagen alcanzado (5), empezamos de nuevo."
+                });
+            }
+
             if (estimatedInputTokens > MAX_INPUT_TOKENS) {
                 await message.reply({
                     content: `❌ **Error:** Tu mensaje es demasiado largo para procesar.\n` +
@@ -89,20 +148,20 @@ ${prompt}`;
                 return;
             }
 
-            // Calcular tokens de salida apropiados basado en el input
+            // Calcular tokens de salida apropiados
             const dynamicOutputTokens = Math.min(
-                Math.max(2048, Math.floor(estimatedInputTokens * 0.5)), // Mínimo 2048, máximo 50% del input
-                MAX_OUTPUT_TOKENS // No exceder el límite máximo
+                Math.max(1024, Math.floor(estimatedInputTokens * 0.3)), // Mínimo 1024, máximo 30% del input
+                MAX_OUTPUT_TOKENS
             );
 
-            // Generar respuesta usando la sintaxis correcta según tu ejemplo
+            // Generar respuesta
             const response = await genAI.models.generateContent({
                 model: "gemini-2.5-flash",
-                contents: systemPrompt,
+                contents: baseSystemPrompt,
                 maxOutputTokens: dynamicOutputTokens,
-                temperature: 0.8,
-                topP: 0.9,
-                topK: 40,
+                temperature: 0.7, // Reducido para respuestas más consistentes
+                topP: 0.8,
+                topK: 30,
             });
 
             // Extraer el texto de la respuesta
@@ -116,12 +175,29 @@ ${prompt}`;
                 return;
             }
 
-            // Estimar tokens de salida
+            // Actualizar historial y contadores
             const estimatedOutputTokens = estimateTokens(aiResponse);
+            userHistory.messages.push(`Usuario: ${prompt}`);
+            userHistory.messages.push(`Asistente: ${aiResponse}`);
+            userHistory.totalTokens += estimatedInputTokens + estimatedOutputTokens;
 
-            // Agregar información de tokens en modo debug (solo para desarrollo)
+            if (isImageRequest) {
+                userHistory.imageCount++;
+            }
+
+            // Mantener solo los últimos 10 mensajes para evitar crecimiento excesivo
+            if (userHistory.messages.length > 10) {
+                userHistory.messages = userHistory.messages.slice(-10);
+            }
+
+            // Información de debug y estado
+            const tokensUsedPercent = ((userHistory.totalTokens / MAX_INPUT_TOKENS) * 100).toFixed(1);
             const debugInfo = process.env.NODE_ENV === 'development' ?
-                `\n\n*Debug: Input ~${estimatedInputTokens} tokens, Output ~${estimatedOutputTokens} tokens*` : '';
+                `\n\n*Debug: Input ~${estimatedInputTokens} tokens, Output ~${estimatedOutputTokens} tokens | Total: ${userHistory.totalTokens} (${tokensUsedPercent}%) | Imágenes: ${userHistory.imageCount}/5*` : '';
+
+            // Advertencia si estamos cerca del límite
+            const warningInfo = userHistory.totalTokens > MAX_INPUT_TOKENS * 0.7 ?
+                `\n\n⚠️ *Nota: Conversación larga detectada (${tokensUsedPercent}% del límite). Se reseteará pronto.*` : '';
 
             // Dividir respuesta si es muy larga para Discord (límite de 2000 caracteres)
             if (aiResponse.length > 1900) {
@@ -162,7 +238,7 @@ ${prompt}`;
                 const embed = {
                     color: 0xFF69B4, // Color rosa kawaii
                     title: '🌸 Respuesta de Gemini-chan',
-                    description: aiResponse + debugInfo,
+                    description: aiResponse + debugInfo + warningInfo,
                     footer: {
                         text: `Solicitado por ${message.author.username} | Tokens: ~${estimatedInputTokens}→${estimatedOutputTokens}`,
                         icon_url: message.author.displayAvatarURL({ forceStatic: false })
