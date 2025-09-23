@@ -32,7 +32,8 @@ class Amayo extends Client {
 
     async play () {
         if(!this.key) {
-            return console.error('No key provided');
+            console.error('No key provided');
+            throw new Error('Missing DISCORD TOKEN');
         } else {
             // Ejemplo de cómo usarías prisma antes de iniciar sesión
             try {
@@ -40,7 +41,8 @@ class Amayo extends Client {
                 console.log('Successfully connected to the database.');
                 await this.login(this.key);
             } catch (error) {
-                console.error('Failed to connect to the database:', error);
+                console.error('Failed to connect to DB or login to Discord:', error);
+                throw error; // Propaga para que withRetry en main.ts reintente
             }
         }
     }
