@@ -10,12 +10,18 @@ export const bot = new Amayo();
 // Listeners de robustez del cliente Discord
 bot.on('error', (e) => console.error('🐞 Discord client error:', e));
 bot.on('warn', (m) => console.warn('⚠️ Discord warn:', m));
+// Evitar reintentos de re-login simultáneos
+let relogging = false;
 // Cuando la sesión es invalidada, intentamos reconectar/login
 bot.on('invalidated', () => {
+    if (relogging) return;
+    relogging = true;
     console.error('🔄 Sesión de Discord invalidada. Reintentando login...');
-    withRetry('Re-login tras invalidated', () => bot.play(), { minDelayMs: 2000, maxDelayMs: 60_000 }).catch(() => {
-        console.error('No se pudo reloguear tras invalidated, se seguirá intentando en el bucle general.');
-    });
+    withRetry('Re-login tras invalidated', () => bot.play(), { minDelayMs: 2000, maxDelayMs: 60_000 })
+        .catch(() => {
+            console.error('No se pudo reloguear tras invalidated, se seguirá intentando en el bucle general.');
+        })
+        .finally(() => { relogging = false; });
 });
 
 // Utilidad: reintentos con backoff exponencial + jitter
@@ -80,8 +86,20 @@ process.on('uncaughtException', (err) => {
     // No salimos; dejamos que el bot continúe vivo
 });
 
-process.on('multipleResolves', (type, promise, reason) => {
-    console.warn('⚠️ multipleResolves:', type, reason);
+process.on('multipleResolves', (type, promise, reason: any) => {
+    // Ignorar resoluciones sin razón (ruido)
+    if (type === 'resolve' && (reason === undefined || reason === null)) {
+        return;
+    }
+    const msg = reason instanceof Error ? `${reason.name}: ${reason.message}` : String(reason);
+    const stack = (reason && (reason as any).stack) ? String((reason as any).stack) : '';
+    const isAbortErr = (reason && ((reason as any).code === 'ABORT_ERR' || /AbortError|operation was aborted/i.test(msg)));
+    const isDiscordWs = /@discordjs\/ws|WebSocketShard/.test(stack);
+    if (isAbortErr && isDiscordWs) {
+        // Ruido benigno de reconexiones del WS de Discord: ignorar
+        return;
+    }
+    console.warn('⚠️ multipleResolves:', type, msg);
 });
 
 let shuttingDown = false;
