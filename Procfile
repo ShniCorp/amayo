@@ -1,2 +1,3 @@
-worker: npm start:prod
-dev: npm dev:mem
+worker: npm run start:prod
+dev: npm run dev:mem
+
