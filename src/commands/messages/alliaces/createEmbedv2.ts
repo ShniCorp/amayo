@@ -22,7 +22,7 @@ const btns = (disabled = false) => ([
         components: [
             { style: ButtonStyle.Secondary, type: 2, label: "🖼️ Imagen", disabled, custom_id: "add_image" },
             { style: ButtonStyle.Secondary, type: 2, label: "🖼️ Portada", disabled, custom_id: "cover_image" },
-            { style: ButtonStyle.Secondary, type: 2, label: "📎 Thumbnail", disabled, custom_id: "edit_thumbnail" },
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420535460773498891", label: "Thumbnail", disabled, custom_id: "edit_thumbnail" },
             { style: ButtonStyle.Secondary, type: 2, label: "🔗 Crear Botón Link", disabled, custom_id: "edit_link_button" },
             { style: ButtonStyle.Primary, type: 2, label: "🔄 Mover", disabled, custom_id: "move_block" }
         ]
