@@ -4,6 +4,13 @@ import { loadEvents } from "./core/loaderEvents";
 import { redis, redisConnect } from "./core/redis";
 import { registeringCommands } from "./core/api/discordAPI";
 import {loadComponents} from "./core/components";
+import { startMemoryMonitor } from "./core/memoryMonitor"; // añadido
+
+// Activar monitor de memoria si se define la variable
+const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
+if (__memInt > 0) {
+    startMemoryMonitor({ intervalSeconds: __memInt });
+}
 
 export const bot = new Amayo();
 

@@ -1,12 +1,10 @@
 import {
     Message
 } from "discord.js";
-// Se agrega ts
-//@ts-ignore
-import { PrismaClient } from "@prisma/client";
+// Reemplaza instancia local -> usa singleton
+import { prisma } from "../../core/prisma";
 import { replaceVars } from "../../core/lib/vars";
 
-const prisma = new PrismaClient();
 
 // Regex para detectar URLs válidas (corregido)
 const URL_REGEX = /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi;
@@ -389,8 +387,8 @@ async function convertConfigToDisplayComponent(config: any, user: any, guild: an
 }
 
 // Función helper para validar URLs
-function isValidUrl(url: string): boolean {
-    if (!url || typeof url !== 'string') return false;
+function isValidUrl(url: unknown): url is string {
+    if (typeof url !== 'string' || !url) return false;
     try {
         new URL(url);
         return url.startsWith('http://') || url.startsWith('https://');
