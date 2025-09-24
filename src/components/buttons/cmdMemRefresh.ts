@@ -1,4 +1,4 @@
-import type { ButtonInteraction } from 'discord.js';
+import {ButtonInteraction, MessageFlags} from 'discord.js';
 import { buildAdminPanel } from '../../commands/messages/net/commandsAdmin';
 
 const OWNER_ID = '327207082203938818';
@@ -7,7 +7,7 @@ export default {
   customId: 'cmd_mem_refresh',
   run: async (interaction: ButtonInteraction) => {
     if (interaction.user.id !== OWNER_ID) {
-      return interaction.reply({ content: '❌ No autorizado.', ephemeral: true });
+      return interaction.reply({ content: '❌ No autorizado.',  flags: MessageFlags.Ephemeral });
     }
     try {
       await interaction.deferUpdate();
@@ -17,7 +17,7 @@ export default {
     } catch (e) {
       console.error('Error refrescando panel de memoria:', e);
       if (!interaction.deferred && !interaction.replied)
-        await interaction.reply({ content: '❌ Error refrescando panel.', ephemeral: true });
+        await interaction.reply({ content: '❌ Error refrescando panel.',  flags: MessageFlags.Ephemeral });
     }
   }
 };
