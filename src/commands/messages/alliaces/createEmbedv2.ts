@@ -12,26 +12,26 @@ const btns = (disabled = false) => ([
         components: [
             { style: ButtonStyle.Secondary, type: 2, emoji: "1420535018521886924", label: "📝 Título", disabled, custom_id: "edit_title" },
             { style: ButtonStyle.Secondary, type: 2, emoji: "1420535018521886924", label: "Descripción", disabled, custom_id: "edit_description" },
-            { style: ButtonStyle.Secondary, type: 2, label: "🎨 Color", disabled, custom_id: "edit_color" },
-            { style: ButtonStyle.Secondary, type: 2, emoji: "31420535511663116368", label: "Contenido", disabled, custom_id: "add_content" },
-            { style: ButtonStyle.Secondary, type: 2, label: "➖ Separador", disabled, custom_id: "add_separator" }
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420540368503570484", label: "Color", disabled, custom_id: "edit_color" },
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420535511663116368", label: "Contenido", disabled, custom_id: "add_content" },
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420540572715847861", label: "Separador", disabled, custom_id: "add_separator" }
         ]
     },
     {
         type: 1,
         components: [
-            { style: ButtonStyle.Secondary, type: 2, label: "🖼️ Imagen", disabled, custom_id: "add_image" },
-            { style: ButtonStyle.Secondary, type: 2, label: "🖼️ Portada", disabled, custom_id: "cover_image" },
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420539242643193896", label: "Imagen", disabled, custom_id: "add_image" },
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420539242643193896", label: "Portada", disabled, custom_id: "cover_image" },
             { style: ButtonStyle.Secondary, type: 2, emoji: "1420535460773498891", label: "Thumbnail", disabled, custom_id: "edit_thumbnail" },
             { style: ButtonStyle.Secondary, type: 2, emoji: "1420535460773498891", label: "Crear Botón Link", disabled, custom_id: "edit_link_button" },
-            { style: ButtonStyle.Primary, type: 2, label: "🔄 Mover", disabled, custom_id: "move_block" }
+            { style: ButtonStyle.Primary, type: 2, emoji: "1420539499615752242", label: "Mover", disabled, custom_id: "move_block" }
         ]
     },
     {
         type: 1,
         components: [
-            { style: ButtonStyle.Secondary, type: 2, label: "🎯 Variables", disabled, custom_id: "show_variables" },
-            { style: ButtonStyle.Secondary, type: 2, emoji: "1420537312801980456", label: "Duplicar", disabled, custom_id: "duplicate_block" },
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420537401692131400", label: "Variables", disabled, custom_id: "show_variables" },
+            { style: ButtonStyle.Secondary, type: 2, emoji: "1420535206837747944", label: "Duplicar", disabled, custom_id: "duplicate_block" },
             { style: ButtonStyle.Secondary, type: 2, emoji: "1420518308553167071", label: "Vista Raw", disabled, custom_id: "show_raw" },
             { style: ButtonStyle.Secondary, type: 2, label: "📥 Importar", disabled, custom_id: "import_json" },
             { style: ButtonStyle.Secondary, type: 2, label: "📤 Exportar", disabled, custom_id: "export_json" }
