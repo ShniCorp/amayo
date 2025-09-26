@@ -154,7 +154,7 @@ export const command: CommandMessage = {
         };
 
         // Select de categorías + botón exportar
-        const categoryRow = {
+        const categorySelectRow = {
             type: 1,
             components: [
                 {
@@ -162,12 +162,17 @@ export const command: CommandMessage = {
                     custom_id: 'help_category_select',
                     placeholder: '📂 Selecciona una categoría...',
                     options: categories.slice(0, 25).map(c => ({ label: c, value: `cat:${c}` }))
-                },
+                }
+            ]
+        };
+        const exportRow = {
+            type: 1,
+            components: [
                 { type: 2, style: 3, label: '📋 Exportar', custom_id: 'export_commands' }
             ]
         };
 
-        const panelMessage = await message.reply({ flags: 32768, components: [helpPanel, categoryRow] });
+        const panelMessage = await message.reply({ flags: 32768, components: [helpPanel, categorySelectRow, exportRow] });
 
         const collector = panelMessage.createMessageComponentCollector({
             time: 600000,
@@ -196,7 +201,7 @@ export const command: CommandMessage = {
             }
 
             if (interaction.customId === 'back_to_main' || interaction.customId === 'show_all_commands') {
-                await interaction.update({ components: [helpPanel, categoryRow] });
+                await interaction.update({ components: [helpPanel, categorySelectRow, exportRow] });
                 return;
             }
 
