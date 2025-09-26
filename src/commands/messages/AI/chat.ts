@@ -158,10 +158,13 @@ ${userHistory.messages.slice(-3).join('\n')}`;
             const response = await genAI.models.generateContent({
                 model: "gemini-2.5-flash",
                 contents: baseSystemPrompt,
-                maxOutputTokens: dynamicOutputTokens,
-                temperature: 0.7, // Reducido para respuestas más consistentes
-                topP: 0.8,
-                topK: 30,
+                // @ts-ignore
+                generationConfig: {
+                    maxOutputTokens: dynamicOutputTokens,
+                    temperature: 0.7, // Reducido para respuestas más consistentes
+                    topP: 0.8,
+                    topK: 30,
+                }
             });
 
             // Extraer el texto de la respuesta

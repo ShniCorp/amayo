@@ -8,7 +8,10 @@
     "dev": "npx tsx watch src/main.ts",
     "dev:light": "CACHE_MESSAGES_LIMIT=25 CACHE_MEMBERS_LIMIT=50 SWEEP_MESSAGES_LIFETIME_SECONDS=600 SWEEP_MESSAGES_INTERVAL_SECONDS=240 npx tsx watch --clear-screen=false src/main.ts",
     "dev:mem": "MEMORY_LOG_INTERVAL_SECONDS=120 npx tsx watch src/main.ts",
+    "dev:ultra": "CACHE_MESSAGES_LIMIT=10 CACHE_MEMBERS_LIMIT=25 SWEEP_MESSAGES_LIFETIME_SECONDS=300 SWEEP_MESSAGES_INTERVAL_SECONDS=120 MEMORY_LOG_INTERVAL_SECONDS=60 ENABLE_MEMORY_OPTIMIZER=true NODE_OPTIONS='--max-old-space-size=256 --expose-gc' npx tsx watch --clear-screen=false src/main.ts",
+    "dev:optimized": "MEMORY_LOG_INTERVAL_SECONDS=300 ENABLE_MEMORY_OPTIMIZER=true NODE_OPTIONS='--expose-gc' npx tsx watch src/main.ts",
     "start:prod": "NODE_ENV=production NODE_OPTIONS=--max-old-space-size=384 npx tsx src/main.ts",
+    "start:prod-optimized": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx src/main.ts",
     "typecheck": "tsc --noEmit"
   },
   "keywords": [ ],

@@ -4,7 +4,8 @@ import { loadEvents } from "./core/loaderEvents";
 import { redis, redisConnect } from "./core/redis";
 import { registeringCommands } from "./core/api/discordAPI";
 import {loadComponents} from "./core/components";
-import { startMemoryMonitor } from "./core/memoryMonitor"; // añadido
+import { startMemoryMonitor } from "./core/memoryMonitor";
+import {memoryOptimizer} from "./core/memoryOptimizer";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
@@ -12,11 +13,17 @@ if (__memInt > 0) {
     startMemoryMonitor({ intervalSeconds: __memInt });
 }
 
+// Activar optimizador de memoria adicional
+if (process.env.ENABLE_MEMORY_OPTIMIZER === 'true') {
+    memoryOptimizer.start();
+}
+
 export const bot = new Amayo();
 
 // Listeners de robustez del cliente Discord
 bot.on('error', (e) => console.error('🐞 Discord client error:', e));
 bot.on('warn', (m) => console.warn('⚠️ Discord warn:', m));
+
 // Evitar reintentos de re-login simultáneos
 let relogging = false;
 // Cuando la sesión es invalidada, intentamos reconectar/login
@@ -115,6 +122,9 @@ async function gracefulShutdown() {
     shuttingDown = true;
     console.log('🛑 Apagado controlado iniciado...');
     try {
+        // Detener optimizador de memoria
+        memoryOptimizer.stop();
+
         // Cerrar Redis si procede
         try {
             if (redis?.isOpen) {

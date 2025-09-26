@@ -1,6 +1,9 @@
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
-import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags } from "discord.js";
+import {
+    ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags,
+    AnyComponentBuilder
+} from "discord.js";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
 
 /**
@@ -356,7 +359,7 @@ export const command: CommandMessage = {
                             .setMaxLength(256)
                             .setRequired(true);
 
-                        const firstActionRow = new ActionRowBuilder().addComponents(titleInput);
+                        const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput);
                         modal.addComponents(firstActionRow);
 
                         //@ts-ignore
@@ -380,7 +383,7 @@ export const command: CommandMessage = {
                             .setMaxLength(2000)
                             .setRequired(true);
 
-                        const firstActionRow = new ActionRowBuilder().addComponents(descInput);
+                        const firstActionRow: ActionRowBuilder<AnyComponentBuilder> = new ActionRowBuilder().addComponents(descInput);
                         modal.addComponents(firstActionRow);
 
                         //@ts-ignore
@@ -403,7 +406,7 @@ export const command: CommandMessage = {
                             .setMaxLength(7)
                             .setRequired(false);
 
-                        const firstActionRow = new ActionRowBuilder().addComponents(colorInput);
+                        const firstActionRow: ActionRowBuilder<TextInputBuilder> = new ActionRowBuilder().addComponents(colorInput);
                         modal.addComponents(firstActionRow);
 
                         //@ts-ignore

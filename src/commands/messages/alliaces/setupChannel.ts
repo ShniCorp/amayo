@@ -319,7 +319,7 @@ export const command: CommandMessage = {
                             // Verificar que el bloque existe
                             const blockConfig = await client.prisma.blockV2Config.findFirst({
                                 where: {
-                                    guildId: message.guildId,
+                                    guildId: message.guildId || undefined,
                                     name: blockName
                                 }
                             });

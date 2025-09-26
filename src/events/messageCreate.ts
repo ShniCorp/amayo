@@ -10,10 +10,10 @@ bot.on(Events.MessageCreate, async (message) => {
     await alliance(message);
     const server = await bot.prisma.guild.upsert({
         where: {
-            id: message.guildId
+            id: message.guildId || undefined
         },
         create: {
-            id: message.guildId,
+            id: message!.guildId || message.guild!.id,
             name: message.guild!.name
         },
         update: {}

@@ -2,6 +2,7 @@ import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } from "discord.js";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
+import {Block} from "../../../core/types/block";
 
 // Botones de edición (máx 5 por fila)
 const btns = (disabled = false) => ([
@@ -141,10 +142,14 @@ export const command: CommandMessage = {
             return;
         }
 
-        let blockState: any = {
-            title: existingBlock.config?.title || `Block: ${blockName}`,
-            color: existingBlock.config?.color ?? null,
+        let blockState: Block = {
+            //@ts-ignore
+            title: existingBlock.config?.title ?? `## Block: ${blockName}`,
+            //@ts-ignore
+            color: existingBlock.config?.color ?? 0x427AE3,
+            //@ts-ignore
             coverImage: existingBlock.config?.coverImage ?? null,
+            //@ts-ignore
             components: Array.isArray(existingBlock.config?.components) ? existingBlock.config.components : []
         };
 
@@ -183,6 +188,7 @@ export const command: CommandMessage = {
                         await i.deferUpdate();
                         await client.prisma.blockV2Config.update({
                             where: { guildId_name: { guildId: message.guildId!, name: blockName } },
+                            //@ts-ignore
                             data: { config: blockState }
                         });
                         await updateEditor(editorMessage, {
@@ -210,6 +216,7 @@ export const command: CommandMessage = {
                         const modal = new ModalBuilder().setCustomId('edit_title_modal').setTitle('📝 Editar Título del Block');
                         const titleInput = new TextInputBuilder().setCustomId('title_input').setLabel('Nuevo Título').setStyle(TextInputStyle.Short).setPlaceholder('Escribe el nuevo título aquí...').setValue(blockState.title || '').setMaxLength(256).setRequired(true);
                         const row = new ActionRowBuilder().addComponents(titleInput);
+                        //@ts-ignore
                         modal.addComponents(row);
                         // @ts-ignore
                         await i.showModal(modal);
@@ -217,10 +224,12 @@ export const command: CommandMessage = {
                     }
                     case "edit_description": {
                         const modal = new ModalBuilder().setCustomId('edit_description_modal').setTitle('📄 Editar Descripción');
+                        //@ts-ignore
                         const descComp = blockState.components.find((c: any) => c.type === 10);
                         const currentDesc = descComp ? descComp.content : '';
                         const descInput = new TextInputBuilder().setCustomId('description_input').setLabel('Nueva Descripción').setStyle(TextInputStyle.Paragraph).setPlaceholder('Escribe la nueva descripción aquí...').setValue(currentDesc || '').setMaxLength(2000).setRequired(true);
                         const row = new ActionRowBuilder().addComponents(descInput);
+                        //@ts-ignore
                         modal.addComponents(row);
                         // @ts-ignore
                         await i.showModal(modal);
@@ -231,6 +240,7 @@ export const command: CommandMessage = {
                         const currentColor = blockState.color ? `#${blockState.color.toString(16).padStart(6, '0')}` : '';
                         const colorInput = new TextInputBuilder().setCustomId('color_input').setLabel('Color en formato HEX').setStyle(TextInputStyle.Short).setPlaceholder('#FF5733 o FF5733').setValue(currentColor).setMaxLength(7).setRequired(false);
                         const row = new ActionRowBuilder().addComponents(colorInput);
+                        //@ts-ignore
                         modal.addComponents(row);
                         // @ts-ignore
                         await i.showModal(modal);
@@ -240,6 +250,7 @@ export const command: CommandMessage = {
                         const modal = new ModalBuilder().setCustomId('add_content_modal').setTitle('➕ Agregar Nuevo Contenido');
                         const contentInput = new TextInputBuilder().setCustomId('content_input').setLabel('Contenido del Texto').setStyle(TextInputStyle.Paragraph).setPlaceholder('Escribe el contenido aquí...').setMaxLength(2000).setRequired(true);
                         const row = new ActionRowBuilder().addComponents(contentInput);
+                        //@ts-ignore
                         modal.addComponents(row);
                         // @ts-ignore
                         await i.showModal(modal);
@@ -249,6 +260,7 @@ export const command: CommandMessage = {
                         const modal = new ModalBuilder().setCustomId('add_image_modal').setTitle('🖼️ Agregar Nueva Imagen');
                         const imageUrlInput = new TextInputBuilder().setCustomId('image_url_input').setLabel('URL de la Imagen').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/imagen.png').setMaxLength(2000).setRequired(true);
                         const row = new ActionRowBuilder().addComponents(imageUrlInput);
+                        //@ts-ignore
                         modal.addComponents(row);
                         // @ts-ignore
                         await i.showModal(modal);
@@ -270,10 +282,12 @@ export const command: CommandMessage = {
                                     const modal = new ModalBuilder().setCustomId('edit_cover_modal').setTitle('🖼️ Editar Imagen de Portada');
                                     const coverInput = new TextInputBuilder().setCustomId('cover_input').setLabel('URL de la Imagen de Portada').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/portada.png').setValue(blockState.coverImage || '').setMaxLength(2000).setRequired(true);
                                     const row = new ActionRowBuilder().addComponents(coverInput);
+                                    //@ts-ignore
                                     modal.addComponents(row);
                                     // @ts-ignore
                                     await b.showModal(modal);
                                 } else if (b.customId === 'delete_cover') {
+                                    //@ts-ignore
                                     blockState.coverImage = null;
                                     await b.update({ content: '✅ Imagen de portada eliminada.', components: [] });
                                     await updateEditor(editorMessage, { // @ts-ignore
@@ -287,6 +301,7 @@ export const command: CommandMessage = {
                             const modal = new ModalBuilder().setCustomId('add_cover_modal').setTitle('🖼️ Agregar Imagen de Portada');
                             const coverInput = new TextInputBuilder().setCustomId('cover_input').setLabel('URL de la Imagen de Portada').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/portada.png').setMaxLength(2000).setRequired(true);
                             const row = new ActionRowBuilder().addComponents(coverInput);
+                            //@ts-ignore
                             modal.addComponents(row);
                             // @ts-ignore
                             await i.showModal(modal);
@@ -294,6 +309,7 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "move_block": {
+                        //@ts-ignore
                         const options = blockState.components.map((c: any, idx: number) => ({
                             label: c.type === 10 ? `Texto: ${c.content?.slice(0, 30) || '...'}` : c.type === 14 ? 'Separador' : c.type === 12 ? `Imagen: ${c.url?.slice(-30) || '...'}` : `Componente ${c.type}`,
                             value: String(idx),
@@ -317,8 +333,11 @@ export const command: CommandMessage = {
                                 if (b.customId.startsWith('move_up_')) {
                                     const i2 = parseInt(b.customId.replace('move_up_', ''));
                                     if (i2 > 0) {
+                                        //@ts-ignore
                                         const item = blockState.components[i2];
+                                        //@ts-ignore
                                         blockState.components.splice(i2, 1);
+                                        //@ts-ignore
                                         blockState.components.splice(i2 - 1, 0, item);
                                     }
                                     await b.update({ content: '✅ Bloque movido arriba.', components: [] });
@@ -364,10 +383,12 @@ export const command: CommandMessage = {
                         selCollector.on('collect', async (sel: any) => {
                             const selectedValue = sel.values[0];
                             if (selectedValue === 'cover_image') {
+                                //@ts-ignore
                                 blockState.coverImage = null;
                                 await sel.update({ content: '✅ Imagen de portada eliminada.', components: [] });
                             } else {
                                 const idx = parseInt(selectedValue);
+                                //@ts-ignore
                                 blockState.components.splice(idx, 1);
                                 await sel.update({ content: '✅ Elemento eliminado.', components: [] });
                             }
@@ -445,6 +466,7 @@ export const command: CommandMessage = {
                         const modal = new ModalBuilder().setCustomId('import_json_modal').setTitle('📥 Importar JSON');
                         const jsonInput = new TextInputBuilder().setCustomId('json_input').setLabel('Pega tu configuración JSON aquí').setStyle(TextInputStyle.Paragraph).setPlaceholder('{"title": "...", "components": [...]}').setMaxLength(4000).setRequired(true);
                         const row = new ActionRowBuilder().addComponents(jsonInput);
+                        //@ts-ignore
                         modal.addComponents(row);
                         // @ts-ignore
                         await i.showModal(modal);
@@ -463,6 +485,7 @@ export const command: CommandMessage = {
                         const spacingInput = new TextInputBuilder().setCustomId('separator_spacing').setLabel('Espaciado (1-3)').setStyle(TextInputStyle.Short).setPlaceholder('1, 2 o 3').setValue('1').setMaxLength(1).setRequired(false);
                         const r1 = new ActionRowBuilder().addComponents(visibleInput);
                         const r2 = new ActionRowBuilder().addComponents(spacingInput);
+                        //@ts-ignore
                         modal.addComponents(r1, r2);
                         // @ts-ignore
                         await i.showModal(modal);
@@ -489,6 +512,7 @@ export const command: CommandMessage = {
                             const modal = new ModalBuilder().setCustomId(`edit_thumbnail_modal_${idx}`).setTitle('📎 Editar Thumbnail');
                             const thumbnailInput = new TextInputBuilder().setCustomId('thumbnail_input').setLabel('URL del Thumbnail').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/thumbnail.png o dejar vacío para eliminar').setValue(textComp?.thumbnail || '').setMaxLength(2000).setRequired(false);
                             const row = new ActionRowBuilder().addComponents(thumbnailInput);
+                            //@ts-ignore
                             modal.addComponents(row);
                             // Abrir modal directamente sin update previo
                             // @ts-ignore
@@ -497,6 +521,7 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "edit_link_button": {
+                        //@ts-ignore
                         const textDisplays = blockState.components.map((c: any, idx: number) => ({ c, idx })).filter(({ c }: any) => c.type === 10);
                         if (textDisplays.length === 0) {
                             await i.deferReply({ flags: 64 });
@@ -535,6 +560,7 @@ export const command: CommandMessage = {
                                         const r1 = new ActionRowBuilder().addComponents(urlInput);
                                         const r2 = new ActionRowBuilder().addComponents(labelInput);
                                         const r3 = new ActionRowBuilder().addComponents(emojiInput);
+                                        //@ts-ignore
                                         modal.addComponents(r1, r2, r3);
                                         // Abrir modal directamente sobre el botón sin update previo
                                         // @ts-ignore
@@ -556,6 +582,7 @@ export const command: CommandMessage = {
                                 const r1 = new ActionRowBuilder().addComponents(urlInput);
                                 const r2 = new ActionRowBuilder().addComponents(labelInput);
                                 const r3 = new ActionRowBuilder().addComponents(emojiInput);
+                                //@ts-ignore
                                 modal.addComponents(r1, r2, r3);
                                 // Abrir modal directamente sin update previo
                                 // @ts-ignore

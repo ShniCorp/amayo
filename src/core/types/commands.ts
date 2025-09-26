@@ -1,5 +1,5 @@
-import type {ChatInputCommandInteraction, Client, Message} from "discord.js";
-import Amayo from "../client";
+import type {ChatInputCommandInteraction, Message} from "discord.js";
+import type Amayo from "../client";
 
 export interface CommandMessage {
     name: string;
@@ -13,7 +13,7 @@ export interface CommandSlash {
     name: string;
     description: string;
     type: 'slash';
-    options?: string[];
+    options?: any[];
     cooldown?: number;
-    run: (i: ChatInputCommandInteraction, client: Client) => Promise<void>;
+    run: (i: ChatInputCommandInteraction, client: Amayo) => Promise<void>;
 }
