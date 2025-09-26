@@ -24,6 +24,9 @@ export const command: CommandMessage = {
     type: "message",
     aliases: ['chat', 'gemini'],
     cooldown: 5,
+    description: 'Chatea con la IA (Gemini) directamente desde Discord.',
+    category: 'IA',
+    usage: 'ai <mensaje>',
     run: async (message, args) => {
         // Verificar que se proporcione un prompt
         if (!args || args.length === 0) {

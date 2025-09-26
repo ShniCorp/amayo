@@ -2,7 +2,6 @@ import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import {
     ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, Message, MessageFlags,
-    AnyComponentBuilder
 } from "discord.js";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
 
@@ -238,6 +237,9 @@ export const command: CommandMessage = {
     type: "message",
     aliases: ["embed-crear", "nuevo-embed", "blockcreatev2"],
     cooldown: 20,
+    description: "Crea un nuevo bloque/embedded con editor interactivo (DisplayComponents).",
+    category: "Alianzas",
+    usage: "crear-embed <nombre>",
     run: async (message, args, client) => {
         if (!message.member?.permissions.has("Administrator")) {
             await message.reply("❌ No tienes permisos de Administrador.");
@@ -383,7 +385,7 @@ export const command: CommandMessage = {
                             .setMaxLength(2000)
                             .setRequired(true);
 
-                        const firstActionRow: ActionRowBuilder<AnyComponentBuilder> = new ActionRowBuilder().addComponents(descInput);
+                        const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descInput);
                         modal.addComponents(firstActionRow);
 
                         //@ts-ignore
@@ -406,7 +408,7 @@ export const command: CommandMessage = {
                             .setMaxLength(7)
                             .setRequired(false);
 
-                        const firstActionRow: ActionRowBuilder<TextInputBuilder> = new ActionRowBuilder().addComponents(colorInput);
+                        const firstActionRow: ActionRowBuilder<TextInputBuilder> = new ActionRowBuilder<TextInputBuilder>().addComponents(colorInput);
                         modal.addComponents(firstActionRow);
 
                         //@ts-ignore
@@ -426,7 +428,7 @@ export const command: CommandMessage = {
                             .setMaxLength(2000)
                             .setRequired(true);
 
-                        const firstActionRow = new ActionRowBuilder().addComponents(contentInput);
+                        const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput);
                         modal.addComponents(firstActionRow);
 
                         //@ts-ignore
@@ -446,7 +448,7 @@ export const command: CommandMessage = {
                             .setMaxLength(2000)
                             .setRequired(true);
 
-                        const firstActionRow = new ActionRowBuilder().addComponents(imageUrlInput);
+                        const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(imageUrlInput);
                         modal.addComponents(firstActionRow);
 
                         //@ts-ignore
@@ -498,7 +500,7 @@ export const command: CommandMessage = {
                                         .setMaxLength(2000)
                                         .setRequired(true);
 
-                                    const firstActionRow = new ActionRowBuilder().addComponents(coverInput);
+                                    const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(coverInput);
                                     modal.addComponents(firstActionRow);
 
                                     //@ts-ignore
@@ -527,7 +529,7 @@ export const command: CommandMessage = {
                                 .setMaxLength(2000)
                                 .setRequired(true);
 
-                            const firstActionRow = new ActionRowBuilder().addComponents(coverInput);
+                            const firstActionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(coverInput);
                             modal.addComponents(firstActionRow);
 
                             //@ts-ignore
@@ -831,7 +833,7 @@ export const command: CommandMessage = {
                             .setMaxLength(4000)
                             .setRequired(true);
 
-                        const firstRow = new ActionRowBuilder().addComponents(jsonInput);
+                        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(jsonInput);
                         modal.addComponents(firstRow);
 
                         //@ts-ignore
@@ -874,8 +876,8 @@ export const command: CommandMessage = {
                             .setMaxLength(1)
                             .setRequired(false);
 
-                        const firstRow = new ActionRowBuilder().addComponents(visibleInput);
-                        const secondRow = new ActionRowBuilder().addComponents(spacingInput);
+                        const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(visibleInput);
+                        const secondRow = new ActionRowBuilder<TextInputBuilder>().addComponents(spacingInput);
                         modal.addComponents(firstRow, secondRow);
 
                         //@ts-ignore
@@ -936,7 +938,7 @@ export const command: CommandMessage = {
                                 .setMaxLength(2000)
                                 .setRequired(false);
 
-                            const firstRow = new ActionRowBuilder().addComponents(thumbnailInput);
+                            const firstRow = new ActionRowBuilder<TextInputBuilder>().addComponents(thumbnailInput);
                             modal.addComponents(firstRow);
 
                             // Abrir modal directamente sin update previo
@@ -1035,9 +1037,9 @@ export const command: CommandMessage = {
                                             .setMaxLength(64)
                                             .setRequired(false);
 
-                                        const r1 = new ActionRowBuilder().addComponents(urlInput);
-                                        const r2 = new ActionRowBuilder().addComponents(labelInput);
-                                        const r3 = new ActionRowBuilder().addComponents(emojiInput);
+                                        const r1 = new ActionRowBuilder<TextInputBuilder>().addComponents(urlInput);
+                                        const r2 = new ActionRowBuilder<TextInputBuilder>().addComponents(labelInput);
+                                        const r3 = new ActionRowBuilder<TextInputBuilder>().addComponents(emojiInput);
                                         modal.addComponents(r1, r2, r3);
 
                                         // Abrir modal directamente en la misma interacción del botón
@@ -1081,9 +1083,9 @@ export const command: CommandMessage = {
                                     .setMaxLength(64)
                                     .setRequired(false);
 
-                                const r1 = new ActionRowBuilder().addComponents(urlInput);
-                                const r2 = new ActionRowBuilder().addComponents(labelInput);
-                                const r3 = new ActionRowBuilder().addComponents(emojiInput);
+                                const r1 = new ActionRowBuilder<TextInputBuilder>().addComponents(urlInput);
+                                const r2 = new ActionRowBuilder<TextInputBuilder>().addComponents(labelInput);
+                                const r3 = new ActionRowBuilder<TextInputBuilder>().addComponents(emojiInput);
                                 modal.addComponents(r1, r2, r3);
 
                                 // Abrir modal directamente sin update previo

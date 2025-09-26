@@ -1,11 +1,15 @@
 // @ts-ignore
 import { CommandMessage } from "../../../core/types/commands";
+import { commands as registry } from "../../core/loader";
 
 export const command: CommandMessage = {
     name: 'ayuda',
     type: "message",
     aliases: ['help', 'comandos', 'cmds'],
     cooldown: 5,
+    description: 'Muestra la lista de comandos y detalles por categoría.',
+    category: 'Utilidad',
+    usage: 'ayuda [comando] | [categoría] | vacío',
     run: async (message: any, args: string[], client: any) => {
         // Obtener información del servidor para mostrar el prefix actual
         const server = await client.prisma.guild.findFirst({
@@ -13,432 +17,210 @@ export const command: CommandMessage = {
         });
         const prefix = server?.prefix || "!";
 
-        // Definir categorías de comandos con nombres modernos
-        const commandCategories = {
-            "Alianzas": [
-                {
-                    name: "crear-embed",
-                    aliases: ["embed-crear", "nuevo-embed"],
-                    description: "Crear nuevos embeds con DisplayComponents modernos",
-                    usage: `${prefix}crear-embed <nombre>`
-                },
-                {
-                    name: "editar-embed",
-                    aliases: ["embed-editar", "modificar-embed"],
-                    description: "Editor avanzado de embeds con interfaz interactiva",
-                    usage: `${prefix}editar-embed <nombre>`
-                },
-                {
-                    name: "lista-embeds",
-                    aliases: ["embeds", "ver-embeds"],
-                    description: "Centro de gestión de embeds con paginación",
-                    usage: `${prefix}lista-embeds`
-                },
-                {
-                    name: "eliminar-embed",
-                    aliases: ["embed-eliminar", "borrar-embed"],
-                    description: "Panel interactivo para eliminar embeds",
-                    usage: `${prefix}eliminar-embed [nombre]`
-                },
-                {
-                    name: "canal-alianza",
-                    aliases: ["configurar-canal", "setup-canal"],
-                    description: "Configurar canales para sistema de alianzas",
-                    usage: `${prefix}canal-alianza`
-                },
-                {
-                    name: "eliminar-canal-alianza",
-                    aliases: ["removechannel-alliance", "removealchannel", "delalchannel"],
-                    description: "Eliminar canales de la configuración de alianzas",
-                    usage: `${prefix}eliminar-canal-alianza`
-                },
-                {
-                    name: "listar-canales-alianza",
-                    aliases: ["listchannels-alliance", "listalchannel", "channelsally"],
-                    description: "Ver lista detallada de canales configurados para alianzas",
-                    usage: `${prefix}listar-canales-alianza`
-                },
-                {
-                    name: "demo-componentes",
-                    aliases: ["demo", "prueba-componentes"],
-                    description: "Demostración de DisplayComponents con accesorios",
-                    usage: `${prefix}demo-componentes`
-                }
-            ],
-            "Red": [
-                {
-                    name: "ping",
-                    aliases: ["latencia", "pong"],
-                    description: "Verificar latencia y estado del bot",
-                    usage: `${prefix}ping`
-                }
-            ],
-            "Configuracion": [
-                {
-                    name: "configuracion",
-                    aliases: ["config", "ajustes", "settings"],
-                    description: "Panel de configuración del servidor",
-                    usage: `${prefix}configuracion`
-                }
-            ]
+        // Construir lista de comandos únicos (sin duplicar aliases)
+        const seen = new Set<string>();
+        const allMsgCommands = [] as Array<{
+            name: string;
+            aliases: string[];
+            description: string;
+            category: string;
+            usage: string;
+            cooldown?: number;
+        }>;
+
+        for (const [, cmd] of registry) {
+            if (!cmd || cmd.type !== 'message') continue;
+            const baseName: string | undefined = cmd.name ?? cmd.data?.name;
+            if (!baseName) continue;
+            if (seen.has(baseName)) continue; // evitar duplicados por alias
+            seen.add(baseName);
+
+            const cdesc = (cmd.description ?? '').toString().trim();
+            const ccat = (cmd.category ?? 'Otros').toString();
+            const usage = (cmd.usage ? `${prefix}${cmd.usage}` : `${prefix}${baseName}`);
+
+            allMsgCommands.push({
+                name: baseName,
+                aliases: Array.isArray(cmd.aliases) ? cmd.aliases : [],
+                description: cdesc || 'Sin descripción',
+                category: ccat,
+                usage,
+                cooldown: typeof cmd.cooldown === 'number' ? cmd.cooldown : undefined
+            });
+        }
+
+        // Si no hay comandos
+        if (allMsgCommands.length === 0) {
+            const emptyPanel = {
+                type: 17,
+                accent_color: 0xf04747,
+                components: [
+                    {
+                        type: 10,
+                        content: `### ❌ No hay comandos disponibles\n\nAún no se han cargado comandos de mensaje.`
+                    }
+                ]
+            };
+            await message.reply({ flags: 32768, components: [emptyPanel] });
+            return;
+        }
+
+        // Index para búsqueda rápida por nombre/alias
+        const findByNameOrAlias = (q: string) => {
+            const term = q.toLowerCase();
+            return allMsgCommands.find(c => c.name === term || c.aliases.map(a => a.toLowerCase()).includes(term));
         };
 
-        // Definir backRow una sola vez fuera de los casos
-        const backRow = {
-            type: 1,
-            components: [
-                {
-                    type: 2,
-                    style: 2,
-                    label: "↩️ Volver al Menú",
-                    custom_id: "back_to_main"
-                }
-            ]
-        };
+        // Agrupar por categoría
+        const byCategory = new Map<string, typeof allMsgCommands>();
+        for (const c of allMsgCommands) {
+            const cat = c.category || 'Otros';
+            if (!byCategory.has(cat)) byCategory.set(cat, [] as any);
+            // @ts-ignore
+            byCategory.get(cat)!.push(c);
+        }
 
-        // Si se especifica un comando específico
+        // Ordenar categorías por nombre
+        const categories = Array.from(byCategory.keys()).sort((a, b) => a.localeCompare(b, 'es'));
+
+        // Si se solicita un comando concreto
         if (args.length > 0) {
-            const searchCommand = args[0].toLowerCase();
-            let foundCommand = null;
-            let foundCategory = null;
-
-            // Buscar el comando en todas las categorías
-            for (const [category, commands] of Object.entries(commandCategories)) {
-                const command = commands.find(cmd => 
-                    cmd.name === searchCommand || cmd.aliases.includes(searchCommand)
-                );
-                if (command) {
-                    foundCommand = command;
-                    foundCategory = category;
-                    break;
-                }
-            }
-
-            if (foundCommand) {
-                // Panel detallado del comando específico - SIMPLIFICADO
-                const commandDetailPanel = {
+            const query = args.join(' ').trim();
+            const found = findByNameOrAlias(query);
+            if (found) {
+                const panel = {
                     type: 17,
                     accent_color: 0x5865f2,
                     components: [
                         {
                             type: 10,
-                            content: `### 📖 **Ayuda: \`${foundCommand.name}\`**\n\n**Categoría:** ${foundCategory}\n**Descripción:** ${foundCommand.description}\n**Uso:** ${foundCommand.usage}\n\n**Aliases disponibles:**\n${foundCommand.aliases.map(alias => `\`${prefix}${alias}\``).join(", ")}`
+                            content: `### 📖 Ayuda: \`${found.name}\`\n\n` +
+                                     `• Categoría: **${found.category}**\n` +
+                                     `• Descripción: ${found.description}\n` +
+                                     `• Uso: \`${found.usage}\`\n` +
+                                     (found.aliases.length ? `• Aliases: ${found.aliases.map(a => `\`${prefix}${a}\``).join(', ')}` : '')
                         }
                     ]
                 };
-
-                const detailActionsRow = {
+                const backRow = {
                     type: 1,
                     components: [
-                        {
-                            type: 2,
-                            style: 2,
-                            label: "📋 Ver Todos",
-                            custom_id: "show_all_commands"
-                        },
-                        {
-                            type: 2,
-                            style: 2,
-                            label: "🔍 Buscar Otro",
-                            custom_id: "search_command"
-                        }
+                        { type: 2, style: 2, label: '↩️ Volver', custom_id: 'back_to_main' }
                     ]
                 };
-
-                await message.reply({
-                    flags: 32768,
-                    components: [commandDetailPanel, detailActionsRow]
-                });
+                await message.reply({ flags: 32768, components: [panel, backRow] });
                 return;
-            } else {
-                // Comando no encontrado - SIMPLIFICADO
-                const notFoundPanel = {
+            }
+            // También permitir filtrar por categoría si coincide exacto (case-insensitive)
+            const matchCat = categories.find(c => c.toLowerCase() === query.toLowerCase());
+            if (matchCat) {
+                const cmds = byCategory.get(matchCat)!;
+                const catPanel = {
                     type: 17,
-                    accent_color: 0xf04747,
+                    accent_color: 0x00a8ff,
                     components: [
-                        {
+                        { type: 10, content: `### 📂 Categoría: **${matchCat}** (${cmds.length})` },
+                        { type: 14, spacing: 2, divider: true },
+                        ...cmds.map(cmd => ({
                             type: 10,
-                            content: `### ❌ **Comando no encontrado: \`${searchCommand}\`**\n\nNo se encontró ningún comando con el nombre o alias \`${searchCommand}\`.\n\n🔍 **Sugerencias:**\n• Verifica la ortografía\n• Usa \`${prefix}ayuda\` para ver todos los comandos\n• Usa \`${prefix}ayuda <categoría>\` para filtrar`
-                        }
+                            content: `**${cmd.name}** — ${cmd.description}\n\`${cmd.usage}\``
+                        }))
                     ]
                 };
-
-                const notFoundRow = {
+                const backRow = {
                     type: 1,
-                    components: [
-                        {
-                            type: 2,
-                            style: 1,
-                            label: "📋 Ver Todos",
-                            custom_id: "show_all_commands"
-                        }
-                    ]
+                    components: [ { type: 2, style: 2, label: '↩️ Volver', custom_id: 'back_to_main' } ]
                 };
-
-                await message.reply({
-                    flags: 32768,
-                    components: [notFoundPanel, notFoundRow]
-                });
+                await message.reply({ flags: 32768, components: [catPanel, backRow] });
                 return;
             }
         }
 
-        // Panel principal de ayuda - OPTIMIZADO para no exceder límite de componentes
-        const helpPanel = {
+        // Panel principal dinámico
+        const helpPanel: any = {
             type: 17,
             accent_color: 0x5865f2,
             components: [
-                {
-                    type: 10,
-                    content: `### 📚 **Centro de Ayuda - ${message.guild!.name}**`
-                },
-                {
-                    type: 14,
-                    spacing: 1,
-                    divider: true
-                },
-                {
-                    type: 10,
-                    content: `**Prefix actual:** \`${prefix}\`\n**Total de comandos:** ${Object.values(commandCategories).flat().length}\n**Categorías disponibles:** ${Object.keys(commandCategories).length}`
-                },
-                {
-                    type: 14,
-                    spacing: 2,
-                    divider: false
-                }
+                { type: 10, content: `### 📚 Centro de Ayuda — ${message.guild!.name}` },
+                { type: 14, spacing: 1, divider: true },
+                { type: 10, content: `**Prefix actual:** \`${prefix}\`\n**Total de comandos:** ${allMsgCommands.length}\n**Categorías disponibles:** ${categories.length}` },
+                { type: 14, spacing: 2, divider: false },
+                ...categories.map(cat => {
+                    const list = byCategory.get(cat)!;
+                    const names = list.map(c => `\`${c.name}\``).join(', ');
+                    return { type: 10, content: `🔹 **${cat}** (${list.length})\n${names}` };
+                })
             ]
         };
 
-        // Agregar resumen de categorías de forma compacta
-        for (const [categoryName, commands] of Object.entries(commandCategories)) {
-            const commandsList = commands.map(cmd => `\`${cmd.name}\``).join(", ");
-            helpPanel.components.push({
-                type: 10,
-                content: `🔹 **${categoryName}** (${commands.length})\n${commandsList}`
-            });
-        }
-
-        // Botones de navegación
-        const navigationRow = {
+        // Select de categorías + botón exportar
+        const categoryRow = {
             type: 1,
             components: [
                 {
-                    type: 2,
-                    style: 1,
-                    label: "🤝 Alianzas",
-                    custom_id: "category_alliances"
+                    type: 3,
+                    custom_id: 'help_category_select',
+                    placeholder: '📂 Selecciona una categoría...',
+                    options: categories.slice(0, 25).map(c => ({ label: c, value: `cat:${c}` }))
                 },
-                {
-                    type: 2,
-                    style: 2,
-                    label: "🌐 Red",
-                    custom_id: "category_network"
-                },
-                {
-                    type: 2,
-                    style: 2,
-                    label: "⚙️ Config",
-                    custom_id: "category_settings"
-                },
-                {
-                    type: 2,
-                    style: 3,
-                    label: "📋 Exportar",
-                    custom_id: "export_commands"
-                }
+                { type: 2, style: 3, label: '📋 Exportar', custom_id: 'export_commands' }
             ]
         };
 
-        const panelMessage = await message.reply({
-            flags: 32768,
-            components: [helpPanel, navigationRow]
-        });
+        const panelMessage = await message.reply({ flags: 32768, components: [helpPanel, categoryRow] });
 
         const collector = panelMessage.createMessageComponentCollector({
             time: 600000,
             filter: (i: any) => i.user.id === message.author.id
         });
 
-        collector.on("collect", async (interaction: any) => {
-            // Manejar información específica de comandos
-            if (interaction.customId.startsWith("cmd_info_")) {
-                const commandName = interaction.customId.replace("cmd_info_", "");
-                let foundCommand = null;
-                let foundCategory = null;
+        collector.on('collect', async (interaction: any) => {
+            // Selección de categoría
+            if (interaction.customId === 'help_category_select' && interaction.isStringSelectMenu()) {
+                const val = interaction.values?.[0] ?? '';
+                const cat = val.startsWith('cat:') ? val.slice(4) : val;
+                const list = byCategory.get(cat) ?? [];
 
-                for (const [category, commands] of Object.entries(commandCategories)) {
-                    const command = commands.find(cmd => cmd.name === commandName);
-                    if (command) {
-                        foundCommand = command;
-                        foundCategory = category;
-                        break;
-                    }
-                }
-
-                if (foundCommand) {
-                    await interaction.reply({
-                        content: `📖 **${foundCommand.name}**\n\n**Categoría:** ${foundCategory}\n**Descripción:** ${foundCommand.description}\n**Uso:** ${foundCommand.usage}\n**Aliases:** ${foundCommand.aliases.join(", ")}\n\n💡 **Tip:** Usa \`${foundCommand.usage}\` para ejecutar este comando.`,
-                        flags: 64
-                    });
-                }
+                const catPanel = {
+                    type: 17,
+                    accent_color: 0x00a8ff,
+                    components: [
+                        { type: 10, content: `### 📂 Categoría: **${cat}** (${list.length})` },
+                        { type: 14, spacing: 2, divider: true },
+                        ...list.map(cmd => ({ type: 10, content: `**${cmd.name}** — ${cmd.description}\n\`${cmd.usage}\`` }))
+                    ]
+                };
+                const backRow = { type: 1, components: [ { type: 2, style: 2, label: '↩️ Volver', custom_id: 'back_to_main' } ] };
+                await interaction.update({ components: [catPanel, backRow] });
                 return;
             }
 
-            // Manejar categorías específicas - VERSIÓN COMPACTA
-            switch (interaction.customId) {
-                case "category_alliances":
-                    const alliancePanel = {
-                        type: 17,
-                        accent_color: 0x00ff88,
-                        components: [
-                            {
-                                type: 10,
-                                content: "### 🤝 **Comandos de Alianzas**\n\nSistema completo para gestionar alianzas entre servidores:"
-                            },
-                            {
-                                type: 14,
-                                spacing: 2,
-                                divider: true
-                            }
-                        ]
-                    };
+            if (interaction.customId === 'back_to_main' || interaction.customId === 'show_all_commands') {
+                await interaction.update({ components: [helpPanel, categoryRow] });
+                return;
+            }
 
-                    // Agregar comandos de forma compacta
-                    commandCategories["Alianzas"].forEach(cmd => {
-                        alliancePanel.components.push({
-                            type: 10,
-                            content: `**${cmd.name}**\n${cmd.description}\n\`${cmd.usage}\``
-                        });
-                    });
-
-                    await interaction.update({
-                        components: [alliancePanel, backRow]
-                    });
-                    break;
-
-                case "category_network":
-                    const networkPanel = {
-                        type: 17,
-                        accent_color: 0x0099ff,
-                        components: [
-                            {
-                                type: 10,
-                                content: "### 🌐 **Comandos de Red**"
-                            },
-                            {
-                                type: 14,
-                                spacing: 2,
-                                divider: true
-                            }
-                        ]
-                    };
-
-                    commandCategories["Red"].forEach(cmd => {
-                        networkPanel.components.push({
-                            type: 10,
-                            content: `**${cmd.name}**\n${cmd.description}\n\`${cmd.usage}\``
-                        });
-                    });
-
-                    await interaction.update({
-                        components: [networkPanel, backRow]
-                    });
-                    break;
-
-                case "category_settings":
-                    const settingsPanel = {
-                        type: 17,
-                        accent_color: 0xff9500,
-                        components: [
-                            {
-                                type: 10,
-                                content: "### ⚙️ **Comandos de Configuración**"
-                            },
-                            {
-                                type: 14,
-                                spacing: 2,
-                                divider: true
-                            }
-                        ]
-                    };
-
-                    commandCategories["Configuracion"].forEach(cmd => {
-                        settingsPanel.components.push({
-                            type: 10,
-                            content: `**${cmd.name}**\n${cmd.description}\n\`${cmd.usage}\``
-                        });
-                    });
-
-                    await interaction.update({
-                        components: [settingsPanel, backRow]
-                    });
-                    break;
-
-                case "back_to_main":
-                    await interaction.update({
-                        components: [helpPanel, navigationRow]
-                    });
-                    break;
-
-                case "export_commands":
-                    let exportText = `📋 **Lista Completa de Comandos - ${message.guild!.name}**\n\n`;
-                    exportText += `**Prefix:** ${prefix}\n\n`;
-
-                    for (const [category, commands] of Object.entries(commandCategories)) {
-                        exportText += `**${category}**\n`;
-                        commands.forEach(cmd => {
-                            exportText += `• ${cmd.name} - ${cmd.description}\n`;
-                            exportText += `  Uso: ${cmd.usage}\n`;
-                            if (cmd.aliases.length > 0) {
-                                exportText += `  Aliases: ${cmd.aliases.join(", ")}\n`;
-                            }
-                            exportText += `\n`;
-                        });
-                        exportText += `\n`;
+            if (interaction.customId === 'export_commands') {
+                let exportText = `Comandos — ${message.guild!.name}\n\nPrefix: ${prefix}\n\n`;
+                for (const cat of categories) {
+                    const list = byCategory.get(cat)!;
+                    exportText += `${cat}\n`;
+                    for (const cmd of list) {
+                        exportText += `• ${cmd.name} — ${cmd.description}\n  Uso: ${cmd.usage}\n`;
+                        if (cmd.aliases.length) exportText += `  Aliases: ${cmd.aliases.join(', ')}\n`;
                     }
-
-                    await interaction.reply({
-                        content: `\`\`\`\n${exportText}\`\`\``,
-                        flags: 64
-                    });
-                    break;
-
-                default:
-                    if (interaction.customId.startsWith("use_")) {
-                        const commandName = interaction.customId.replace("use_", "");
-                        const foundCmd = Object.values(commandCategories).flat().find(cmd => cmd.name === commandName);
-                        
-                        if (foundCmd) {
-                            await interaction.reply({
-                                content: `🚀 **Ejecutar: \`${foundCmd.name}\`**\n\nUsa: \`${foundCmd.usage}\`\n\n💡 **Tip:** Copia y pega el comando en el chat para usarlo.`,
-                                flags: 64
-                            });
-                        }
-                    }
-                    break;
+                    exportText += `\n`;
+                }
+                await interaction.reply({ content: `\`\`\`\n${exportText}\n\`\`\``, flags: 64 });
+                return;
             }
         });
 
-        collector.on("end", async (collected: any, reason: string) => {
-            if (reason === "time") {
-                const timeoutPanel = {
-                    type: 17,
-                    accent_color: 0x36393f,
-                    components: [
-                        {
-                            type: 10,
-                            content: `### ⏰ **Panel de Ayuda Expirado**\n\nEl panel de ayuda ha expirado por inactividad.\n\nUsa \`${prefix}ayuda\` para abrir un nuevo panel.`
-                        }
-                    ]
-                };
-
+        collector.on('end', async (collected: any, reason: string) => {
+            if (reason === 'time') {
                 try {
-                    await panelMessage.edit({
-                        components: [timeoutPanel]
-                    });
-                } catch (error) {
-                    // Mensaje eliminado o error de edición
-                }
+                    await panelMessage.edit({ components: [helpPanel] });
+                } catch {}
             }
         });
     }

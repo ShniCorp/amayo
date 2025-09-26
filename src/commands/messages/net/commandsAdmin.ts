@@ -62,6 +62,9 @@ export const command: CommandMessage = {
     type: 'message',
     aliases: ['cmdadmin', 'synccommands', 'comandos-admin'],
     cooldown: 5,
+    description: 'Panel del dueño para registrar/limpiar comandos slash y revisar memoria.',
+    category: 'Administración',
+    usage: 'admin-comandos',
     run: async (message, _args, _client) => {
         if (message.author.id !== OWNER_ID) {
             await message.reply({ content: '❌ No tienes permisos para usar este panel.' });

@@ -6,6 +6,10 @@ export interface CommandMessage {
     type: 'message';
     aliases?: string[];
     cooldown?: number;
+    // New optional metadata for auto-help
+    description?: string;
+    category?: string;
+    usage?: string;
     run: (message: Message, args: string[], client: Amayo) => Promise<void>;
 }
 

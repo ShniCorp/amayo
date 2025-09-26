@@ -5,6 +5,9 @@ export const command: CommandMessage = {
     type: "message",
     aliases: ['config', 'ajustes', 'settings'],
     cooldown: 5,
+    description: 'Abre el panel de configuración del servidor (prefix y más).',
+    category: 'Configuración',
+    usage: 'configuracion',
     run: async (message, args, client) => {
         if (!message.member?.permissions.has("Administrator")) {
             await message.reply("❌ No tienes permisos de Administrador.");

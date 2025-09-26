@@ -2,7 +2,6 @@ import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } from "discord.js";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
-import {Block} from "../../../core/types/block";
 
 // Botones de edición (máx 5 por fila)
 const btns = (disabled = false) => ([
@@ -122,6 +121,9 @@ export const command: CommandMessage = {
     type: "message",
     aliases: ["embed-editar", "modificar-embed", "blockeditv2"],
     cooldown: 20,
+    description: "Edita un bloque/embed existente con herramientas interactivas.",
+    category: "Alianzas",
+    usage: "editar-embed <nombre>",
     run: async (message, args, client) => {
         if (!message.member?.permissions.has("Administrator")) {
             await message.reply("❌ No tienes permisos de Administrador.");
@@ -142,7 +144,7 @@ export const command: CommandMessage = {
             return;
         }
 
-        let blockState: Block = {
+        let blockState: any = {
             //@ts-ignore
             title: existingBlock.config?.title ?? `## Block: ${blockName}`,
             //@ts-ignore

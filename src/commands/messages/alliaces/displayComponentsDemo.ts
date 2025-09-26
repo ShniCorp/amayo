@@ -5,6 +5,9 @@ export const command: CommandMessage = {
     type: "message",
     aliases: ["ddemo", "componentsdemo"],
     cooldown: 10,
+    description: "Demostración de DisplayComponents con accesorios y acciones.",
+    category: "Alianzas",
+    usage: "displaydemo",
     run: async (message, args, client) => {
         if (!message.member?.permissions.has("Administrator")) {
             await message.reply("❌ No tienes permisos de Administrador.");
