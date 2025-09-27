@@ -17,13 +17,14 @@ function buildAdminPanel() {
     const now = new Date();
     const ts = now.toISOString().replace('T', ' ').split('.')[0];
 
+    // @ts-ignore
     return {
         type: 17,
         accent_color: 0x2b2d31,
         components: [
             {
                 type: 10,
-                content: '### 🛠️ Panel de Administración de Comandos\nGestiona el registro y limpieza de comandos **Slash**.'
+                content: '## <:Sup_bug:1420537401692131400> Panel de Administrativo\n -# Gestiona el registro y limpieza de comandos **Slash**.'
             },
             { type: 14, divider: true, spacing: 1 },
             {
@@ -31,37 +32,80 @@ function buildAdminPanel() {
                 content: 'Acciones disponibles:\n• Registrar comandos de GUILD (testing)\n• Registrar comandos GLOBAL (propagación lenta)\n• Limpiar comandos de GUILD\n• Limpiar comandos GLOBAL\n\nUsa los botones de abajo. Se evita ejecución simultánea.'
             },
             {
-                type: 1,
+                type: 9,
                 components: [
-                    { type: 2, style: 1, label: 'Registrar GUILD', custom_id: 'cmd_reg_guild' },
-                    { type: 2, style: 1, label: 'Registrar GLOBAL', custom_id: 'cmd_reg_global' },
-                    { type: 2, style: 2, label: '🔄 Refrescar Memoria', custom_id: 'cmd_mem_refresh' }
-                ]
+                    { type: 10, content: "Registrar los comandos '/' dentro del servidor de pruebas" }
+                ],
+                accessory: {
+                    type: 2,
+                    style: 1,
+                    emoji: "1421364744412991520",
+                    label: 'Registrar CMD en ServerTest',
+                    custom_id: 'cmd_reg_guild'
+                }
             },
-            // Fila 2 (acciones de limpieza)
             {
-                type: 1,
+                type: 9,
                 components: [
-                    { type: 2, style: 4, label: 'Limpiar GUILD', custom_id: 'cmd_clear_guild' },
-                    { type: 2, style: 4, label: 'Limpiar GLOBAL', custom_id: 'cmd_clear_global' }
-                ]
+                    { type: 10, content: "Registrar los comandos '/' de manera GLOBAL (todos los servidores)" }
+                ],
+                accessory: {
+                    type: 2,
+                    style: 1,
+                    emoji: "1421364744412991520",
+                    label: 'Registrar GLOBAL',
+                    custom_id: 'cmd_reg_global'
+                }
             },
+            {
+                type: 9,
+                components: [
+                    { type: 10, content: "Eliminar los comandos '/' dentro del servidor de pruebas" }
+                ],
+                accessory: {
+                    type: 2,
+                    style: 1,
+                    emoji: "1420535096208920576",
+                    label: 'Eliminar CMD en ServerTest',
+                    custom_id: 'cmd_clear_guild'
+                }
+            },
+            {
+                type: 9,
+                components: [
+                    { type: 10, content: "Eliminar los comandos '/' de manera GLOBAL (todos los servidores)" }
+                ],
+                accessory: {
+                    type: 2,
+                    style: 1,
+                    emoji: "1420535096208920576",
+                    label: 'Eliminar ALL',
+                    custom_id: 'cmd_clear_global'
+                }
+            },
+
             { type: 14, divider: true, spacing: 1 },
             {
                 type: 10,
-                content: ` ## 🖥️ Uso de Memoria
+                content: ` ## <:Sup_bug:1420537401692131400> Uso de Memoria \n -# Última actualización: ${ts} UTC
                 \`\`\`
 ┌─────────────────┬──────────────┐
 │ Memory Type     │ Usage        │
 ├─────────────────┼──────────────┤
-│ RSS             │ ${rss.padEnd(12)}│
-│ Heap Used       │ ${heapUsed.padEnd(12)}│
-│ Heap Total      │ ${heapTotal.padEnd(12)}│
-│ External        │ ${ext.padEnd(12)}│
+│ RSS             │ ${rss.padEnd(12)} │
+│ Heap Used       │ ${heapUsed.padEnd(12)} │
+│ Heap Total      │ ${heapTotal.padEnd(12)} │
+│ External        │ ${ext.padEnd(12)} │
 └─────────────────┴──────────────┘
-Última actualización: ${ts} UTC\`\`\``
+\`\`\``
             },
-            { type: 14, divider: false, spacing: 1 },
+            {
+                type: 1,
+                components: [
+                    { type: 2, style: 2, emoji: "1420539242643193896", label: 'Refrescar Memoria', custom_id: 'cmd_mem_refresh' }
+                ]
+            },
+            { type: 14, divider: false, spacing: 1 }
         ]
     };
 }
