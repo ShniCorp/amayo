@@ -24,17 +24,17 @@ function buildAdminPanel() {
         components: [
             {
                 type: 10,
-                content: '## <:Sup_bug:1420537401692131400> Panel de Administrativo\n -# Gestiona el registro y limpieza de comandos **Slash**.'
+                content: '## <:Sup_bug:1420537401692131400> Panel de Administrativo'
+            },
+            {
+                type: 10,
+                content: '-# Gestiona el registro y limpieza de comandos **Slash**.'
             },
             { type: 14, divider: true, spacing: 1 },
             {
-                type: 10,
-                content: 'Acciones disponibles:\n• Registrar comandos de GUILD (testing)\n• Registrar comandos GLOBAL (propagación lenta)\n• Limpiar comandos de GUILD\n• Limpiar comandos GLOBAL\n\nUsa los botones de abajo. Se evita ejecución simultánea.'
-            },
-            {
                 type: 9,
                 components: [
-                    { type: 10, content: "Registrar los comandos '/' dentro del servidor de pruebas" }
+                    { type: 10, content: "<:astar:1336533817296683059> Registrar los comandos '/' dentro del servidor de pruebas" }
                 ],
                 accessory: {
                     type: 2,
@@ -47,7 +47,7 @@ function buildAdminPanel() {
             {
                 type: 9,
                 components: [
-                    { type: 10, content: "Registrar los comandos '/' de manera GLOBAL (todos los servidores)" }
+                    { type: 10, content: "<:astar:1336533817296683059> Registrar los comandos '/' de manera GLOBAL (todos los servidores)" }
                 ],
                 accessory: {
                     type: 2,
@@ -60,7 +60,7 @@ function buildAdminPanel() {
             {
                 type: 9,
                 components: [
-                    { type: 10, content: "Eliminar los comandos '/' dentro del servidor de pruebas" }
+                    { type: 10, content: "<:Sup_urg:1420535068056748042> Eliminar los comandos '/' dentro del servidor de pruebas" }
                 ],
                 accessory: {
                     type: 2,
@@ -73,7 +73,7 @@ function buildAdminPanel() {
             {
                 type: 9,
                 components: [
-                    { type: 10, content: "Eliminar los comandos '/' de manera GLOBAL (todos los servidores)" }
+                    { type: 10, content: "<:Sup_urg:1420535068056748042> Eliminar los comandos '/' de manera GLOBAL (todos los servidores)" }
                 ],
                 accessory: {
                     type: 2,
@@ -87,7 +87,7 @@ function buildAdminPanel() {
             { type: 14, divider: true, spacing: 1 },
             {
                 type: 10,
-                content: ` ## <:Sup_bug:1420537401692131400> Uso de Memoria \n -# Última actualización: ${ts} UTC
+                content: ` ## <:Sup_bug:1420537401692131400> Uso de Memoria
                 \`\`\`
 ┌─────────────────┬──────────────┐
 │ Memory Type     │ Usage        │
@@ -97,7 +97,9 @@ function buildAdminPanel() {
 │ Heap Total      │ ${heapTotal.padEnd(12)} │
 │ External        │ ${ext.padEnd(12)} │
 └─────────────────┴──────────────┘
-\`\`\``
+\`\`\`
+Última actualización: ${ts} UTC
+`
             },
             {
                 type: 1,
