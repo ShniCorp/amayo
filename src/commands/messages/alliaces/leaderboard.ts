@@ -6,10 +6,10 @@ import type { Message } from "discord.js";
 
 const MAX_ENTRIES = 10;
 
-function formatRow(index: number, userId: string, points: number): string {
+function formatRow(index: number, displayName: string, points: number): string {
   const rank = String(index + 1).padStart(2, ' ');
   const pts = String(points).padStart(5, ' ');
-  return `#${rank}  ${userId}  (${pts})`;
+  return `#${rank}  ${displayName}  (${pts})`;
 }
 
 async function getLeaderboardData(guildId: string) {
@@ -43,23 +43,57 @@ function codeBlock(lines: string[]): string {
 export async function buildLeaderboardPanel(message: Message) {
   const guild = message.guild!;
   const guildId = guild.id;
-  const userId = message.author.username
+  const userId = message.author.id;
 
   const [boards, ranks] = await Promise.all([
     getLeaderboardData(guildId),
     getSelfRanks(guildId, userId)
   ]);
 
+  // Construir mapa de nombres visibles para los usuarios presentes en los top
+  const ids = new Set<string>();
+  for (const x of boards.weekly) ids.add(x.userId);
+  for (const x of boards.monthly) ids.add(x.userId);
+  for (const x of boards.total) ids.add(x.userId);
+
+  const idList = Array.from(ids);
+  const nameMap = new Map<string, string>();
+  // Intentar primero desde el cache del guild
+  for (const id of idList) {
+    const m = guild.members.cache.get(id);
+    if (m) nameMap.set(id, m.displayName || m.user.username || id);
+  }
+  // Fetch individual para los que falten (evitar peticiones innecesarias)
+  for (const id of idList) {
+    if (nameMap.has(id)) continue;
+    try {
+      const m = await guild.members.fetch(id);
+      if (m) {
+        nameMap.set(id, m.displayName || m.user.username || id);
+        continue;
+      }
+    } catch {}
+    try {
+      const u = await message.client.users.fetch(id);
+      if (u) {
+        nameMap.set(id, u.username || id);
+        continue;
+      }
+    } catch {}
+    // Fallback: no mostrar ID crudo; usar placeholder
+    nameMap.set(id, 'Usuario desconocido');
+  }
+
   const weeklyLines = boards.weekly.length
-    ? boards.weekly.map((x, i) => formatRow(i, x.userId, x.weeklyPoints))
+    ? boards.weekly.map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.weeklyPoints))
     : ['(sin datos)'];
 
   const monthlyLines = boards.monthly.length
-    ? boards.monthly.map((x, i) => formatRow(i, x.userId, x.monthlyPoints))
+    ? boards.monthly.map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.monthlyPoints))
     : ['(sin datos)'];
 
   const totalLines = boards.total.length
-    ? boards.total.map((x, i) => formatRow(i, x.userId, x.totalPoints))
+    ? boards.total.map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.totalPoints))
     : ['(sin datos)'];
 
   const now = new Date();
@@ -124,4 +158,3 @@ export const command: CommandMessage = {
     });
   }
 };
-
