@@ -30,13 +30,6 @@ function buildAdminPanel() {
                 type: 10,
                 content: 'Acciones disponibles:\n• Registrar comandos de GUILD (testing)\n• Registrar comandos GLOBAL (propagación lenta)\n• Limpiar comandos de GUILD\n• Limpiar comandos GLOBAL\n\nUsa los botones de abajo. Se evita ejecución simultánea.'
             },
-            { type: 14, divider: true, spacing: 1 },
-            {
-                type: 10,
-                content: `**Memoria (actual)**\n• RSS: ${rss}\n• Heap Used: ${heapUsed}\n• Heap Total: ${heapTotal}\n• External: ${ext}\n\nÚltima actualización: ${ts} UTC`
-            },
-            { type: 14, divider: false, spacing: 1 },
-            // Fila 1 (acciones de registro)
             {
                 type: 1,
                 components: [
@@ -52,7 +45,23 @@ function buildAdminPanel() {
                     { type: 2, style: 4, label: 'Limpiar GUILD', custom_id: 'cmd_clear_guild' },
                     { type: 2, style: 4, label: 'Limpiar GLOBAL', custom_id: 'cmd_clear_global' }
                 ]
-            }
+            },
+            { type: 14, divider: true, spacing: 1 },
+            {
+                type: 10,
+                content: ` ## 🖥️ Uso de Memoria
+                \`\`\`
+┌─────────────────┬──────────────┐
+│ Memory Type     │ Usage        │
+├─────────────────┼──────────────┤
+│ RSS             │ ${rss.padEnd(12)}│
+│ Heap Used       │ ${heapUsed.padEnd(12)}│
+│ Heap Total      │ ${heapTotal.padEnd(12)}│
+│ External        │ ${ext.padEnd(12)}│
+└─────────────────┴──────────────┘
+Última actualización: ${ts} UTC\`\`\``
+            },
+            { type: 14, divider: false, spacing: 1 },
         ]
     };
 }
