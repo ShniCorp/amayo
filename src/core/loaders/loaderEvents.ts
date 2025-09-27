@@ -2,7 +2,13 @@ import { bot } from "../../main";
 import path from "node:path";
 import * as fs from "node:fs";
 
-export function loadEvents(dir: string = path.join(__dirname, "../events")) {
+export function loadEvents(dir: string = path.resolve(__dirname, "../../events")) {
+    // Evitar fallo si el directorio no existe
+    if (!fs.existsSync(dir)) {
+        console.warn(`⚠️ Directorio de eventos no encontrado: ${dir}`);
+        return;
+    }
+
     const files = fs.readdirSync(dir);
 
     for (const file of files) {

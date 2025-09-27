@@ -8,7 +8,13 @@ export const modals: Collection<string, Modal> = new Collection<string, Modal>()
 export const selectmenus: Collection<string, SelectMenu> = new Collection<string, SelectMenu>();
 export const contextmenus: Collection<string, ContextMenu> = new Collection<string, ContextMenu>();
 
-export function loadComponents(dir: string = path.join(__dirname, "..", "components")) {
+export function loadComponents(dir: string = path.resolve(__dirname, "../../components")) {
+    // Evitar fallo si el directorio no existe en el entorno
+    if (!fs.existsSync(dir)) {
+        console.warn(`⚠️ Directorio de componentes no encontrado: ${dir}`);
+        return;
+    }
+
     const files = fs.readdirSync(dir);
 
     for (const file of files) {
@@ -21,6 +27,7 @@ export function loadComponents(dir: string = path.join(__dirname, "..", "compone
         }
 
         if (!file.endsWith(".ts") && !file.endsWith(".js")) continue;
+        if (file.endsWith('.d.ts')) continue;
 
         try {
             const imported = require(fullPath);
