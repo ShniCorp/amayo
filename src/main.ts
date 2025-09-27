@@ -1,11 +1,11 @@
 import Amayo from "./core/client";
-import { loadCommands } from "./core/loader";
-import { loadEvents } from "./core/loaderEvents";
-import { redis, redisConnect } from "./core/redis";
+import { loadCommands } from "./core/loaders/loader";
+import { loadEvents } from "./core/loaders/loaderEvents";
+import { redis, redisConnect } from "./core/database/redis";
 import { registeringCommands } from "./core/api/discordAPI";
-import {loadComponents} from "./core/components";
-import { startMemoryMonitor } from "./core/memoryMonitor";
-import {memoryOptimizer} from "./core/memoryOptimizer";
+import {loadComponents} from "./core/lib/components";
+import { startMemoryMonitor } from "./core/memory/memoryMonitor";
+import {memoryOptimizer} from "./core/memory/memoryOptimizer";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);

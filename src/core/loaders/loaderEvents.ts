@@ -1,4 +1,4 @@
-import { bot } from "../main";
+import { bot } from "../../main";
 import path from "node:path";
 import * as fs from "node:fs";
 

@@ -1,7 +1,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Collection } from "discord.js";
-import type { Button, Modal, SelectMenu, ContextMenu } from "./types/components";
+import type { Button, Modal, SelectMenu, ContextMenu } from "../types/components";
 
 export const buttons: Collection<string, Button> = new Collection<string, Button>();
 export const modals: Collection<string, Modal> = new Collection<string, Modal>();

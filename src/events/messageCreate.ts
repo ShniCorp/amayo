@@ -1,7 +1,7 @@
 import {bot} from "../main";
 import {Events} from "discord.js";
-import {redis} from "../core/redis";
-import {commands} from "../core/loader";
+import {redis} from "../core/database/redis";
+import {commands} from "../core/loaders/loader";
 import {alliance} from "./extras/alliace";
 
 

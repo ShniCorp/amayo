@@ -1,7 +1,7 @@
 import { REST } from "discord.js";
 // @ts-ignore
 import { Routes } from "discord-api-types/v10";
-import { commands } from "../loader";
+import { commands } from "../loaders/loader";
 
 // Reutilizamos una instancia REST singleton
 const rest = new REST({ version: '10' }).setToken(process.env.TOKEN ?? "");

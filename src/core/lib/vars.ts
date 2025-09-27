@@ -1,4 +1,6 @@
 import { Guild, Invite, User, GuildMember } from "discord.js";
+// Prisma client to compute ranks
+import { prisma } from "../database/prisma";
 
 /**
  * Registro central de variables -> resolutores
@@ -33,6 +35,27 @@ const getInviteObject = (invite?: Invite) => invite?.guild ? {
     icon: invite.guild.icon ? `https://cdn.discordapp.com/icons/${invite.guild.id}/${invite.guild.icon}.webp?size=256` : ''
 } : null;
 
+// Helper: calcula el rank dentro del servidor para un campo (weeklyPoints / monthlyPoints)
+async function computeRankInGuild(guildId: string, userId: string, field: 'weeklyPoints' | 'monthlyPoints', knownPoints?: number): Promise<number> {
+    try {
+        let points = knownPoints;
+        if (typeof points !== 'number') {
+            const self = await prisma.partnershipStats.findUnique({
+                where: { userId_guildId: { userId, guildId } }
+            });
+            if (!self) return 0; // No tiene registro -> no rank
+            // @ts-ignore - modelo generado por Prisma
+            points = (self as any)[field] as number;
+        }
+        const higher = await prisma.partnershipStats.count({
+            where: { guildId, [field]: { gt: points as number } } as any
+        });
+        return higher + 1; // rank 1 para el mayor puntaje
+    } catch {
+        return 0;
+    }
+}
+
 export const VARIABLES: Record<string, VarResolver> = {
     // USER INFO
     'user.name': ({ user }) => getUsername(user),
@@ -47,6 +70,21 @@ export const VARIABLES: Record<string, VarResolver> = {
     'user.pointsAll': ({ stats }) => stats?.totalPoints?.toString?.() ?? '0',
     'user.pointsWeekly': ({ stats }) => stats?.weeklyPoints?.toString?.() ?? '0',
     'user.pointsMonthly': ({ stats }) => stats?.monthlyPoints?.toString?.() ?? '0',
+    // USER RANKS (dentro del servidor actual)
+    'user.rankWeekly': async ({ user, guild, stats }) => {
+        const userId = getUserId(user);
+        const guildId = guild?.id;
+        if (!userId || !guildId) return '0';
+        const rank = await computeRankInGuild(guildId, userId, 'weeklyPoints', stats?.weeklyPoints);
+        return String(rank || 0);
+    },
+    'user.rankMonthly': async ({ user, guild, stats }) => {
+        const userId = getUserId(user);
+        const guildId = guild?.id;
+        if (!userId || !guildId) return '0';
+        const rank = await computeRankInGuild(guildId, userId, 'monthlyPoints', stats?.monthlyPoints);
+        return String(rank || 0);
+    },
 
     // GUILD INFO
     'guild.name': ({ guild }) => guild?.name ?? '',

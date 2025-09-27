@@ -2,7 +2,7 @@ import {
     Message
 } from "discord.js";
 // Reemplaza instancia local -> usa singleton
-import { prisma } from "../../core/prisma";
+import { prisma } from "../../core/database/prisma";
 import { replaceVars } from "../../core/lib/vars";
 
 

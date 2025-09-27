@@ -34,7 +34,7 @@ function buildAdminPanel() {
             {
                 type: 9,
                 components: [
-                    { type: 10, content: "<:astar:1336533817296683059> Registrar los comandos '/' dentro del servidor de pruebas" }
+                    { type: 10, content: "<:astar:1336533817296683059> Registrar los comandos **/** dentro del servidor de pruebas" }
                 ],
                 accessory: {
                     type: 2,
@@ -47,7 +47,7 @@ function buildAdminPanel() {
             {
                 type: 9,
                 components: [
-                    { type: 10, content: "<:astar:1336533817296683059> Registrar los comandos '/' de manera GLOBAL (todos los servidores)" }
+                    { type: 10, content: "<:astar:1336533817296683059> Registrar los comandos **/** de manera GLOBAL (todos los servidores)" }
                 ],
                 accessory: {
                     type: 2,
@@ -60,7 +60,7 @@ function buildAdminPanel() {
             {
                 type: 9,
                 components: [
-                    { type: 10, content: "<:Sup_urg:1420535068056748042> Eliminar los comandos '/' dentro del servidor de pruebas" }
+                    { type: 10, content: "<:Sup_urg:1420535068056748042> Eliminar los comandos **/** dentro del servidor de pruebas" }
                 ],
                 accessory: {
                     type: 2,
@@ -73,7 +73,7 @@ function buildAdminPanel() {
             {
                 type: 9,
                 components: [
-                    { type: 10, content: "<:Sup_urg:1420535068056748042> Eliminar los comandos '/' de manera GLOBAL (todos los servidores)" }
+                    { type: 10, content: "<:Sup_urg:1420535068056748042> Eliminar los comandos **/** de manera GLOBAL (todos los servidores)" }
                 ],
                 accessory: {
                     type: 2,

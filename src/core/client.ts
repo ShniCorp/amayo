@@ -1,5 +1,5 @@
 import { Client, GatewayIntentBits, Options, Partials } from 'discord.js';
-import { prisma, ensurePrismaConnection } from './prisma';
+import { prisma, ensurePrismaConnection } from './database/prisma';
 
 // Verificar si process.loadEnvFile existe (Node.js 20.6+)
 if (typeof process.loadEnvFile === 'function') {

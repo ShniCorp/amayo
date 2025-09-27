@@ -1,9 +1,9 @@
 import { bot } from "../main";
 import type { BaseInteraction } from "discord.js";
 import { Events } from "discord.js";
-import { redis } from "../core/redis";
-import { commands } from "../core/loader";
-import { buttons, modals, selectmenus } from "../core/components";
+import { redis } from "../core/database/redis";
+import { commands } from "../core/loaders/loader";
+import { buttons, modals, selectmenus } from "../core/lib/components";
 
 bot.on(Events.InteractionCreate, async (interaction: BaseInteraction) => {
     try {

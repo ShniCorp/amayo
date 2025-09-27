@@ -227,7 +227,6 @@ const updateEditor = async (msg: any, data: any) => {
     const payload: any = { ...data };
     delete payload.display;
     payload.components = components;
-    // Si no se pasa flags explícitos, usamos 32768 como en tu entorno
     if (payload.flags === undefined) payload.flags = 32768;
     await msg.edit(payload);
 };

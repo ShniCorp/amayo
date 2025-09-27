@@ -1,6 +1,6 @@
 // @ts-ignore
 import { CommandMessage } from "../../../core/types/commands";
-import { commands as registry } from "../../core/loader";
+import { commands as registry } from "../../core/loaders/loader";
 
 export const command: CommandMessage = {
     name: 'ayuda',
