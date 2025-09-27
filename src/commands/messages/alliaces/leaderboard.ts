@@ -9,7 +9,7 @@ const MAX_ENTRIES = 10;
 function formatRow(index: number, userId: string, points: number): string {
   const rank = String(index + 1).padStart(2, ' ');
   const pts = String(points).padStart(5, ' ');
-  return `#${rank}  <@${userId}>  (${pts})`;
+  return `#${rank}  ${userId}  (${pts})`;
 }
 
 async function getLeaderboardData(guildId: string) {
@@ -43,7 +43,7 @@ function codeBlock(lines: string[]): string {
 export async function buildLeaderboardPanel(message: Message) {
   const guild = message.guild!;
   const guildId = guild.id;
-  const userId = message.author.id;
+  const userId = message.author.username
 
   const [boards, ranks] = await Promise.all([
     getLeaderboardData(guildId),
