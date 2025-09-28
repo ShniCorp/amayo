@@ -35,8 +35,13 @@ const getInviteObject = (invite?: Invite) => invite?.guild ? {
     icon: invite.guild.icon ? `https://cdn.discordapp.com/icons/${invite.guild.id}/${invite.guild.icon}.webp?size=256` : ''
 } : null;
 
-// Helper: calcula el rank dentro del servidor para un campo (weeklyPoints / monthlyPoints)
-async function computeRankInGuild(guildId: string, userId: string, field: 'weeklyPoints' | 'monthlyPoints', knownPoints?: number): Promise<number> {
+// Helper: calcula el rank dentro del servidor para un campo (weeklyPoints / monthlyPoints / totalPoints)
+async function computeRankInGuild(
+    guildId: string,
+    userId: string,
+    field: 'weeklyPoints' | 'monthlyPoints' | 'totalPoints',
+    knownPoints?: number
+): Promise<number> {
     try {
         let points = knownPoints;
         if (typeof points !== 'number') {
@@ -83,6 +88,13 @@ export const VARIABLES: Record<string, VarResolver> = {
         const guildId = guild?.id;
         if (!userId || !guildId) return '0';
         const rank = await computeRankInGuild(guildId, userId, 'monthlyPoints', stats?.monthlyPoints);
+        return String(rank || 0);
+    },
+    'user.rankTotal': async ({ user, guild, stats }) => {
+        const userId = getUserId(user);
+        const guildId = guild?.id;
+        if (!userId || !guildId) return '0';
+        const rank = await computeRankInGuild(guildId, userId, 'totalPoints', stats?.totalPoints);
         return String(rank || 0);
     },
 

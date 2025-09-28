@@ -6,6 +6,7 @@ import { registeringCommands } from "./core/api/discordAPI";
 import {loadComponents} from "./core/lib/components";
 import { startMemoryMonitor } from "./core/memory/memoryMonitor";
 import {memoryOptimizer} from "./core/memory/memoryOptimizer";
+import { startReminderPoller } from "./core/api/reminders";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
@@ -177,6 +178,9 @@ async function bootstrap() {
             return !/missing discord token|invalid token/i.test(msg);
         }
     });
+
+    // Iniciar poller de recordatorios si Appwrite está configurado
+    startReminderPoller(bot);
 
     console.log("✅ Bot conectado a Discord");
 }

@@ -14,7 +14,7 @@
     "start:prod-optimized": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx src/main.ts",
     "typecheck": "tsc --noEmit"
   },
-  "keywords": [ ],
+  "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
@@ -22,8 +22,11 @@
     "@google/genai": "1.20.0",
     "@google/generative-ai": "0.24.1",
     "@prisma/client": "6.16.2",
+    "appwrite": "20.1.0",
+    "chrono-node": "2.9.0",
     "discord-api-types": "0.38.24",
     "discord.js": "14.22.1",
+    "node-appwrite": "19.1.0",
     "prisma": "6.16.2",
     "redis": "5.8.2"
   },
