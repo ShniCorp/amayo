@@ -45,9 +45,12 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   const minUnit = 'm(?:in(?:uto(?:s)?)?)?';
   const hourUnit = 'h(?:ora(?:s)?)?';
   const dayUnit = 'd(?:[ií]a(?:s)?)?|d'; // dia, días, dias, día, d
+  const MIN = `(?:${minUnit})`;
+  const HOUR = `(?:${hourUnit})`;
+  const DAY = `(?:${dayUnit})`;
 
   // 1) "en menos de 1h" -> 59 minutos
-  let m = lower.match(new RegExp(`en\\s+menos\\s+de\\s+1\\s*${hourUnit}`, 'i'));
+  let m = lower.match(new RegExp(`en\\s+menos\\s+de\\s+1\\s*${HOUR}`, 'i'));
   if (m) {
     const minutes = 59;
     const when = new Date(Date.now() + minutes * 60 * 1000);
@@ -56,7 +59,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 2) "en menos de X min" -> (X-1) minutos
-  m = lower.match(new RegExp(`en\\s+menos\\s+de\\s+(\\d+)\\s*${minUnit}`, 'i'));
+  m = lower.match(new RegExp(`en\\s+menos\\s+de\\s+(\\d+)\\s*${MIN}`, 'i'));
   if (m) {
     const minutes = Math.max(1, parseInt(m[1], 10) - 1);
     const when = new Date(Date.now() + minutes * 60 * 1000);
@@ -65,7 +68,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 3) "en X minutos" / "en Xm"
-  m = lower.match(new RegExp(`en\\s+(\\d+)\\s*${minUnit}`, 'i'));
+  m = lower.match(new RegExp(`en\\s+(\\d+)\\s*${MIN}`, 'i'));
   if (m) {
     const minutes = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + minutes * 60 * 1000);
@@ -74,7 +77,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 4) "en X horas" / "en Xh"
-  m = lower.match(new RegExp(`en\\s+(\\d+)\\s*${hourUnit}`, 'i'));
+  m = lower.match(new RegExp(`en\\s+(\\d+)\\s*${HOUR}`, 'i'));
   if (m) {
     const hours = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + hours * 60 * 60 * 1000);
@@ -83,7 +86,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 5) "en X días" / "en Xd"
-  m = lower.match(new RegExp(`en\\s+(\\d+)\\s*${dayUnit}`, 'i'));
+  m = lower.match(new RegExp(`en\\s+(\\d+)\\s*${DAY}`, 'i'));
   if (m) {
     const days = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -92,7 +95,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 6) "dentro de X minutos"
-  m = lower.match(new RegExp(`dentro\\s+de\\s+(\\d+)\\s*${minUnit}`, 'i'));
+  m = lower.match(new RegExp(`dentro\\s+de\\s+(\\d+)\\s*${MIN}`, 'i'));
   if (m) {
     const minutes = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + minutes * 60 * 1000);
@@ -101,7 +104,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 7) "dentro de X horas"
-  m = lower.match(new RegExp(`dentro\\s+de\\s+(\\d+)\\s*${hourUnit}`, 'i'));
+  m = lower.match(new RegExp(`dentro\\s+de\\s+(\\d+)\\s*${HOUR}`, 'i'));
   if (m) {
     const hours = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + hours * 60 * 60 * 1000);
@@ -110,7 +113,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 8) "dentro de X días"
-  m = lower.match(new RegExp(`dentro\\s+de\\s+(\\d+)\\s*${dayUnit}`, 'i'));
+  m = lower.match(new RegExp(`dentro\\s+de\\s+(\\d+)\\s*${DAY}`, 'i'));
   if (m) {
     const days = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
@@ -119,7 +122,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 9) Post-fijo corto al final: "15m" o "45 min"
-  m = lower.match(new RegExp(`(\\d+)\\s*${minUnit}$`, 'i'));
+  m = lower.match(new RegExp(`(\\d+)\\s*${MIN}$`, 'i'));
   if (m) {
     const minutes = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + minutes * 60 * 1000);
@@ -128,7 +131,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 10) Post-fijo corto: "1h" o "2 horas" al final
-  m = lower.match(new RegExp(`(\\d+)\\s*${hourUnit}$`, 'i'));
+  m = lower.match(new RegExp(`(\\d+)\\s*${HOUR}$`, 'i'));
   if (m) {
     const hours = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + hours * 60 * 60 * 1000);
@@ -137,7 +140,7 @@ function parseRelativeDelay(text: string): { when: Date, reminderText: string } 
   }
 
   // 11) Post-fijo corto: "7d" o "7 dias" al final
-  m = lower.match(new RegExp(`(\\d+)\\s*${dayUnit}$`, 'i'));
+  m = lower.match(new RegExp(`(\\d+)\\s*${DAY}$`, 'i'));
   if (m) {
     const days = Math.max(1, parseInt(m[1], 10));
     const when = new Date(Date.now() + days * 24 * 60 * 60 * 1000);
