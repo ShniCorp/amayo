@@ -2,6 +2,7 @@
 const sdk: any = require('node-appwrite');
 import type Amayo from '../client';
 import { getDatabases, isAppwriteConfigured, APPWRITE_COLLECTION_REMINDERS_ID, APPWRITE_DATABASE_ID } from './appwrite';
+import { ensureRemindersSchema } from './remindersSchema';
 
 export type ReminderDoc = {
   $id?: string;
@@ -23,9 +24,20 @@ export type ReminderRow = ReminderDoc & {
   $databaseId?: string;
 };
 
+let schemaEnsured = false;
+async function ensureSchemaOnce() {
+  if (schemaEnsured) return;
+  try {
+    await ensureRemindersSchema();
+  } finally {
+    schemaEnsured = true;
+  }
+}
+
 export async function scheduleReminder(doc: ReminderDoc): Promise<string> {
   const db = getDatabases();
   if (!db || !isAppwriteConfigured()) throw new Error('Appwrite no está configurado');
+  await ensureSchemaOnce();
   const data = {
     userId: doc.userId,
     guildId: doc.guildId ?? null,
@@ -41,6 +53,7 @@ export async function scheduleReminder(doc: ReminderDoc): Promise<string> {
 async function fetchDueReminders(limit = 25): Promise<ReminderRow[]> {
   const db = getDatabases();
   if (!db || !isAppwriteConfigured()) return [];
+  try { await ensureSchemaOnce(); } catch {}
   const nowIso = new Date().toISOString();
   try {
     const list = await db.listDocuments(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_REMINDERS_ID, [

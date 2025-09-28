@@ -7,6 +7,7 @@ import {loadComponents} from "./core/lib/components";
 import { startMemoryMonitor } from "./core/memory/memoryMonitor";
 import {memoryOptimizer} from "./core/memory/memoryOptimizer";
 import { startReminderPoller } from "./core/api/reminders";
+import { ensureRemindersSchema } from "./core/api/remindersSchema";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
@@ -178,6 +179,9 @@ async function bootstrap() {
             return !/missing discord token|invalid token/i.test(msg);
         }
     });
+
+    // Asegurar esquema de Appwrite para recordatorios (colección + atributos + índice)
+    try { await ensureRemindersSchema(); } catch (e) { console.warn('No se pudo asegurar el esquema de recordatorios:', e); }
 
     // Iniciar poller de recordatorios si Appwrite está configurado
     startReminderPoller(bot);
