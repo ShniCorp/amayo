@@ -187,6 +187,7 @@ export const command: CommandMessage = {
       const r = results[0];
       when = r.date();
 
+      // Nota: validación completa al final también
       if (!when || isNaN(when.getTime())) {
         await message.reply('❌ La fecha/hora no es válida.');
         return;
@@ -207,6 +208,12 @@ export const command: CommandMessage = {
           reminderText = cleanSpaces(reminderTextCandidate) || text;
         }
       }
+    }
+
+    // Validación robusta antes de usar getTime/toISOString
+    if (!(when instanceof Date) || isNaN(when.getTime())) {
+      await message.reply('❌ La fecha/hora interpretada no es válida. Intenta con un formato distinto.');
+      return;
     }
 
     // Validaciones de futuro y límites mínimos
