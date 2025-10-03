@@ -57,14 +57,14 @@ bot.on(Events.ClientReady, () => {
         },
         {
             type: ActivityType.Playing,
-            name: '<a:SparklyRose:1321195729259073668> Rolear con la IA "!ai hola"',
+            name: 'Rolear con la IA "!ai hola"',
         },
         {
             type: ActivityType.Watching,
             name: `!help | ${bot.guilds.cache.size} servidores`
         },
         {
-            name: "",
+            name: "Streaming en YouTube",
             type: ActivityType.Streaming,
             url: "https://youtu.be/MRkOSkBbjSw?si=PuTkDgJn5eBMHnoN",
         }
