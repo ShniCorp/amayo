@@ -16,9 +16,15 @@ export async function ensureRemindersSchema() {
     await db.getCollection(databaseId, collectionId);
   } catch {
     try {
-      await db.createCollection(databaseId, collectionId, collectionId, [
-        // Permisos por defecto: accesible solo por server via API Key
-      ]);
+      // Sintaxis actualizada para createCollection (versión actual de Appwrite SDK)
+      await db.createCollection(
+        databaseId,
+        collectionId,
+        collectionId,
+        undefined, // permissions (opcional)
+        undefined, // documentSecurity (opcional)
+        false      // enabled (opcional)
+      );
       // Nota: No añadimos permisos de lectura pública para evitar fuga de datos
     } catch (e) {
       // @ts-ignore
@@ -47,8 +53,9 @@ export async function ensureRemindersSchema() {
 
   // 3) Índice por executeAt para consultas por vencimiento
   try {
-      //@ts-ignore
-    await db.createIndex(databaseId, collectionId, 'idx_executeAt_asc', 'key', ['executeAt'], ['ASC']);
+    // Sintaxis actualizada para createIndex - 'ASC' ahora debe ser 'asc' (lowercase)
+    // @ts-ignore
+      await db.createIndex(databaseId, collectionId, 'idx_executeAt_asc', 'key', ['executeAt'], ['asc']);
   } catch (e: any) {
     const msg = String(e?.message || e);
     if (!/already exists|index_already_exists/i.test(msg)) {
@@ -57,4 +64,3 @@ export async function ensureRemindersSchema() {
     }
   }
 }
-
