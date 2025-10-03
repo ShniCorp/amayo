@@ -5,22 +5,70 @@ import logger from "../core/lib/logger";
 bot.on(Events.ClientReady, () => {
     logger.info("Ready!");
 
-    // ✨ ESTADO PERSONALIZADO (como usuarios normales) - RECOMENDADO
-    bot.user?.setPresence({
-        activities: [{
+    // 🔄 ACTIVIDADES ROTATIVAS - Cambia cada 15 segundos
+    const activities = [
+        {
             type: ActivityType.Custom,
-            name: 'custom', // Este campo es requerido pero no se muestra
-            state: '✨ Activo y funcionando' // Este es el texto que se ve como estado
-        }],
-        status: 'online', // online, idle, dnd, invisible
+            name: 'custom',
+            state: '✨ Activo y funcionando'
+        },
+        {
+            type: ActivityType.Playing,
+            name: '🎮 con los comandos'
+        },
+        {
+            type: ActivityType.Watching,
+            name: `${bot.guilds.cache.size} servidores`
+        },
+        {
+            type: ActivityType.Listening,
+            name: 'tus mensajes'
+        }
+    ];
+
+    let currentActivity = 0;
+
+    // Establecer la primera actividad
+    bot.user?.setPresence({
+        activities: [activities[currentActivity]],
+        status: 'online',
     });
 
-    // Otras opciones que puedes usar:
+    // Rotar actividades cada 15 segundos
+    setInterval(() => {
+        currentActivity = (currentActivity + 1) % activities.length;
+        bot.user?.setPresence({
+            activities: [activities[currentActivity]],
+            status: 'online',
+        });
+        logger.info(`Actividad cambiada a: ${activities[currentActivity].name || activities[currentActivity].state}`);
+    }, 15000); // Cambia cada 15 segundos
 
-    // Opción 1: Configuración simple con setActivity
-    // bot.user?.setActivity('con los comandos', { type: ActivityType.Playing });
+    // ============================================
+    // 📌 ALTERNATIVA: Una sola actividad fija
+    // ============================================
+    // Si prefieres una sola actividad sin rotación, descomenta una de estas:
 
-    // Opción 2: Ver mensajes (Watching)
+    // ✨ ESTADO PERSONALIZADO (como usuarios normales)
+    // bot.user?.setPresence({
+    //     activities: [{
+    //         type: ActivityType.Custom,
+    //         name: 'custom',
+    //         state: '✨ Activo y funcionando'
+    //     }],
+    //     status: 'online',
+    // });
+
+    // 🎮 JUGANDO A...
+    // bot.user?.setPresence({
+    //     activities: [{
+    //         type: ActivityType.Playing,
+    //         name: '🎮 Moderando servidores'
+    //     }],
+    //     status: 'online',
+    // });
+
+    // 👀 VIENDO...
     // bot.user?.setPresence({
     //     activities: [{
     //         name: 'tus mensajes 👀',
@@ -29,25 +77,25 @@ bot.on(Events.ClientReady, () => {
     //     status: 'online',
     // });
 
-    // Para mostrar "Jugando a..."
+    // 🎵 ESCUCHANDO...
     // bot.user?.setPresence({
-    //     activities: [{ name: 'Minecraft', type: ActivityType.Playing }],
+    //     activities: [{
+    //         name: 'Spotify',
+    //         type: ActivityType.Listening
+    //     }],
     //     status: 'online',
     // });
 
-    // Para mostrar "Escuchando..."
+    // 🏆 COMPITIENDO EN...
     // bot.user?.setPresence({
-    //     activities: [{ name: 'Spotify', type: ActivityType.Listening }],
-    //     status: 'online',
-    // });
-
-    // Para mostrar "Compitiendo en..."
-    // bot.user?.setPresence({
-    //     activities: [{ name: 'Ranked', type: ActivityType.Competing }],
+    //     activities: [{
+    //         name: 'Ranked',
+    //         type: ActivityType.Competing
+    //     }],
     //     status: 'dnd',
     // });
 
-    // Para streaming (requiere una URL válida de Twitch/YouTube)
+    // 📺 STREAMING (requiere URL válida de Twitch/YouTube)
     // bot.user?.setPresence({
     //     activities: [{
     //         name: 'Mi Stream',
@@ -55,34 +103,6 @@ bot.on(Events.ClientReady, () => {
     //         url: 'https://twitch.tv/tu-canal'
     //     }],
     //     status: 'online',
-    // });
-
-    // Más ejemplos de estados personalizados con emojis:
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         type: ActivityType.Custom,
-    //         name: 'custom',
-    //         state: '🚀 Listo para ayudar'
-    //     }],
-    //     status: 'online',
-    // });
-
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         type: ActivityType.Custom,
-    //         name: 'custom',
-    //         state: '💻 Desarrollando features'
-    //     }],
-    //     status: 'dnd',
-    // });
-
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         type: ActivityType.Custom,
-    //         name: 'custom',
-    //         state: '🎮 Moderando servidores'
-    //     }],
-    //     status: 'idle',
     // });
 
     logger.info(`Presencia configurada para ${bot.user?.tag}`);
