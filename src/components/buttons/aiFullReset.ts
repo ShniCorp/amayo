@@ -1,5 +1,5 @@
 import logger from "../../core/lib/logger";
-import { ButtonInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { ButtonInteraction, MessageFlags, ContainerBuilder, TextDisplayBuilder, SectionBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
 import { aiService } from '../../core/services/AIService';
 
 const OWNER_ID = '327207082203938818'; // Solo el dueño puede hacer reset completo
@@ -7,7 +7,7 @@ const OWNER_ID = '327207082203938818'; // Solo el dueño puede hacer reset compl
 export default {
   customId: 'ai_full_reset',
   run: async (interaction: ButtonInteraction) => {
-    // Verificar que sea el dueño del bot (reset completo es crítico)
+    // Verificar que sea el dueño del bot (reset completo es CRÍTICO)
     if (interaction.user.id !== OWNER_ID) {
       return interaction.reply({ 
         content: '❌ Solo el dueño del bot puede realizar un reset completo del sistema de IA.',  
@@ -23,33 +23,22 @@ export default {
       const conversationsCleared = statsBefore.activeConversations;
       const requestsCleared = statsBefore.queueLength;
       
-      // Aquí irían las funciones reales de reset del servicio
-      // Por ejemplo:
+      // Aquí irían las funciones reales de reset del servicio:
       // aiService.fullReset();
       // aiService.clearAllConversations();
       // aiService.clearRequestQueue();
       // aiService.resetStatistics();
-      
+
       const resetTimestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
       
-      // Panel de confirmación de reset completo
-      // @ts-ignore
-      const resetCompletePanel = {
-        type: 17,
-        accent_color: 0xFF4444,
-        components: [
-          {
-            type: 10,
-            content: '## ⚠️ RESET COMPLETO EJECUTADO'
-          },
-          {
-            type: 10,
-            content: '-# El sistema de IA ha sido completamente reiniciado.'
-          },
-          { type: 14, divider: true, spacing: 1 },
-          {
-            type: 10,
-            content: `## 🔄 Resumen del Reset
+      // Panel de confirmación de reset completo usando la API real
+      const resetCompleteContainer = new ContainerBuilder()
+        .addTextDisplayComponents(
+          new TextDisplayBuilder()
+            .setContent(`## ⚠️ RESET COMPLETO EJECUTADO
+-# El sistema de IA ha sido completamente reiniciado.
+
+## 🔄 Resumen del Reset
 \`\`\`
 ┌─────────────────────────┬─────────────┐
 │ Elemento Limpiado       │ Cantidad    │
@@ -69,12 +58,9 @@ export default {
 
 ⚠️ ADVERTENCIA: Todas las conversaciones activas 
    han sido eliminadas permanentemente.
-\`\`\``
-          },
-          { type: 14, divider: true, spacing: 1 },
-          {
-            type: 10,
-            content: `## ✅ Sistema Restaurado
+\`\`\`
+
+## ✅ Sistema Restaurado
 
 El sistema de IA ha vuelto a su estado inicial:
 • **Memoria limpia** - Sin conversaciones previas
@@ -83,45 +69,46 @@ El sistema de IA ha vuelto a su estado inicial:
 • **Configuración default** - Valores originales
 • **Cache limpio** - Memoria optimizada
 
-El sistema está listo para recibir nuevas consultas.`
-          },
-          { type: 14, divider: true, spacing: 1 },
-          {
-            type: 9,
-            components: [
-              { type: 10, content: "🔙 Volver al panel principal (con datos reset)" }
-            ],
-            accessory: {
-              type: 2,
-              style: 1,
-              emoji: "🔙",
-              label: 'Volver al Panel',
-              custom_id: 'ai_refresh_stats'
-            }
-          },
-          {
-            type: 9,
-            components: [
-              { type: 10, content: "⚠️ **REALIZAR OTRO RESET** (solo si es necesario)" }
-            ],
-            accessory: {
-              type: 2,
-              style: 4,
-              emoji: "⚠️",
-              label: 'Reset Nuevamente',
-              custom_id: 'ai_full_reset'
-            }
-          }
-        ]
-      };
+El sistema está listo para recibir nuevas consultas.`)
+        )
+        .addSectionComponents(
+          new SectionBuilder()
+            .addTextDisplayComponents(
+              new TextDisplayBuilder()
+                .setContent("🔙 Volver al panel principal (con datos reset)")
+            )
+              .setButtonAccessory(
+              new ButtonBuilder()
+                .setCustomId('ai_refresh_stats')
+                .setLabel('Volver al Panel')
+                .setEmoji('🔙')
+                .setStyle(ButtonStyle.Primary)
+            ),
+          new SectionBuilder()
+            .addTextDisplayComponents(
+              new TextDisplayBuilder()
+                .setContent("⚠️ **REALIZAR OTRO RESET** (solo si es necesario)")
+            )
+              .setButtonAccessory(
+              new ButtonBuilder()
+                .setCustomId('ai_full_reset')
+                .setLabel('Reset Nuevamente')
+                .setEmoji('⚠️')
+                .setStyle(ButtonStyle.Danger)
+            )
+        );
 
-      await interaction.message.edit({ components: [resetCompletePanel] });
-      
+      await interaction.message.edit({
+        components: [resetCompleteContainer],
+        flags: MessageFlags.IsComponentsV2
+      });
+
       // Log crítico del reset completo
-      logger.warn(`🚨 RESET COMPLETO DE IA ejecutado por ${interaction.user.username} (${interaction.user.id})`);
+      logger.warn(`🚨 RESET COMPLETO DE IA ejecutado por el dueño ${interaction.user.username} (${interaction.user.id})`);
       logger.info(`Reset stats - Conversaciones: ${conversationsCleared}, Queue: ${requestsCleared}, Timestamp: ${resetTimestamp}`);
       
     } catch (error) {
+        //@ts-ignore
       logger.error('Error ejecutando reset completo de IA:', error);
       if (!interaction.deferred && !interaction.replied) {
         await interaction.reply({ 
