@@ -4,6 +4,7 @@ import { Events } from "discord.js";
 import { redis } from "../core/database/redis";
 import { commands } from "../core/loaders/loader";
 import { buttons, modals, selectmenus } from "../core/lib/components";
+import logger from "../core/lib/logger";
 
 bot.on(Events.InteractionCreate, async (interaction: BaseInteraction) => {
     try {
@@ -45,7 +46,7 @@ bot.on(Events.InteractionCreate, async (interaction: BaseInteraction) => {
             if (modal) await modal.run(interaction, bot);
         }
     } catch (error) {
-        console.error(error);
+        logger.error({ err: error }, "Error ejecutando interacción");
         if (interaction.isRepliable()) {
             await interaction.reply({ content: "❌ Hubo un error ejecutando la interacción.", ephemeral: true });
         }

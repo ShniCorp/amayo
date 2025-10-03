@@ -3,6 +3,7 @@ import {Events} from "discord.js";
 import {redis} from "../core/database/redis";
 import {commands} from "../core/loaders/loader";
 import {alliance} from "./extras/alliace";
+import logger from "../core/lib/logger";
 
 
 bot.on(Events.MessageCreate, async (message) => {
@@ -30,7 +31,7 @@ bot.on(Events.MessageCreate, async (message) => {
     if (cooldown > 0) {
         const key = `cooldown:${command.name}:${message.author.id}`;
         const ttl = await redis.ttl(key);
-        console.log(`Key: ${key}, TTL: ${ttl}`);
+        logger.debug(`Key: ${key}, TTL: ${ttl}`);
 
         if (ttl > 0) {
             return message.reply(`⏳ Espera ${ttl}s antes de volver a usar **${command.name}**.`);
@@ -44,7 +45,7 @@ bot.on(Events.MessageCreate, async (message) => {
     try {
         await command.run(message, args, message.client);
     } catch (error) {
-        console.error(error);
+        logger.error({ err: error }, "Error ejecutando comando");
         await message.reply("❌ Hubo un error ejecutando el comando.");
     }
 })

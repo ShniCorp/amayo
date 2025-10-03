@@ -1,3 +1,4 @@
+import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
 
 export const command: CommandMessage = {
@@ -254,7 +255,7 @@ export const command: CommandMessage = {
                     }
                 }).catch(async (error: any) => {
                     // Modal timeout o cancelado
-                    console.log("Modal timeout o error:", error.message);
+                    logger.info("Modal timeout o error:", error.message);
                 });
             }
 

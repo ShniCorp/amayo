@@ -1,3 +1,4 @@
+import logger from "../../../core/lib/logger";
 // Comando para crear recordatorios con Appwrite: !recordar {texto} {fecha}
 // Ejemplos:
 //   !recordar hacer esto el miércoles a las 5pm
@@ -236,7 +237,7 @@ export const command: CommandMessage = {
         executeAt: iso
       });
     } catch (e) {
-      console.error('Error programando recordatorio:', e);
+      logger.error('Error programando recordatorio:', e);
       await message.reply('❌ No pude guardar el recordatorio. Revisa la configuración de Appwrite.');
       return;
     }

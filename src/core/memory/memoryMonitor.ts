@@ -1,3 +1,4 @@
+import logger from "../lib/logger";
 // Monitor ligero de memoria y event loop.
 // Se activa si defines MEMORY_LOG_INTERVAL_SECONDS.
 import { monitorEventLoopDelay } from 'node:perf_hooks';
@@ -41,7 +42,7 @@ export function startMemoryMonitor(opts: MemoryMonitorOptions) {
       }
     }
 
-    console.log(`[MEM] rss=${rss} heapUsed=${heapUsed} heapTotal=${heapTotal} ext=${external} evLoopDelay=${elDelay.toFixed(2)}ms${warn}`);
+    logger.info(`[MEM] rss=${rss} heapUsed=${heapUsed} heapTotal=${heapTotal} ext=${external} evLoopDelay=${elDelay.toFixed(2)}ms${warn}`);
 
     // Resetear métricas de event loop delay para la siguiente ventana
     h.reset();

@@ -1,3 +1,4 @@
+import logger from "../../../core/lib/logger";
 import { GoogleGenAI } from "@google/genai";
 import {CommandMessage} from "../../../core/types/commands";
 import { TextChannel, DMChannel, NewsChannel, ThreadChannel } from "discord.js";
@@ -256,7 +257,7 @@ ${userHistory.messages.slice(-3).join('\n')}`;
             }
 
         } catch (error: any) {
-            console.error('Error en comando AI:', error);
+            logger.error('Error en comando AI:', error);
 
             // Manejar errores específicos incluyendo límites de tokens
             let errorMessage = "❌ **Error:** Ocurrió un problema al comunicarse con la IA.";

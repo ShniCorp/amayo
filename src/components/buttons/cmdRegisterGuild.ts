@@ -1,3 +1,4 @@
+import logger from "../../core/lib/logger";
 import {ButtonInteraction, MessageFlags} from 'discord.js';
 import { registeringCommands } from '../../core/api/discordAPI';
 import type { Button } from '../../core/types/components';
@@ -21,7 +22,7 @@ export default {
       await registeringCommands();
       await interaction.editReply('✅ Comandos de GUILD registrados correctamente.');
     } catch (e: any) {
-      console.error('Error registrando comandos guild:', e);
+      logger.error('Error registrando comandos guild:', e);
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply('❌ Error registrando comandos de guild. Revisa logs.');
       } else {

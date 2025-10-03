@@ -1,3 +1,4 @@
+import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import {
@@ -1259,17 +1260,17 @@ export const command: CommandMessage = {
                         });
                     } catch (error: any) {
                         if (error.code === 10008) {
-                            console.log('Mensaje del editor eliminado');
+                            logger.info('Mensaje del editor eliminado');
                         } else if (error.code === 10062) {
-                            console.log('Interacción expirada');
+                            logger.info('Interacción expirada');
                         } else {
-                            console.error('Error actualizando preview:', error.message || error);
+                            logger.error('Error actualizando preview:', error.message || error);
                         }
                     }
                 }, 500);
 
             } catch (error: any) {
-                console.error('Error en modal:', error);
+                logger.error('Error en modal:', error);
                 try {
                     if (error.code !== 10062 && !interaction.replied && !interaction.deferred) {
                         await interaction.reply({ content: '❌ Error procesando el modal.', flags: 64 });
@@ -1301,7 +1302,7 @@ export const command: CommandMessage = {
                         });
                     }
                 } catch (error) {
-                    console.log('No se pudo actualizar el mensaje final');
+                    logger.info('No se pudo actualizar el mensaje final');
                 }
             }
         });

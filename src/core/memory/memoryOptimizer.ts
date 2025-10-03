@@ -1,3 +1,4 @@
+import logger from "../lib/logger";
 // Sistema adicional de optimización de memoria para complementar el monitor existente
 
 export interface MemoryOptimizerOptions {
@@ -21,7 +22,7 @@ export class MemoryOptimizer {
   start() {
     // Solo habilitar si está disponible el GC manual
     if (typeof global.gc !== 'function') {
-      console.warn('⚠️ Manual GC no disponible. Inicia con --expose-gc para habilitar optimizaciones adicionales.');
+      logger.warn('⚠️ Manual GC no disponible. Inicia con --expose-gc para habilitar optimizaciones adicionales.');
       return;
     }
 
@@ -34,7 +35,7 @@ export class MemoryOptimizer {
       this.gcTimer.unref(); // No bloquear el cierre del proceso
     }
 
-    console.log(`✅ Memory Optimizer iniciado - GC cada ${this.options.forceGCInterval}min, umbral: ${this.options.maxHeapUsageBeforeGC}MB`);
+    logger.info(`✅ Memory Optimizer iniciado - GC cada ${this.options.forceGCInterval}min, umbral: ${this.options.maxHeapUsageBeforeGC}MB`);
   }
 
   stop() {
@@ -69,7 +70,7 @@ export class MemoryOptimizer {
       const duration = Date.now() - startTime;
       const heapFreed = (before.heapUsed - after.heapUsed) / 1024 / 1024;
       
-      console.log(`🗑️ GC ${reason}: liberó ${heapFreed.toFixed(1)}MB en ${duration}ms`);
+      logger.info(`🗑️ GC ${reason}: liberó ${heapFreed.toFixed(1)}MB en ${duration}ms`);
     }
   }
 }

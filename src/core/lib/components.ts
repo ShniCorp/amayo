@@ -1,3 +1,4 @@
+import logger from "./logger";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { Collection } from "discord.js";
@@ -11,7 +12,7 @@ export const contextmenus: Collection<string, ContextMenu> = new Collection<stri
 export function loadComponents(dir: string = path.resolve(__dirname, "../../components")) {
     // Evitar fallo si el directorio no existe en el entorno
     if (!fs.existsSync(dir)) {
-        console.warn(`⚠️ Directorio de componentes no encontrado: ${dir}`);
+        logger.warn(`⚠️ Directorio de componentes no encontrado: ${dir}`);
         return;
     }
 
@@ -34,28 +35,28 @@ export function loadComponents(dir: string = path.resolve(__dirname, "../../comp
             const component = imported.default ?? imported;
 
             if (!component?.customId) {
-                console.warn(`⚠️ Archivo ignorado: ${file} (no tiene "customId")`);
+                logger.warn(`⚠️ Archivo ignorado: ${file} (no tiene "customId")`);
                 continue;
             }
 
             // Detectamos el tipo según la carpeta en la que está
             if (fullPath.includes("buttons")) {
                 buttons.set(component.customId, component as Button);
-                console.log(`🔘 Botón cargado: ${component.customId}`);
+                logger.info(`🔘 Botón cargado: ${component.customId}`);
             } else if (fullPath.includes("modals")) {
                 modals.set(component.customId, component as Modal);
-                console.log(`📄 Modal cargado: ${component.customId}`);
+                logger.info(`📄 Modal cargado: ${component.customId}`);
             } else if (fullPath.includes("selectmenus")) {
                 selectmenus.set(component.customId, component as SelectMenu);
-                console.log(`📜 SelectMenu cargado: ${component.customId}`);
+                logger.info(`📜 SelectMenu cargado: ${component.customId}`);
             } else if (fullPath.includes("contextmenu")) {
                 contextmenus.set(component.customId, component as ContextMenu);
-                console.log(`📑 ContextMenu cargado: ${component.customId}`);
+                logger.info(`📑 ContextMenu cargado: ${component.customId}`);
             } else {
-                console.log(`⚠️ Componente desconocido: ${component.customId}`);
+                logger.info(`⚠️ Componente desconocido: ${component.customId}`);
             }
         } catch (error) {
-            console.error(`❌ Error cargando componente ${file}:`, error);
+            logger.error(`❌ Error cargando componente ${file}:`, error);
         }
     }
 }

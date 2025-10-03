@@ -1,3 +1,4 @@
+import logger from "../../core/lib/logger";
 import {ModalSubmitInteraction, MessageFlags} from "discord.js";
 import type { Modal } from '../../core/types/components';
 import type Amayo from '../../core/client';
@@ -22,7 +23,7 @@ export default {
                 flags: MessageFlags.Ephemeral
             });
         } catch (error) {
-            console.error('Error cambiando prefix:', error);
+            logger.error('Error cambiando prefix:', error);
             await interaction.reply({
                 content: '❌ Error al cambiar el prefix.',
                 flags: MessageFlags.Ephemeral

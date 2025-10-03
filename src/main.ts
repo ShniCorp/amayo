@@ -8,6 +8,7 @@ import { startMemoryMonitor } from "./core/memory/memoryMonitor";
 import {memoryOptimizer} from "./core/memory/memoryOptimizer";
 import { startReminderPoller } from "./core/api/reminders";
 import { ensureRemindersSchema } from "./core/api/remindersSchema";
+import logger from "./core/lib/logger";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
@@ -23,8 +24,8 @@ if (process.env.ENABLE_MEMORY_OPTIMIZER === 'true') {
 export const bot = new Amayo();
 
 // Listeners de robustez del cliente Discord
-bot.on('error', (e) => console.error('🐞 Discord client error:', e));
-bot.on('warn', (m) => console.warn('⚠️ Discord warn:', m));
+bot.on('error', (e) => logger.error({ err: e }, '🐞 Discord client error'));
+bot.on('warn', (m) => logger.warn('⚠️ Discord warn: %s', m));
 
 // Evitar reintentos de re-login simultáneos
 let relogging = false;
@@ -32,10 +33,10 @@ let relogging = false;
 bot.on('invalidated', () => {
     if (relogging) return;
     relogging = true;
-    console.error('🔄 Sesión de Discord invalidada. Reintentando login...');
+    logger.error('🔄 Sesión de Discord invalidada. Reintentando login...');
     withRetry('Re-login tras invalidated', () => bot.play(), { minDelayMs: 2000, maxDelayMs: 60_000 })
         .catch(() => {
-            console.error('No se pudo reloguear tras invalidated, se seguirá intentando en el bucle general.');
+            logger.error('No se pudo reloguear tras invalidated, se seguirá intentando en el bucle general.');
         })
         .finally(() => { relogging = false; });
 });
@@ -68,10 +69,10 @@ async function withRetry<T>(name: string, fn: () => Promise<T>, opts?: {
         } catch (err) {
             attempt++;
             const errMsg = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
-            console.error(`❌ ${name} falló (intento ${attempt}) =>`, errMsg);
+            logger.error(`❌ ${name} falló (intento ${attempt}) => %s`, errMsg);
 
             if (!isRetryable(err, attempt)) {
-                console.error(`⛔ ${name}: error no recuperable, deteniendo reintentos.`);
+                logger.error(`⛔ ${name}: error no recuperable, deteniendo reintentos.`);
                 throw err;
             }
 
@@ -85,7 +86,7 @@ async function withRetry<T>(name: string, fn: () => Promise<T>, opts?: {
             } else {
                 wait = Math.min(maxDelayMs, delay);
             }
-            console.warn(`⏳ Reintentando ${name} en ${wait}ms...`);
+            logger.warn(`⏳ Reintentando ${name} en ${wait}ms...`);
             await new Promise((r) => setTimeout(r, wait));
             delay = Math.min(maxDelayMs, Math.floor(delay * factor));
         }
@@ -94,11 +95,11 @@ async function withRetry<T>(name: string, fn: () => Promise<T>, opts?: {
 
 // Handlers globales para robustez
 process.on('unhandledRejection', (reason: any, p) => {
-    console.error('🚨 UnhandledRejection en Promise:', p, 'razón:', reason);
+    logger.error({ promise: p, reason }, '🚨 UnhandledRejection en Promise');
 });
 
 process.on('uncaughtException', (err) => {
-    console.error('🚨 UncaughtException:', err);
+    logger.error({ err }, '🚨 UncaughtException');
     // No salimos; dejamos que el bot continúe vivo
 });
 
@@ -115,14 +116,14 @@ process.on('multipleResolves', (type, promise, reason: any) => {
         // Ruido benigno de reconexiones del WS de Discord: ignorar
         return;
     }
-    console.warn('⚠️ multipleResolves:', type, msg);
+    logger.warn('⚠️ multipleResolves: %s %s', type, msg);
 });
 
 let shuttingDown = false;
 async function gracefulShutdown() {
     if (shuttingDown) return;
     shuttingDown = true;
-    console.log('🛑 Apagado controlado iniciado...');
+    logger.info('🛑 Apagado controlado iniciado...');
     try {
         // Detener optimizador de memoria
         memoryOptimizer.stop();
@@ -131,10 +132,10 @@ async function gracefulShutdown() {
         try {
             if (redis?.isOpen) {
                 await redis.quit();
-                console.log('🔌 Redis cerrado');
+                logger.info('🔌 Redis cerrado');
             }
         } catch (e) {
-            console.warn('No se pudo cerrar Redis limpiamente:', e);
+            logger.warn({ err: e }, 'No se pudo cerrar Redis limpiamente');
         }
         // Cerrar Prisma y Discord
         try {
@@ -144,7 +145,7 @@ async function gracefulShutdown() {
             await bot.destroy();
         } catch {}
     } finally {
-        console.log('✅ Apagado controlado completo');
+        logger.info('✅ Apagado controlado completo');
     }
 }
 
@@ -152,17 +153,17 @@ process.on('SIGINT', gracefulShutdown);
 process.on('SIGTERM', gracefulShutdown);
 
 async function bootstrap() {
-    console.log("🚀 Iniciando bot...");
+    logger.info("🚀 Iniciando bot...");
 
     // Cargar recursos locales (no deberían tirar el proceso si fallan)
-    try { loadCommands(); } catch (e) { console.error('Error cargando comandos:', e); }
-    try { loadComponents(); } catch (e) { console.error('Error cargando componentes:', e); }
-    try { loadEvents(); } catch (e) { console.error('Error cargando eventos:', e); }
+    try { loadCommands(); } catch (e) { logger.error({ err: e }, 'Error cargando comandos'); }
+    try { loadComponents(); } catch (e) { logger.error({ err: e }, 'Error cargando componentes'); }
+    try { loadEvents(); } catch (e) { logger.error({ err: e }, 'Error cargando eventos'); }
 
     // Registrar comandos en segundo plano con reintentos; no bloquea el arranque del bot
     withRetry('Registrar slash commands', async () => {
         await registeringCommands();
-    }).catch((e) => console.error('Registro de comandos agotó reintentos:', e));
+    }).catch((e) => logger.error({ err: e }, 'Registro de comandos agotó reintentos'));
 
     // Conectar Redis con reintentos
     await withRetry('Conectar a Redis', async () => {
@@ -181,12 +182,12 @@ async function bootstrap() {
     });
 
     // Asegurar esquema de Appwrite para recordatorios (colección + atributos + índice)
-    try { await ensureRemindersSchema(); } catch (e) { console.warn('No se pudo asegurar el esquema de recordatorios:', e); }
+    try { await ensureRemindersSchema(); } catch (e) { logger.warn({ err: e }, 'No se pudo asegurar el esquema de recordatorios'); }
 
     // Iniciar poller de recordatorios si Appwrite está configurado
     startReminderPoller(bot);
 
-    console.log("✅ Bot conectado a Discord");
+    logger.info("✅ Bot conectado a Discord");
 }
 
 // Bucle de arranque resiliente: si bootstrap completo falla, reintenta sin matar el proceso

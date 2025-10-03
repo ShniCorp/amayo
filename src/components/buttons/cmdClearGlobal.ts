@@ -1,3 +1,4 @@
+import logger from "../../core/lib/logger";
 import {ButtonInteraction, MessageFlags} from 'discord.js';
 import {clearGlobalCommands} from '../../core/api/discordAPI';
 import type { Button } from '../../core/types/components';
@@ -21,7 +22,7 @@ export default {
       await clearGlobalCommands();
       await interaction.editReply('🧹 Comandos GLOBAL eliminados.');
     } catch (e: any) {
-      console.error('Error limpiando comandos globales:', e);
+      logger.error('Error limpiando comandos globales:', e);
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply('❌ Error limpiando comandos globales.');
       } else {

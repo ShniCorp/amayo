@@ -1,3 +1,4 @@
+import logger from "../../core/lib/logger";
 import {ButtonInteraction, MessageFlags} from 'discord.js';
 import { registeringGlobalCommands } from '../../core/api/discordAPI';
 
@@ -19,7 +20,7 @@ export default {
       await registeringGlobalCommands();
       await interaction.editReply('✅ Comandos GLOBAL registrados (propagación puede tardar).');
     } catch (e: any) {
-      console.error('Error registrando comandos globales:', e);
+      logger.error('Error registrando comandos globales:', e);
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply('❌ Error registrando comandos globales.');
       } else {

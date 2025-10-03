@@ -1,5 +1,6 @@
 import { Client, GatewayIntentBits, Options, Partials } from 'discord.js';
 import { prisma, ensurePrismaConnection } from './database/prisma';
+import logger from './lib/logger';
 
 // Verificar si process.loadEnvFile existe (Node.js 20.6+)
 if (typeof process.loadEnvFile === 'function') {
@@ -9,6 +10,7 @@ if (typeof process.loadEnvFile === 'function') {
 class Amayo extends Client {
     public key: string;
     public prisma = prisma;
+    public mode: string;
 
     constructor() {
         super({
@@ -44,19 +46,20 @@ class Amayo extends Client {
         });
 
         this.key = process.env.TOKEN ?? '';
+        this.mode = process.env.MODE ?? 'Normal';
     }
 
     async play() {
         if (!this.key) {
-            console.error('No key provided');
+            logger.error('No key provided');
             throw new Error('Missing DISCORD TOKEN');
         } else {
             try {
                 await ensurePrismaConnection();
-                console.log('Successfully connected to the database (singleton).');
+                logger.info('Successfully connected to the database (singleton).');
                 await this.login(this.key);
             } catch (error) {
-                console.error('Failed to connect to DB or login to Discord:', error);
+                logger.error({ err: error }, 'Failed to connect to DB or login to Discord');
                 throw error;
             }
         }

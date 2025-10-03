@@ -1,3 +1,4 @@
+import logger from "../lib/logger";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const sdk: any = require('node-appwrite');
 import { getDatabases, isAppwriteConfigured, APPWRITE_COLLECTION_REMINDERS_ID, APPWRITE_DATABASE_ID } from './appwrite';
@@ -20,7 +21,7 @@ export async function ensureRemindersSchema() {
       ]);
       // Nota: No añadimos permisos de lectura pública para evitar fuga de datos
     } catch (e) {
-      console.warn('No se pudo crear la colección de recordatorios (puede existir ya):', e);
+      logger.warn('No se pudo crear la colección de recordatorios (puede existir ya):', e);
     }
   }
 
@@ -30,7 +31,7 @@ export async function ensureRemindersSchema() {
       const msg = String(e?.message || e);
       if (!/already exists|attribute_already_exists/i.test(msg)) {
         // Otros errores se muestran
-        console.warn('No se pudo crear atributo:', msg);
+        logger.warn('No se pudo crear atributo:', msg);
       }
     }
   };
@@ -49,7 +50,7 @@ export async function ensureRemindersSchema() {
   } catch (e: any) {
     const msg = String(e?.message || e);
     if (!/already exists|index_already_exists/i.test(msg)) {
-      console.warn('No se pudo crear índice executeAt:', msg);
+      logger.warn('No se pudo crear índice executeAt:', msg);
     }
   }
 }

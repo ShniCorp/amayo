@@ -1,3 +1,4 @@
+import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { EmbedBuilder, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
@@ -209,7 +210,7 @@ export const command: CommandMessage = {
                             });
 
                         } catch (error) {
-                            console.log(error)
+                            logger.info(error)
                             const errorEmbed = new EmbedBuilder()
                                 .setTitle("❌ Error de Eliminación")
                                 .setDescription(`💥 **Error al eliminar el canal:**\n\n📺 Canal: ${channelName}\n🧩 Configuración: \`${channelConfig?.blockConfigName}\`\n\n🔍 **Posibles causas:**\n• El canal ya fue eliminado\n• Error de base de datos\n• Permisos insuficientes\n\n🔄 Intenta nuevamente.`)

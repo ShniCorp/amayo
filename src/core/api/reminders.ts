@@ -1,3 +1,4 @@
+import logger from "../lib/logger";
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const sdk: any = require('node-appwrite');
 import type Amayo from '../client';
@@ -62,7 +63,7 @@ async function fetchDueReminders(limit = 25): Promise<ReminderRow[]> {
     ]) as unknown as { documents?: ReminderRow[] };
     return (list.documents || []) as ReminderRow[];
   } catch (e) {
-    console.error('Error listando recordatorios vencidos:', e);
+    logger.error('Error listando recordatorios vencidos:', e);
     return [];
   }
 }
@@ -82,7 +83,7 @@ async function deliverReminder(bot: Amayo, doc: ReminderRow) {
         delivered = true;
       }
     } catch (e) {
-      console.warn('No se pudo enviar al canal original:', e);
+      logger.warn('No se pudo enviar al canal original:', e);
     }
   }
   // 2) Fallback: DM al usuario
@@ -92,7 +93,7 @@ async function deliverReminder(bot: Amayo, doc: ReminderRow) {
       await user.send({ content: `⏰ Recordatorio: ${message}` });
       delivered = true;
     } catch (e) {
-      console.warn('No se pudo enviar DM al usuario:', e);
+      logger.warn('No se pudo enviar DM al usuario:', e);
     }
   }
 
@@ -101,12 +102,12 @@ async function deliverReminder(bot: Amayo, doc: ReminderRow) {
 
 export function startReminderPoller(bot: Amayo) {
   if (!isAppwriteConfigured()) {
-    console.warn('Appwrite no configurado: el poller de recordatorios no se iniciará.');
+    logger.warn('Appwrite no configurado: el poller de recordatorios no se iniciará.');
     return null;
   }
 
   const intervalSec = parseInt(process.env.REMINDERS_POLL_INTERVAL_SECONDS || '30', 10);
-  console.log(`⏱️ Iniciando poller de recordatorios cada ${intervalSec}s`);
+  logger.info(`⏱️ Iniciando poller de recordatorios cada ${intervalSec}s`);
 
   const timer = setInterval(async () => {
     try {
@@ -119,11 +120,11 @@ export function startReminderPoller(bot: Amayo) {
           const db = getDatabases();
           if (db) await db.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_REMINDERS_ID, d.$id);
         } catch (e) {
-          console.warn('No se pudo eliminar recordatorio entregado:', e);
+          logger.warn('No se pudo eliminar recordatorio entregado:', e);
         }
       }
     } catch (e) {
-      console.error('Error en ciclo de recordatorios:', e);
+      logger.error('Error en ciclo de recordatorios:', e);
     }
   }, Math.max(10, intervalSec) * 1000);
 

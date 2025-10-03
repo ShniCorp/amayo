@@ -4,6 +4,7 @@ import {
 // Reemplaza instancia local -> usa singleton
 import { prisma } from "../../core/database/prisma";
 import { replaceVars } from "../../core/lib/vars";
+import logger from "../../core/lib/logger";
 
 
 // Regex para detectar URLs válidas (corregido)
@@ -69,7 +70,7 @@ export async function alliance(message: Message) {
         }
 
     } catch (error) {
-        console.error('Error en función alliance:', error);
+        logger.error({ err: error }, 'Error en función alliance');
     }
 }
 
@@ -130,10 +131,10 @@ async function processValidLink(message: Message, allianceChannel: any, link: st
         // Enviar el bloque configurado usando Display Components
         await sendBlockConfigV2(message, allianceChannel.blockConfigName, message.guild!.id, link, userStats, inviteData);
 
-        console.log(`✅ Punto otorgado a ${message.author.tag} por enlace válido: ${link}`);
+        logger.info(`✅ Punto otorgado a ${message.author.tag} por enlace válido: ${link}`);
 
     } catch (error) {
-        console.error('Error procesando enlace válido:', error);
+        logger.error({ err: error }, 'Error procesando enlace válido');
     }
 }
 
@@ -161,7 +162,7 @@ async function validateDiscordInvite(link: string): Promise<any> {
 
         return null;
     } catch (error) {
-        console.error('Error validando invitación de Discord:', error);
+        logger.error({ err: error }, 'Error validando invitación de Discord');
         return null; // En caso de error, considerar como inválido
     }
 }
@@ -247,7 +248,7 @@ async function sendBlockConfigV2(message: Message, blockConfigName: string, guil
         });
 
         if (!blockConfig) {
-            console.error(`❌ Bloque "${blockConfigName}" no encontrado para guild ${guildId}`);
+            logger.error(`❌ Bloque "${blockConfigName}" no encontrado para guild ${guildId}`);
             return;
         }
 
@@ -266,8 +267,7 @@ async function sendBlockConfigV2(message: Message, blockConfigName: string, guil
         });
 
     } catch (error) {
-        console.error('❌ Error enviando bloque de configuración V2:', error);
-        console.log('Detalles del error:', error);
+        logger.error({ err: error }, '❌ Error enviando bloque de configuración V2');
 
         // Fallback: usar mensaje simple
         try {
@@ -275,7 +275,7 @@ async function sendBlockConfigV2(message: Message, blockConfigName: string, guil
                 content: '✅ ¡Enlace de alianza procesado correctamente!'
             });
         } catch (fallbackError) {
-            console.error('❌ Error en fallback:', fallbackError);
+            logger.error({ err: fallbackError }, '❌ Error en fallback');
         }
     }
 }
@@ -381,7 +381,7 @@ async function convertConfigToDisplayComponent(config: any, user: any, guild: an
         return { type: 17, accent_color: config.color ?? null, components: previewComponents };
 
     } catch (error) {
-        console.error('Error convirtiendo configuración a Display Component:', error);
+        logger.error({ err: error }, 'Error convirtiendo configuración a Display Component');
         return { type: 17, accent_color: null, components: [ { type: 10, content: 'Error al procesar la configuración del bloque.' } ] };
     }
 }

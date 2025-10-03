@@ -1,3 +1,4 @@
+import logger from "../../core/lib/logger";
 import {ButtonInteraction, MessageFlags} from 'discord.js';
 import { clearAllCommands } from '../../core/api/discordAPI';
 import type { Button } from '../../core/types/components';
@@ -21,7 +22,7 @@ export default {
       await clearAllCommands();
       await interaction.editReply('🧹 Comandos de GUILD eliminados.');
     } catch (e: any) {
-      console.error('Error limpiando comandos guild:', e);
+      logger.error('Error limpiando comandos guild:', e);
       if (interaction.deferred || interaction.replied) {
         await interaction.editReply('❌ Error limpiando comandos de guild.');
       } else {

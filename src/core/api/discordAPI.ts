@@ -1,3 +1,4 @@
+import logger from "../lib/logger";
 import { REST } from "discord.js";
 // @ts-ignore
 import { Routes } from "discord-api-types/v10";
@@ -19,12 +20,12 @@ export async function registeringCommands(): Promise<void> {
                 options: cmd.options ?? []
             });
 
-            console.log(`✅ Preparado para registrar (guild): ${cmd.name}`);
+            logger.info(`✅ Preparado para registrar (guild): ${cmd.name}`);
         }
     }
 
     try {
-        console.log(`🧹 Limpiando comandos antiguos/residuales (guild)...`);
+        logger.info(`🧹 Limpiando comandos antiguos/residuales (guild)...`);
 
         // Primero eliminamos TODOS los comandos existentes
         await rest.put(
@@ -35,11 +36,11 @@ export async function registeringCommands(): Promise<void> {
             { body: [] } // Array vacío elimina todos los comandos
         );
 
-        console.log(`✅ Comandos antiguos de guild eliminados.`);
+        logger.info(`✅ Comandos antiguos de guild eliminados.`);
         // Pequeña pausa para asegurar que Discord procese la eliminación
         await new Promise(r => setTimeout(r, 1000));
 
-        console.log(`🚀 Registrando ${commandsToRegister.length} comandos slash nuevos (guild)...`);
+        logger.info(`🚀 Registrando ${commandsToRegister.length} comandos slash nuevos (guild)...`);
 
         // Ahora registramos los comandos actuales
         const data: any = await rest.put(
@@ -50,9 +51,9 @@ export async function registeringCommands(): Promise<void> {
             { body: commandsToRegister }
         );
 
-        console.log(`✅ ${data.length} comandos de guild registrados.`);
+        logger.info(`✅ ${data.length} comandos de guild registrados.`);
     } catch (error) {
-        console.error("❌ Error en el proceso de comandos de guild:", error);
+        logger.error("❌ Error en el proceso de comandos de guild:", error);
     }
 }
 
@@ -66,31 +67,31 @@ export async function registeringGlobalCommands(): Promise<void> {
                 type: 1,
                 options: cmd.options ?? []
             });
-            console.log(`🌍 Preparado para registrar global: ${cmd.name}`);
+            logger.info(`🌍 Preparado para registrar global: ${cmd.name}`);
         }
     }
     try {
-        console.log(`🧹 Limpiando comandos globales existentes...`);
+        logger.info(`🧹 Limpiando comandos globales existentes...`);
         await rest.put(
             Routes.applicationCommands(process.env.CLIENT!),
             { body: [] }
         );
-        console.log(`✅ Comandos globales previos eliminados.`);
+        logger.info(`✅ Comandos globales previos eliminados.`);
         await new Promise(r => setTimeout(r, 1500));
-        console.log(`🚀 Registrando ${commandsToRegister.length} comandos globales... (propagación puede tardar hasta 1h)`);
+        logger.info(`🚀 Registrando ${commandsToRegister.length} comandos globales... (propagación puede tardar hasta 1h)`);
         const data: any = await rest.put(
             Routes.applicationCommands(process.env.CLIENT!),
             { body: commandsToRegister }
         );
-        console.log(`✅ ${data.length} comandos globales enviados a la API.`);
+        logger.info(`✅ ${data.length} comandos globales enviados a la API.`);
     } catch (error) {
-        console.error("❌ Error registrando comandos globales:", error);
+        logger.error("❌ Error registrando comandos globales:", error);
     }
 }
 
 export async function clearAllCommands(): Promise<void> {
     try {
-        console.log(`🧹 Eliminando TODOS los comandos slash (guild)...`);
+        logger.info(`🧹 Eliminando TODOS los comandos slash (guild)...`);
         await rest.put(
             Routes.applicationGuildCommands(
                 process.env.CLIENT!,
@@ -98,21 +99,21 @@ export async function clearAllCommands(): Promise<void> {
             ),
             { body: [] }
         );
-        console.log(`✅ Todos los comandos de guild eliminados.`);
+        logger.info(`✅ Todos los comandos de guild eliminados.`);
     } catch (error) {
-        console.error("❌ Error eliminando comandos de guild:", error);
+        logger.error("❌ Error eliminando comandos de guild:", error);
     }
 }
 
 export async function clearGlobalCommands(): Promise<void> {
     try {
-        console.log(`🌍 Eliminando comandos globales...`);
+        logger.info(`🌍 Eliminando comandos globales...`);
         await rest.put(
             Routes.applicationCommands(process.env.CLIENT!),
             { body: [] }
         );
-        console.log(`✅ Comandos globales eliminados.`);
+        logger.info(`✅ Comandos globales eliminados.`);
     } catch (error) {
-        console.error("❌ Error eliminando comandos globales:", error);
+        logger.error("❌ Error eliminando comandos globales:", error);
     }
 }

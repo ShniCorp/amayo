@@ -1,4 +1,5 @@
 import { createClient } from "redis";
+import logger from "../lib/logger";
 
 export const redis = createClient({
     username: 'default',
@@ -9,9 +10,9 @@ export const redis = createClient({
     }
 });
 
-redis.on("error", (err: any) => console.error("Redis error:", err));
-redis.on("connect", () => console.log("✅ Conectado a Redis"));
-redis.on("reconnecting", () => console.warn("♻️  Reintentando conexión Redis"));
+redis.on("error", (err: any) => logger.error({ err }, "Redis error"));
+redis.on("connect", () => logger.info("✅ Conectado a Redis"));
+redis.on("reconnecting", () => logger.warn("♻️  Reintentando conexión Redis"));
 
 export async function redisConnect () {
     if (!redis.isOpen) await redis.connect();

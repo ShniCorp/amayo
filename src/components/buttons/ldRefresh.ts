@@ -1,3 +1,4 @@
+import logger from "../../core/lib/logger";
 import { ButtonInteraction, MessageFlags } from 'discord.js';
 import { buildLeaderboardPanel } from '../../commands/messages/alliaces/leaderboard';
 
@@ -14,7 +15,7 @@ export default {
       const panel = await buildLeaderboardPanel(fakeMessage);
       await interaction.message.edit({ components: [panel] });
     } catch (e) {
-      console.error('Error refrescando leaderboard:', e);
+      logger.error('Error refrescando leaderboard:', e);
       if (!interaction.deferred && !interaction.replied)
         await interaction.reply({ content: '❌ Error refrescando leaderboard.', flags: MessageFlags.Ephemeral });
     }

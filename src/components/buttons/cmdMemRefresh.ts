@@ -1,3 +1,4 @@
+import logger from "../../core/lib/logger";
 import {ButtonInteraction, MessageFlags} from 'discord.js';
 import { buildAdminPanel } from '../../commands/messages/net/commandsAdmin';
 
@@ -15,7 +16,7 @@ export default {
       // Edita el mensaje original reemplazando componentes (solo el contenedor con filas internas)
       await interaction.message.edit({ components: [panel] });
     } catch (e) {
-      console.error('Error refrescando panel de memoria:', e);
+      logger.error('Error refrescando panel de memoria:', e);
       if (!interaction.deferred && !interaction.replied)
         await interaction.reply({ content: '❌ Error refrescando panel.',  flags: MessageFlags.Ephemeral });
     }

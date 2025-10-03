@@ -1,3 +1,4 @@
+import logger from "../lib/logger";
 import * as fs from "node:fs";
 import path from "node:path";
 import { Collection } from "discord.js";
@@ -7,7 +8,7 @@ export const commands = new Collection<string, any>();
 export function loadCommands(dir: string = path.resolve(__dirname, "../../commands")) {
     // Evitar fallo si el directorio no existe en el entorno
     if (!fs.existsSync(dir)) {
-        console.warn(`⚠️ Directorio de comandos no encontrado: ${dir}`);
+        logger.warn(`⚠️ Directorio de comandos no encontrado: ${dir}`);
         return;
     }
 
@@ -29,12 +30,12 @@ export function loadCommands(dir: string = path.resolve(__dirname, "../../comman
         const command = imported.command ?? imported.default ?? imported;
 
         if (!command?.data?.name && !command?.name) {
-            console.warn(`⚠️ Archivo ignorado: ${file} (no es un comando válido)`);
+            logger.warn(`⚠️ Archivo ignorado: ${file} (no es un comando válido)`);
             continue;
         }
 
         const name = command.data?.name ?? command.name;
-        console.log(`📦 Loading command: ${name}`);
+        logger.info(`📦 Loading command: ${name}`);
 
         // @ts-ignore
         commands.set(name, command);
@@ -45,6 +46,6 @@ export function loadCommands(dir: string = path.resolve(__dirname, "../../comman
             }
         }
 
-        console.log(`✅ Cargado comando: ${name}`);
+        logger.info(`✅ Cargado comando: ${name}`);
     }
 }
