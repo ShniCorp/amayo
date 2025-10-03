@@ -181,7 +181,7 @@ export const command: CommandMessage = {
                 };
 
                 await message.reply({
-                    content: '',
+                    flags: 32768,
                     components: [resetPanel]
                 });
                 logger.info(`Sistema de IA reiniciado por ${message.author.username} (${message.author.id})`);
@@ -192,7 +192,7 @@ export const command: CommandMessage = {
             const adminPanel = buildAIAdminPanel();
 
             await message.reply({
-                content: '',
+                flags: 32768,
                 components: [adminPanel]
             });
 
@@ -221,7 +221,7 @@ export const command: CommandMessage = {
             };
 
             await message.reply({
-                content: '',
+                flags: 32768,
                 components: [errorPanel]
             });
         }
