@@ -5,6 +5,7 @@ import {
 import { prisma } from "../../core/database/prisma";
 import { replaceVars } from "../../core/lib/vars";
 import logger from "../../core/lib/logger";
+import { sendComponentsV2Message } from "../../core/api/discordAPI";
 
 
 // Regex para detectar URLs válidas (corregido)
@@ -258,12 +259,14 @@ async function sendBlockConfigV2(message: Message, blockConfigName: string, guil
         // Convertir el JSON plano a la estructura de Display Components correcta
         const displayComponent = await convertConfigToDisplayComponent(processedConfig, message.author, message.guild!);
 
-        // Enviar usando Display Components con la flag correcta
-        // Usar la misma estructura que el editor: flag 32768 y type 17
-        //@ts-ignore
-        await message.reply({
-            flags: 32768, // Equivalente a MessageFlags.IsComponentsV2
-            components: [displayComponent]
+        // Construir adjuntos desde la config si existen
+        const attachments = buildAttachmentsFromConfig(processedConfig);
+
+        // Enviar usando Display Components con la flag correcta a través del cliente REST tipado
+        await sendComponentsV2Message(message.channel.id, {
+            components: [displayComponent],
+            replyToMessageId: message.id,
+            attachments: attachments.length ? attachments : undefined,
         });
 
     } catch (error) {
@@ -280,20 +283,59 @@ async function sendBlockConfigV2(message: Message, blockConfigName: string, guil
     }
 }
 
-// Helper: parsear emojis (unicode o personalizados <:name:id> / <a:name:id>)
-function parseEmojiInput(input?: string): any | null {
-    if (!input) return null;
-    const trimmed = input.trim();
-    if (!trimmed) return null;
-    const match = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
-    if (match) {
-        const animated = match[1] === 'a';
-        const name = match[2];
-        const id = match[3];
-        return { id, name, animated };
+// Extrae adjuntos desde la config (base64) para usar attachment://<filename>
+function buildAttachmentsFromConfig(config: any) {
+    const results: { name: string; data: Buffer; description?: string; spoiler?: boolean }[] = [];
+    if (!config || typeof config !== 'object') return results;
+
+    const arr = Array.isArray(config.attachments) ? config.attachments : [];
+    for (const item of arr) {
+        if (!item || typeof item !== 'object') continue;
+        const name = typeof item.name === 'string' && item.name.trim() ? item.name.trim() : null;
+        const description = typeof item.description === 'string' ? item.description : undefined;
+        const spoiler = Boolean(item.spoiler);
+        const raw = typeof item.dataBase64 === 'string' ? item.dataBase64 : (typeof item.data === 'string' ? item.data : null);
+        if (!name || !raw) continue;
+        const buf = decodeBase64Payload(raw);
+        if (!buf) continue;
+        results.push({ name, data: buf, description, spoiler });
     }
-    // Asumimos unicode si no es formato de emoji personalizado
-    return { name: trimmed };
+    return results;
+}
+
+function decodeBase64Payload(raw: string): Buffer | null {
+    try {
+        let base64 = raw.trim();
+        // Soportar formatos: "base64:..." o data URLs "data:mime/type;base64,...."
+        if (base64.startsWith('base64:')) {
+            base64 = base64.slice('base64:'.length);
+        } else if (base64.startsWith('data:')) {
+            const comma = base64.indexOf(',');
+            if (comma !== -1) base64 = base64.slice(comma + 1);
+        }
+        return Buffer.from(base64, 'base64');
+    } catch {
+        return null;
+    }
+}
+
+// Helper: URLs http/https únicamente
+function isHttpUrl(url: unknown): url is string {
+    if (typeof url !== 'string' || !url) return false;
+    try {
+        const u = new URL(url);
+        return u.protocol === 'http:' || u.protocol === 'https:';
+    } catch {
+        return false;
+    }
+}
+
+// Helper: permitir http/https y attachment:// para medios (thumbnail/media/file)
+function isMediaUrl(url: unknown): boolean {
+    if (typeof url !== 'string' || !url) return false;
+    if (isHttpUrl(url)) return true;
+    const s = url as string;
+    return s.startsWith('attachment://');
 }
 
 // Helper: construir accessory de Link Button para Display Components
@@ -302,7 +344,8 @@ async function buildLinkAccessory(link: any, user: any, guild: any) {
         if (!link || !link.url) return null;
         // @ts-ignore
         const processedUrl = await replaceVars(link.url, user, guild);
-        if (!isValidUrl(processedUrl)) return null;
+        // En botones de enlace solo se permite http/https
+        if (!isHttpUrl(processedUrl)) return null;
         const accessory: any = { type: 2, style: 5, url: processedUrl };
         if (link.label && typeof link.label === 'string' && link.label.trim()) {
             accessory.label = link.label.trim().slice(0, 80);
@@ -324,10 +367,10 @@ async function convertConfigToDisplayComponent(config: any, user: any, guild: an
         const previewComponents: any[] = [];
 
         // Añadir imagen de portada primero si existe
-        if (config.coverImage && isValidUrl(config.coverImage)) {
+        if (config.coverImage) {
             // @ts-ignore
             const processedCoverUrl = await replaceVars(config.coverImage, user, guild);
-            if (isValidUrl(processedCoverUrl)) {
+            if (isMediaUrl(processedCoverUrl)) {
                 previewComponents.push({ type: 12, items: [{ media: { url: processedCoverUrl } }] });
             }
         }
@@ -355,7 +398,7 @@ async function convertConfigToDisplayComponent(config: any, user: any, guild: an
                     if (c.linkButton) {
                         accessory = await buildLinkAccessory(c.linkButton, user, guild);
                     }
-                    if (!accessory && processedThumbnail && isValidUrl(processedThumbnail)) {
+                    if (!accessory && processedThumbnail && isMediaUrl(processedThumbnail)) {
                         accessory = { type: 11, media: { url: processedThumbnail } };
                     }
 
@@ -367,10 +410,10 @@ async function convertConfigToDisplayComponent(config: any, user: any, guild: an
                 } else if (c.type === 14) {
                     previewComponents.push({ type: 14, divider: c.divider ?? true, spacing: c.spacing ?? 1 });
                 } else if (c.type === 12) {
-                    // Imagen - validar URL también
+                    // Imagen - validar http/https o attachment://
                     // @ts-ignore
                     const processedImageUrl = await replaceVars(c.url, user, guild);
-                    if (isValidUrl(processedImageUrl)) {
+                    if (isMediaUrl(processedImageUrl)) {
                         previewComponents.push({ type: 12, items: [{ media: { url: processedImageUrl } }] });
                     }
                 }
@@ -386,16 +429,23 @@ async function convertConfigToDisplayComponent(config: any, user: any, guild: an
     }
 }
 
-// Función helper para validar URLs
-function isValidUrl(url: unknown): url is string {
-    if (typeof url !== 'string' || !url) return false;
-    try {
-        new URL(url);
-        return url.startsWith('http://') || url.startsWith('https://');
-    } catch {
-        return false;
+// Helper: parsear emojis (unicode o personalizados <:name:id> / <a:name:id>)
+function parseEmojiInput(input?: string): any | null {
+    if (!input) return null;
+    const trimmed = input.trim();
+    if (!trimmed) return null;
+    const match = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
+    if (match) {
+        const animated = match[1] === 'a';
+        const name = match[2];
+        const id = match[3];
+        return { id, name, animated };
     }
+    // Asumimos unicode si no es formato de emoji personalizado
+    return { name: trimmed };
 }
+
+// Función helper para validar URLs (http/https y attachment:// para medios)
 
 async function processConfigVariables(config: any, user: any, guild: any, userStats?: any, inviteObject?: any): Promise<any> {
     if (typeof config === 'string') {
