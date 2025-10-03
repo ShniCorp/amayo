@@ -53,19 +53,20 @@ bot.on(Events.ClientReady, () => {
         {
             type: ActivityType.Custom,
             name: 'custom',
-            state: '<:KingCat:1322661036112740514> Tu cazadora de confiaza'
+            state: '💫 Tu cazadora de confiaza',
         },
         {
             type: ActivityType.Playing,
-            name: 'la rolear con la IA !ai',
+            name: '<a:SparklyRose:1321195729259073668> Rolear con la IA "!ai hola"',
         },
         {
             type: ActivityType.Watching,
             name: `!help | ${bot.guilds.cache.size} servidores`
         },
         {
+            name: "",
             type: ActivityType.Streaming,
-            name: "📺 Musica de calidad https://youtu.be/MRkOSkBbjSw?si=PuTkDgJn5eBMHnoN",
+            url: "https://youtu.be/MRkOSkBbjSw?si=PuTkDgJn5eBMHnoN",
         }
     ];
 
