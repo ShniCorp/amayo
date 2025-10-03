@@ -5,24 +5,69 @@ import logger from "../core/lib/logger";
 bot.on(Events.ClientReady, () => {
     logger.info("Ready!");
 
-    // 🔄 ACTIVIDADES ROTATIVAS - Cambia cada 15 segundos
+    // ============================================
+    // 🚀 OPCIÓN 1: ACTIVIDAD FIJA (RECOMENDADO PARA HEROKU 512MB)
+    // ============================================
+    // Una sola actividad, sin interval, sin uso adicional de recursos
+
+    //bot.user?.setPresence({
+    //    activities: [{
+    //        type: ActivityType.Custom,
+    //        name: 'custom',
+    //        state: '✨ Activo y funcionando'
+    //    }],
+    //    status: 'online',
+    //});
+
+    // Otras opciones de actividad fija (descomenta la que prefieras):
+
+    // 🎮 Jugando a...
+    // bot.user?.setPresence({
+    //     activities: [{
+    //         type: ActivityType.Playing,
+    //         name: `en ${bot.guilds.cache.size} servidores`
+    //     }],
+    //     status: 'online',
+    // });
+
+    // 👀 Viendo...
+    // bot.user?.setPresence({
+    //     activities: [{
+    //         type: ActivityType.Watching,
+    //         name: 'tus mensajes'
+    //     }],
+    //     status: 'online',
+    // });
+
+    logger.info(`Presencia configurada para ${bot.user?.tag}`);
+
+    // ============================================
+    // 🔄 OPCIÓN 2: ACTIVIDADES ROTATIVAS (Solo si tienes recursos)
+    // ============================================
+    // ⚠️ NOTA: El interval usa recursos MÍNIMOs (~1KB RAM)
+    // pero si quieres máxima optimización, usa la OPCIÓN 1
+
+    // DESCOMENTA ESTE BLOQUE SI QUIERES ROTACIÓN:
+
     const activities = [
         {
             type: ActivityType.Custom,
             name: 'custom',
-            state: '✨ Activo y funcionando'
+            emoji: "<:KingCat:1322661036112740514>",
+            state: 'Tu cazadora de confiaza'
         },
         {
             type: ActivityType.Playing,
-            name: '🎮 con los comandos'
+            name: '🎮 con la IA Gemini "!ai"',
         },
         {
             type: ActivityType.Watching,
             name: `${bot.guilds.cache.size} servidores`
         },
         {
-            type: ActivityType.Listening,
-            name: 'tus mensajes'
+            type: ActivityType.Streaming,
+            name: "📺 Musica de calidad",
+            details: 'https://youtu.be/MRkOSkBbjSw?si=PuTkDgJn5eBMHnoN'
         }
     ];
 
@@ -34,7 +79,7 @@ bot.on(Events.ClientReady, () => {
         status: 'online',
     });
 
-    // Rotar actividades cada 15 segundos
+    // Rotar actividades cada 30 segundos (más tiempo = menos llamadas)
     setInterval(() => {
         currentActivity = (currentActivity + 1) % activities.length;
         bot.user?.setPresence({
@@ -42,68 +87,6 @@ bot.on(Events.ClientReady, () => {
             status: 'online',
         });
         logger.info(`Actividad cambiada a: ${activities[currentActivity].name || activities[currentActivity].state}`);
-    }, 15000); // Cambia cada 15 segundos
+    }, 30000); // Cambiado a 30 segundos para reducir llamadas API
 
-    // ============================================
-    // 📌 ALTERNATIVA: Una sola actividad fija
-    // ============================================
-    // Si prefieres una sola actividad sin rotación, descomenta una de estas:
-
-    // ✨ ESTADO PERSONALIZADO (como usuarios normales)
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         type: ActivityType.Custom,
-    //         name: 'custom',
-    //         state: '✨ Activo y funcionando'
-    //     }],
-    //     status: 'online',
-    // });
-
-    // 🎮 JUGANDO A...
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         type: ActivityType.Playing,
-    //         name: '🎮 Moderando servidores'
-    //     }],
-    //     status: 'online',
-    // });
-
-    // 👀 VIENDO...
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         name: 'tus mensajes 👀',
-    //         type: ActivityType.Watching,
-    //     }],
-    //     status: 'online',
-    // });
-
-    // 🎵 ESCUCHANDO...
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         name: 'Spotify',
-    //         type: ActivityType.Listening
-    //     }],
-    //     status: 'online',
-    // });
-
-    // 🏆 COMPITIENDO EN...
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         name: 'Ranked',
-    //         type: ActivityType.Competing
-    //     }],
-    //     status: 'dnd',
-    // });
-
-    // 📺 STREAMING (requiere URL válida de Twitch/YouTube)
-    // bot.user?.setPresence({
-    //     activities: [{
-    //         name: 'Mi Stream',
-    //         type: ActivityType.Streaming,
-    //         url: 'https://twitch.tv/tu-canal'
-    //     }],
-    //     status: 'online',
-    // });
-
-    logger.info(`Presencia configurada para ${bot.user?.tag}`);
 })
