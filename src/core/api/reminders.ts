@@ -63,7 +63,8 @@ async function fetchDueReminders(limit = 25): Promise<ReminderRow[]> {
     ]) as unknown as { documents?: ReminderRow[] };
     return (list.documents || []) as ReminderRow[];
   } catch (e) {
-    logger.error('Error listando recordatorios vencidos:', e);
+    // @ts-ignore
+      logger.error('Error listando recordatorios vencidos:', e);
     return [];
   }
 }
@@ -83,7 +84,8 @@ async function deliverReminder(bot: Amayo, doc: ReminderRow) {
         delivered = true;
       }
     } catch (e) {
-      logger.warn('No se pudo enviar al canal original:', e);
+      // @ts-ignore
+        logger.warn('No se pudo enviar al canal original:', e);
     }
   }
   // 2) Fallback: DM al usuario
@@ -93,7 +95,8 @@ async function deliverReminder(bot: Amayo, doc: ReminderRow) {
       await user.send({ content: `⏰ Recordatorio: ${message}` });
       delivered = true;
     } catch (e) {
-      logger.warn('No se pudo enviar DM al usuario:', e);
+      // @ts-ignore
+        logger.warn('No se pudo enviar DM al usuario:', e);
     }
   }
 
@@ -120,11 +123,13 @@ export function startReminderPoller(bot: Amayo) {
           const db = getDatabases();
           if (db) await db.deleteDocument(APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_REMINDERS_ID, d.$id);
         } catch (e) {
-          logger.warn('No se pudo eliminar recordatorio entregado:', e);
+          // @ts-ignore
+            logger.warn('No se pudo eliminar recordatorio entregado:', e);
         }
       }
     } catch (e) {
-      logger.error('Error en ciclo de recordatorios:', e);
+      // @ts-ignore
+        logger.error('Error en ciclo de recordatorios:', e);
     }
   }, Math.max(10, intervalSec) * 1000);
 

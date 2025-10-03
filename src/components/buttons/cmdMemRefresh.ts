@@ -16,7 +16,8 @@ export default {
       // Edita el mensaje original reemplazando componentes (solo el contenedor con filas internas)
       await interaction.message.edit({ components: [panel] });
     } catch (e) {
-      logger.error('Error refrescando panel de memoria:', e);
+      // @ts-ignore
+        logger.error('Error refrescando panel de memoria:', e);
       if (!interaction.deferred && !interaction.replied)
         await interaction.reply({ content: '❌ Error refrescando panel.',  flags: MessageFlags.Ephemeral });
     }

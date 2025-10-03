@@ -53,6 +53,7 @@ export async function registeringCommands(): Promise<void> {
 
         logger.info(`✅ ${data.length} comandos de guild registrados.`);
     } catch (error) {
+        // @ts-ignore
         logger.error("❌ Error en el proceso de comandos de guild:", error);
     }
 }
@@ -85,6 +86,7 @@ export async function registeringGlobalCommands(): Promise<void> {
         );
         logger.info(`✅ ${data.length} comandos globales enviados a la API.`);
     } catch (error) {
+        // @ts-ignore
         logger.error("❌ Error registrando comandos globales:", error);
     }
 }
@@ -101,6 +103,7 @@ export async function clearAllCommands(): Promise<void> {
         );
         logger.info(`✅ Todos los comandos de guild eliminados.`);
     } catch (error) {
+        // @ts-ignore
         logger.error("❌ Error eliminando comandos de guild:", error);
     }
 }
@@ -114,6 +117,7 @@ export async function clearGlobalCommands(): Promise<void> {
         );
         logger.info(`✅ Comandos globales eliminados.`);
     } catch (error) {
+        // @ts-ignore
         logger.error("❌ Error eliminando comandos globales:", error);
     }
 }

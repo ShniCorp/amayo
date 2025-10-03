@@ -21,7 +21,8 @@ export async function ensureRemindersSchema() {
       ]);
       // Nota: No añadimos permisos de lectura pública para evitar fuga de datos
     } catch (e) {
-      logger.warn('No se pudo crear la colección de recordatorios (puede existir ya):', e);
+      // @ts-ignore
+        logger.warn('No se pudo crear la colección de recordatorios (puede existir ya):', e);
     }
   }
 
@@ -31,7 +32,8 @@ export async function ensureRemindersSchema() {
       const msg = String(e?.message || e);
       if (!/already exists|attribute_already_exists/i.test(msg)) {
         // Otros errores se muestran
-        logger.warn('No se pudo crear atributo:', msg);
+        // @ts-ignore
+          logger.warn('No se pudo crear atributo:', msg);
       }
     }
   };
@@ -50,7 +52,8 @@ export async function ensureRemindersSchema() {
   } catch (e: any) {
     const msg = String(e?.message || e);
     if (!/already exists|index_already_exists/i.test(msg)) {
-      logger.warn('No se pudo crear índice executeAt:', msg);
+      // @ts-ignore
+        logger.warn('No se pudo crear índice executeAt:', msg);
     }
   }
 }

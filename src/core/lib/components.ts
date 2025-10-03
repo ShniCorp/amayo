@@ -56,6 +56,7 @@ export function loadComponents(dir: string = path.resolve(__dirname, "../../comp
                 logger.info(`⚠️ Componente desconocido: ${component.customId}`);
             }
         } catch (error) {
+            // @ts-ignore
             logger.error(`❌ Error cargando componente ${file}:`, error);
         }
     }

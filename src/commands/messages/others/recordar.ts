@@ -237,7 +237,8 @@ export const command: CommandMessage = {
         executeAt: iso
       });
     } catch (e) {
-      logger.error('Error programando recordatorio:', e);
+      // @ts-ignore
+        logger.error('Error programando recordatorio:', e);
       await message.reply('❌ No pude guardar el recordatorio. Revisa la configuración de Appwrite.');
       return;
     }

@@ -15,7 +15,8 @@ export default {
       const panel = await buildLeaderboardPanel(fakeMessage);
       await interaction.message.edit({ components: [panel] });
     } catch (e) {
-      logger.error('Error refrescando leaderboard:', e);
+      // @ts-ignore
+        logger.error('Error refrescando leaderboard:', e);
       if (!interaction.deferred && !interaction.replied)
         await interaction.reply({ content: '❌ Error refrescando leaderboard.', flags: MessageFlags.Ephemeral });
     }

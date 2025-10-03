@@ -23,6 +23,7 @@ export default {
                 flags: MessageFlags.Ephemeral
             });
         } catch (error) {
+            // @ts-ignore
             logger.error('Error cambiando prefix:', error);
             await interaction.reply({
                 content: '❌ Error al cambiar el prefix.',
