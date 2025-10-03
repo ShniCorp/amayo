@@ -1,8 +1,6 @@
-import { CommandMessage } from "../../../core/types/commands";
-import { PermissionFlagsBits } from "discord.js";
-import { aiService } from "../../../core/services/AIService";
-import logger from "../../../core/lib/logger";
-const OWNER_ID = '327207082203938818';
+import logger from "../../core/lib/logger";
+import { ButtonInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
+
 /**
  * Formatear tiempo de actividad
  */
@@ -24,20 +22,21 @@ function formatBytesMB(bytes: number): string {
 }
 
 /**
- * Construir panel de administración de IA
+ * Construir panel de administración de IA actualizado
  */
-function buildAIAdminPanel() {
+function buildRefreshedAIPanel() {
+    const { aiService } = require('../../core/services/AIService');
     const stats = aiService.getStats();
     const uptime = process.uptime();
     const memoryUsage = process.memoryUsage();
     const now = new Date();
     const ts = now.toISOString().replace('T', ' ').split('.')[0];
-
+    
     // Estados del sistema
-    const queueStatus = stats.queueLength === 0 ? '🟢 Normal' :
+    const queueStatus = stats.queueLength === 0 ? '🟢 Normal' : 
                        stats.queueLength < 5 ? '🟡 Ocupado' : '🔴 Saturado';
     const memoryStatus = memoryUsage.heapUsed / memoryUsage.heapTotal > 0.8 ? '🔴 Alta' : '🟢 Normal';
-
+    
     const rss = formatBytesMB(memoryUsage.rss);
     const heapUsed = formatBytesMB(memoryUsage.heapUsed);
     const heapTotal = formatBytesMB(memoryUsage.heapTotal);
@@ -50,11 +49,11 @@ function buildAIAdminPanel() {
         components: [
             {
                 type: 10,
-                content: '## 🌸 Panel de Administración - Gemini-chan'
+                content: '## 🌸 Panel de Administración - Gemini-chan (Actualizado)'
             },
             {
                 type: 10,
-                content: '-# Gestiona el sistema de IA y monitorea estadísticas en tiempo real.'
+                content: '-# Estadísticas refrescadas automáticamente.'
             },
             { type: 14, divider: true, spacing: 1 },
             {
@@ -117,7 +116,7 @@ function buildAIAdminPanel() {
 • Max Concurrent: 3 requests simultáneos
 • Modelo: gemini-1.5-flash
 \`\`\`
-Última actualización: ${ts} UTC
+🔄 Última actualización: ${ts} UTC
 
 ⚠️ **Nota:** El sistema se resetea automáticamente cada 30 minutos para optimizar memoria.`
             },
@@ -139,91 +138,35 @@ function buildAIAdminPanel() {
     };
 }
 
-export const command: CommandMessage = {
-    name: 'aistats',
-    type: "message",
-    aliases: ['ai-stats', 'ai-info', 'ai-panel'],
-    cooldown: 5,
-    description: 'Panel de administración del sistema de IA (Solo administradores)',
-    category: 'Administración',
-    usage: 'aistats [reset]',
-    run: async (message, args) => {
-        // Verificar permisos de administrador
-        if (message.author.id !== OWNER_ID) {
-            await message.reply({ content: '❌ No tienes permisos para usar este panel.' });
-            return;
-        }
-
-        try {
-            const action = args[0]?.toLowerCase();
-
-            // Reset del sistema si se solicita
-            if (action === 'reset') {
-                // @ts-ignore
-                const resetPanel = {
-                    type: 17,
-                    accent_color: 0x00FF00,
-                    components: [
-                        {
-                            type: 10,
-                            content: '## ✅ Sistema de IA Reiniciado'
-                        },
-                        {
-                            type: 10,
-                            content: 'Las estadísticas, cache y conversaciones han sido limpiados exitosamente.'
-                        },
-                        { type: 14, divider: true, spacing: 1 },
-                        {
-                            type: 10,
-                            content: `🔄 **Estado:** Sistema reiniciado\n⏰ **Timestamp:** ${new Date().toISOString().replace('T', ' ').split('.')[0]} UTC\n👤 **Administrador:** ${message.author.username}`
-                        }
-                    ]
-                };
-
-                await message.reply({
-                    content: '',
-                    components: [resetPanel]
-                });
-                logger.info(`Sistema de IA reiniciado por ${message.author.username} (${message.author.id})`);
-                return;
-            }
-
-            // Mostrar panel principal
-            const adminPanel = buildAIAdminPanel();
-
-            await message.reply({
-                content: '',
-                components: [adminPanel]
-            });
-
-        } catch (error: any) {
-            logger.error('Error obteniendo estadísticas de IA:', error);
-            
-            // @ts-ignore
-            const errorPanel = {
-                type: 17,
-                accent_color: 0xFF4444,
-                components: [
-                    {
-                        type: 10,
-                        content: '## ❌ Error del Sistema'
-                    },
-                    {
-                        type: 10,
-                        content: 'No se pudieron obtener las estadísticas del sistema de IA.'
-                    },
-                    { type: 14, divider: true, spacing: 1 },
-                    {
-                        type: 10,
-                        content: `**Error:** ${error.message || 'Error desconocido'}\n**Timestamp:** ${new Date().toISOString()}`
-                    }
-                ]
-            };
-
-            await message.reply({
-                content: '',
-                components: [errorPanel]
-            });
-        }
+export default {
+  customId: 'ai_refresh_stats',
+  run: async (interaction: ButtonInteraction) => {
+    // Verificar permisos de administrador
+    if (!interaction.memberPermissions?.has(PermissionFlagsBits.Administrator)) {
+      return interaction.reply({ 
+        content: '❌ No tienes permisos de administrador para usar este botón.',  
+        flags: MessageFlags.Ephemeral 
+      });
     }
-}
+
+    try {
+      await interaction.deferUpdate();
+      
+      // Refrescar y reconstruir el panel con datos actualizados
+      const refreshedPanel = buildRefreshedAIPanel();
+      
+      await interaction.message.edit({ components: [refreshedPanel] });
+      logger.info(`Estadísticas de IA refrescadas por ${interaction.user.username} (${interaction.user.id})`);
+      
+    } catch (error)
+        //@ts-ignore
+      logger.error('Error refrescando estadísticas de IA:', error);
+      if (!interaction.deferred && !interaction.replied) {
+        await interaction.reply({ 
+          content: '❌ Error refrescando las estadísticas del sistema de IA.',  
+          flags: MessageFlags.Ephemeral 
+        });
+      }
+    }
+  }
+};

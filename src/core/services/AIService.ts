@@ -216,7 +216,7 @@ export class AIService {
             
             // Usar la API correcta de Google Generative AI
             const model = this.genAI.getGenerativeModel({
-                model: "gemini-2.5-flash",
+                model: "gemini-2.5-flash-preview-09-2025",
                 generationConfig: {
                     maxOutputTokens: Math.min(this.config.maxOutputTokens, Math.max(1024, estimatedTokens * 0.5)),
                     temperature: 0.7,
