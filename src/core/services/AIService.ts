@@ -150,61 +150,89 @@ export class AIService {
             return override;
         }
 
-        // Lista de candidatos conocidos (orden de preferencia)
+        // Lista de candidatos más amplia y realista para cuentas Pro actuales
         const candidates = [
-            'gemini-2.5-flash-image', // puede no estar disponible aún en tu proyecto/region/apiVersion
+            'gemini-2.5-flash-exp',
+            'gemini-2.0-flash-exp',
+            'imagen-3.0-generate-001',
+            'imagen-3.0-fast-generate-001',
+            'imagen-3.0-001',
+            'imagegeneration@002',
+            'imagegeneration@001',
             'imagen-3.0-generate',
             'imagen-3.0-fast',
             'imagen-3.0',
+            'gemini-2.5-flash-image',
         ];
 
-        // Intentar listar modelos si el SDK lo soporta
+        // Intentar listar modelos primero
         try {
             const listed: any = await (this.genAIv2 as any).models?.listModels?.();
-            const models: string[] = Array.isArray(listed?.models)
-                ? listed.models.map((m: any) => m?.name || m?.model || m?.id).filter(Boolean)
-                : [];
-            if (models.length) {
-                // Buscar modelos que parezcan de imagen
-                const imageLike = models.filter((id: string) => /imagen|image/i.test(id));
-                // Priorizar nuestros candidatos en el orden propuesto; si no, tomar el primero imageLike
-                for (const c of candidates) {
-                    if (imageLike.some((m) => m.includes(c))) {
-                        this.imageModelName = imageLike.find((m) => m.includes(c))!;
-                        logger.info({ model: this.imageModelName }, 'Modelo de imágenes detectado por listModels (preferencia)');
-                        return this.imageModelName;
+            if (listed?.models && Array.isArray(listed.models)) {
+                const models: string[] = listed.models
+                    .map((m: any) => m?.name || m?.model || m?.id || m?.displayName)
+                    .filter(Boolean)
+                    .map((name: string) => name.replace(/^models\//, '')); // Quitar prefijo models/
+
+                logger.debug({ availableModels: models }, 'Modelos disponibles detectados');
+
+                // Buscar modelos de imagen disponibles
+                const imageModels = models.filter((id: string) =>
+                    /imagen|image|generate|vision/i.test(id) &&
+                    !/text|chat|embed|code/i.test(id)
+                );
+
+                if (imageModels.length > 0) {
+                    // Priorizar según orden de candidatos
+                    for (const candidate of candidates) {
+                        const found = imageModels.find(m => m.includes(candidate.replace(/^models\//, '')));
+                        if (found) {
+                            this.imageModelName = found;
+                            logger.info({ model: found, source: 'listModels' }, 'Modelo de imágenes detectado automáticamente');
+                            return found;
+                        }
                     }
-                }
-                if (imageLike[0]) {
-                    this.imageModelName = imageLike[0];
-                    logger.info({ model: this.imageModelName }, 'Modelo de imágenes detectado por listModels');
-                    return this.imageModelName;
+
+                    // Si no coincide con candidatos conocidos, usar el primero disponible
+                    this.imageModelName = imageModels[0];
+                    logger.info({ model: imageModels[0], source: 'listModels-fallback' }, 'Modelo de imágenes detectado (fallback)');
+                    return imageModels[0];
                 }
             }
         } catch (e) {
-            // Continuar con prueba directa de candidatos si listModels no existe o falla
-            logger.debug({ err: getErrorMessage(e) }, 'listModels no disponible o falló; probando candidatos conocidos');
+            logger.debug({ err: getErrorMessage(e) }, 'listModels no disponible');
         }
 
-        // Probar generar un ping mínimo con candidatos conocidos (sin coste excesivo)
+        // Fallback: probar modelos uno por uno con generateContent usando responseMimeType
         for (const candidate of candidates) {
             try {
-                // Intento muy ligero: usar generateImages con un prompt mínimo
-                await (this.genAIv2 as any).models.generateImages({
+                // Usar generateContent con responseMimeType image/* como detector
+                const testRes: any = await (this.genAIv2 as any).models.generateContent({
                     model: candidate,
-                    prompt: 'ping',
-                    config: { imageSize: '1:1' },
+                    contents: [{ text: 'test' }],
+                    config: {
+                        responseMimeType: 'image/png',
+                        maxOutputTokens: 1,
+                    }
                 });
+
+                // Si no lanza error 404, el modelo existe
                 this.imageModelName = candidate;
-                logger.info({ model: candidate }, 'Modelo de imágenes detectado por prueba directa');
+                logger.info({ model: candidate, source: 'direct-test' }, 'Modelo de imágenes detectado por prueba directa');
                 return candidate;
-            } catch (e) {
-                // 404/NOT_FOUND esperado para modelos no disponibles; seguir
-                continue;
+            } catch (e: any) {
+                const msg = getErrorMessage(e);
+                if (msg.includes('not found') || msg.includes('404')) {
+                    continue; // Modelo no disponible, probar siguiente
+                }
+                // Otros errores pueden indicar que el modelo existe pero falló por otra razón
+                logger.debug({ candidate, err: msg }, 'Modelo podría existir pero falló la prueba');
             }
         }
 
+        // No se encontró ningún modelo de imagen
         this.imageModelName = null;
+        logger.warn('No se detectó ningún modelo de imagen disponible');
         return null;
     }
 
