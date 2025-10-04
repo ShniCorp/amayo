@@ -76,7 +76,7 @@ export default {
         });
       }
 
-      logger.info(`🔍 Stats actuales - Total: ${stats.totalPoints}`);
+      logger.info(`🔍 Stats actuales - Total: ${stats.totalPoints}, Semanal: ${stats.weeklyPoints}, Mensual: ${stats.monthlyPoints}`);
 
       // Función para parsear el input y calcular el nuevo valor
       const calculateNewValue = (input: string, currentValue: number): number => {
@@ -103,9 +103,50 @@ export default {
 
       // Calcular nuevo valor de puntos totales
       const newTotalPoints = calculateNewValue(totalInput, stats.totalPoints);
-      logger.info(`🔍 Nuevo total calculado: ${newTotalPoints}`);
+      const totalDifference = newTotalPoints - stats.totalPoints;
 
-      // Actualizar en base de datos (solo puntos totales)
+      logger.info(`🔍 Nuevo total calculado: ${newTotalPoints} (diferencia: ${totalDifference})`);
+
+      // Calcular nuevos puntos semanales y mensuales
+      let newWeeklyPoints = stats.weeklyPoints;
+      let newMonthlyPoints = stats.monthlyPoints;
+
+      if (totalInput[0] === '+') {
+        // Si añadimos puntos, sumar a semanal y mensual también
+        const pointsToAdd = parseInt(totalInput.substring(1)) || 0;
+        newWeeklyPoints = stats.weeklyPoints + pointsToAdd;
+        newMonthlyPoints = stats.monthlyPoints + pointsToAdd;
+        logger.info(`➕ Añadiendo ${pointsToAdd} puntos a todas las categorías`);
+      } else if (totalInput[0] === '-') {
+        // Si quitamos puntos, restar proporcionalmente de semanal y mensual
+        const pointsToRemove = parseInt(totalInput.substring(1)) || 0;
+        newWeeklyPoints = Math.max(0, stats.weeklyPoints - pointsToRemove);
+        newMonthlyPoints = Math.max(0, stats.monthlyPoints - pointsToRemove);
+        logger.info(`➖ Quitando ${pointsToRemove} puntos de todas las categorías`);
+      } else if (totalInput[0] === '=') {
+        // Si establecemos un valor absoluto, ajustar semanal y mensual proporcionalmente
+        const targetTotal = parseInt(totalInput.substring(1)) || 0;
+
+        if (stats.totalPoints > 0) {
+          // Calcular el ratio y aplicarlo
+          const ratio = targetTotal / stats.totalPoints;
+          newWeeklyPoints = Math.round(stats.weeklyPoints * ratio);
+          newMonthlyPoints = Math.round(stats.monthlyPoints * ratio);
+        } else {
+          // Si no había puntos antes, establecer todo a 0
+          newWeeklyPoints = 0;
+          newMonthlyPoints = 0;
+        }
+        logger.info(`🎯 Estableciendo total a ${targetTotal} y ajustando proporcionalmente`);
+      }
+
+      // Asegurar que semanal no exceda mensual, y mensual no exceda total
+      newWeeklyPoints = Math.min(newWeeklyPoints, newMonthlyPoints, newTotalPoints);
+      newMonthlyPoints = Math.min(newMonthlyPoints, newTotalPoints);
+
+      logger.info(`🔍 Nuevos valores calculados - Total: ${newTotalPoints}, Semanal: ${newWeeklyPoints}, Mensual: ${newMonthlyPoints}`);
+
+      // Actualizar en base de datos (todos los puntos)
       await prisma.partnershipStats.update({
         where: {
           userId_guildId: {
@@ -114,7 +155,9 @@ export default {
           }
         },
         data: {
-          totalPoints: newTotalPoints
+          totalPoints: newTotalPoints,
+          weeklyPoints: newWeeklyPoints,
+          monthlyPoints: newMonthlyPoints
         }
       });
 
@@ -134,20 +177,35 @@ export default {
         }
       }
 
-      // Calcular la diferencia
-      const difference = newTotalPoints - stats.totalPoints;
-      const diffText = difference > 0 ? `+${difference}` : `${difference}`;
+      // Calcular las diferencias
+      const totalDiff = newTotalPoints - stats.totalPoints;
+      const weeklyDiff = newWeeklyPoints - stats.weeklyPoints;
+      const monthlyDiff = newMonthlyPoints - stats.monthlyPoints;
+
+      const totalDiffText = totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`;
+      const weeklyDiffText = weeklyDiff > 0 ? `+${weeklyDiff}` : `${weeklyDiff}`;
+      const monthlyDiffText = monthlyDiff > 0 ? `+${monthlyDiff}` : `${monthlyDiff}`;
 
       // Crear embed de confirmación
       const embed = new EmbedBuilder()
-        .setColor(difference >= 0 ? 0x00ff00 : 0xff9900)
+        .setColor(totalDiff >= 0 ? 0x00ff00 : 0xff9900)
         .setTitle('✅ Puntos Actualizados')
         .setDescription(`Se han actualizado los puntos de **${userName}**`)
         .addFields(
           { 
             name: '📊 Puntos Totales', 
-            value: `${stats.totalPoints} → **${newTotalPoints}** (${diffText})`,
-            inline: false
+            value: `${stats.totalPoints} → **${newTotalPoints}** (${totalDiffText})`,
+            inline: true
+          },
+          {
+            name: '🗓️ Puntos Mensuales',
+            value: `${stats.monthlyPoints} → **${newMonthlyPoints}** (${monthlyDiffText})`,
+            inline: true
+          },
+          {
+            name: '📅 Puntos Semanales',
+            value: `${stats.weeklyPoints} → **${newWeeklyPoints}** (${weeklyDiffText})`,
+            inline: true
           },
           {
             name: '📝 Operación',
