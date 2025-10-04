@@ -1379,53 +1379,65 @@ Responde de forma directa y útil:`;
         }
 
         const mimeType = options?.mimeType ?? 'image/png';
+        const size = options?.size ?? 'square';
+        const imageSize = size === 'portrait' ? '9:16' : size === 'landscape' ? '16:9' : '1:1';
 
         try {
-            const res: any = await (this.genAIv2 as any).models.generateContent({
+            // Preferir generateImages (SDK moderno) cuando está disponible
+            const res: any = await (this.genAIv2 as any).models.generateImages({
                 model: 'gemini-2.5-flash-image',
-                contents: prompt,
                 prompt,
                 config: {
                     responseMimeType: mimeType,
-                    responseModalities: ['IMAGE'],
+                    imageSize,
                 }
             });
 
-            // Normalize response shape
-            const response = res?.response ?? res;
-            const candidates = response?.candidates ?? [];
-            const parts = candidates[0]?.content?.parts ?? [];
+            // Respuesta típica: { images: [{ data, mimeType }] }
             let base64: string | undefined;
             let outMime: string | undefined;
 
-            const imgPart = parts.find((p: any) => p?.inlineData?.data || p?.imageData?.data || p?.media?.data);
-            if (imgPart?.inlineData?.data) {
-                base64 = imgPart.inlineData.data;
-                outMime = imgPart.inlineData.mimeType;
-            } else if (imgPart?.imageData?.data) {
-                base64 = imgPart.imageData.data;
-                outMime = imgPart.imageData.mimeType;
-            } else if (imgPart?.media?.data) {
-                base64 = imgPart.media.data;
-                outMime = imgPart.media.mimeType;
+            if (Array.isArray(res?.images) && res.images.length > 0) {
+                const first = res.images[0];
+                base64 = first?.data || first?.b64Data || first?.inlineData?.data;
+                outMime = first?.mimeType || first?.inlineData?.mimeType;
             }
 
+            // Fallbacks para formas alternativas
+            if (!base64 && res?.image?.data) {
+                base64 = res.image.data;
+                outMime = res.image.mimeType;
+            }
+
+            // Fallback a generateContent si generateImages no retorna 'images'
             if (!base64) {
-                // Try other top-level shapes
-                if (res?.image?.data) {
-                    base64 = res.image.data;
-                    outMime = res.image.mimeType;
-                } else if (Array.isArray(res?.images) && res.images.length > 0) {
-                    const first = res.images[0];
-                    base64 = first.data || first.b64Data || first.inlineData?.data;
-                    outMime = first.mimeType || first.inlineData?.mimeType;
-                } else if (response?.media?.data) {
-                    base64 = response.media.data;
-                    outMime = response.media.mimeType;
+                const alt: any = await (this.genAIv2 as any).models.generateContent({
+                    model: 'gemini-2.5-flash-image',
+                    contents: prompt,
+                    config: {
+                        responseMimeType: mimeType,
+                        responseModalities: ['IMAGE'],
+                        imageSize,
+                    }
+                });
+                const response = alt?.response ?? alt;
+                const candidates = response?.candidates ?? [];
+                const parts = candidates[0]?.content?.parts ?? [];
+                const imgPart = parts.find((p: any) => p?.inlineData?.data || p?.imageData?.data || p?.media?.data);
+                if (imgPart?.inlineData?.data) {
+                    base64 = imgPart.inlineData.data;
+                    outMime = imgPart.inlineData.mimeType;
+                } else if (imgPart?.imageData?.data) {
+                    base64 = imgPart.imageData.data;
+                    outMime = imgPart.imageData.mimeType;
+                } else if (imgPart?.media?.data) {
+                    base64 = imgPart.media.data;
+                    outMime = imgPart.media.mimeType;
                 }
             }
 
             if (!base64) {
+                logger.error({ res }, 'Respuesta de imagen sin datos de imagen');
                 throw new Error('No se recibió imagen del modelo');
             }
 
@@ -1437,8 +1449,13 @@ Responde de forma directa y útil:`;
 
             return { data: Buffer.from(base64, 'base64'), mimeType: finalMime, fileName };
         } catch (e) {
-            const msg = this.parseAPIError(e);
-            throw new Error(msg);
+            // Log completo del error original para depuración
+            logger.error(e as any, 'Fallo en generateImage');
+            const parsed = this.parseAPIError(e);
+            const original = getErrorMessage(e);
+            // Conservar mensaje original si el parser no aporta más contexto
+            const message = parsed === 'Error temporal del servicio de IA. Intenta de nuevo' ? original : parsed;
+            throw new Error(message || parsed);
         }
     }
 }
