@@ -147,8 +147,7 @@ export class AIService {
 
         // Lista de candidatos de modelos de imagen ordenados por preferencia
         const candidates = [
-            'imagen-3.0-fast',
-            'imagen-3.0',
+            'imagen-4.0-generate-001',
             'gemini-2.5-flash-image',
         ];
 
