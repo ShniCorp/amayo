@@ -120,46 +120,33 @@ export class AIService {
         if (!apiKey) {
             throw new Error('GOOGLE_AI_API_KEY no está configurada');
         }
-        
+
         this.genAI = new GoogleGenerativeAI(apiKey);
+
         try {
             this.genAIv2 = new GoogleGenAI({ apiKey });
-        } catch {
+            logger.info('GoogleGenAI v2 inicializado correctamente para generación de imágenes');
+        } catch (e) {
+            logger.warn(`GoogleGenAI v2 no pudo inicializarse: ${getErrorMessage(e)}`);
             this.genAIv2 = null;
         }
-        this.startCleanupService();
+
         this.startQueueProcessor();
-        // Detectar modelo de imágenes en background (no bloqueante)
-        this.detectImageModel().catch(err => {
-            logger.warn({ err }, 'No se pudo detectar automáticamente un modelo de imágenes');
-        });
+        this.startCleanupService();
+        this.detectImageModel();
     }
 
-    // Detecta un modelo de imágenes disponible y lo cachea
+    /**
+     * Auto-detectar modelo de imagen disponible
+     */
     private async detectImageModel(): Promise<string | null> {
         if (!this.genAIv2) {
-            this.imageModelName = null;
+            logger.warn('GoogleGenAI v2 no disponible; sin soporte para imágenes');
             return null;
         }
 
-        // Permitir override por variable de entorno
-        const override = process.env.GENAI_IMAGE_MODEL?.trim();
-        if (override) {
-            this.imageModelName = override;
-            logger.info({ model: override }, 'Usando modelo de imágenes por ENV override');
-            return override;
-        }
-
-        // Lista de candidatos más amplia y realista para cuentas Pro actuales
+        // Lista de candidatos de modelos de imagen ordenados por preferencia
         const candidates = [
-            'gemini-2.5-flash-exp',
-            'gemini-2.0-flash-exp',
-            'imagen-3.0-generate-001',
-            'imagen-3.0-fast-generate-001',
-            'imagen-3.0-001',
-            'imagegeneration@002',
-            'imagegeneration@001',
-            'imagen-3.0-generate',
             'imagen-3.0-fast',
             'imagen-3.0',
             'gemini-2.5-flash-image',
@@ -394,91 +381,6 @@ export class AIService {
     }
 
     /**
-     * Parser de errores (versión legacy no utilizada)
-     */
-    private parseAPIErrorLegacy(error: unknown): string {
-        // Delegar a la versión nueva
-        return this.parseAPIError(error);
-    }
-
-    /**
-     * Versión legacy de processAIRequestWithMemory (sin uso externo)
-     */
-    async processAIRequestWithMemoryLegacy(
-        userId: string,
-        prompt: string,
-        guildId?: string,
-        channelId?: string,
-        messageId?: string,
-        referencedMessageId?: string,
-        client?: any,
-        priority: 'low' | 'normal' | 'high' = 'normal',
-        options?: { aiRolePrompt?: string; meta?: string; attachments?: any[] }
-    ): Promise<string> {
-        // Validaciones exhaustivas
-        if (!prompt?.trim()) {
-            throw new Error('El prompt no puede estar vacío');
-        }
-
-        if (prompt.length > 4000) {
-            throw new Error('El prompt excede el límite de 4000 caracteres');
-        }
-
-        // Rate limiting por usuario
-        if (!this.checkRateLimit(userId)) {
-            throw new Error('Has excedido el límite de requests. Espera un momento.');
-        }
-
-        // Cooldown entre requests
-        const lastRequest = this.userCooldowns.get(userId) || 0;
-        const timeSinceLastRequest = Date.now() - lastRequest;
-
-        if (timeSinceLastRequest < this.config.cooldownMs) {
-            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
-            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
-        }
-
-        // Agregar a la queue con Promise
-        return new Promise((resolve, reject) => {
-            const request: AIRequest & { client?: any; attachments?: any[] } = {
-                userId,
-                guildId,
-                channelId,
-                prompt: prompt.trim(),
-                priority,
-                timestamp: Date.now(),
-                resolve,
-                reject,
-                aiRolePrompt: options?.aiRolePrompt,
-                meta: options?.meta,
-                messageId,
-                referencedMessageId,
-                client,
-                attachments: options?.attachments
-            };
-
-            // Insertar según prioridad
-            if (priority === 'high') {
-                this.requestQueue.unshift(request);
-            } else {
-                this.requestQueue.push(request);
-            }
-
-            // Timeout automático
-            setTimeout(() => {
-                const index = this.requestQueue.findIndex(r => r === request);
-                if (index !== -1) {
-                    this.requestQueue.splice(index, 1);
-                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
-                }
-            }, this.config.requestTimeout);
-
-            this.userCooldowns.set(userId, Date.now());
-        });
-    }
-
-
-    /**
      * Parser mejorado de errores de API - Type-safe sin ts-ignore
      */
     private parseAPIError(error: unknown): string {
@@ -636,218 +538,83 @@ export class AIService {
     }
 
     /**
-     * Parser de errores (versión legacy no utilizada)
+     * Detectar si hay imágenes adjuntas en el mensaje para análisis
      */
-    private parseAPIErrorLegacy(error: unknown): string {
-        // Delegar a la versión nueva
-        return this.parseAPIError(error);
-    }
+    public hasImageAttachments(attachments?: any[]): boolean {
+        if (!attachments || attachments.length === 0) return false;
 
-    /**
-     * Versión legacy de processAIRequestWithMemory (sin uso externo)
-     */
-    async processAIRequestWithMemoryLegacy(
-        userId: string,
-        prompt: string,
-        guildId?: string,
-        channelId?: string,
-        messageId?: string,
-        referencedMessageId?: string,
-        client?: any,
-        priority: 'low' | 'normal' | 'high' = 'normal',
-        options?: { aiRolePrompt?: string; meta?: string; attachments?: any[] }
-    ): Promise<string> {
-        // Validaciones exhaustivas
-        if (!prompt?.trim()) {
-            throw new Error('El prompt no puede estar vacío');
-        }
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+        const imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
 
-        if (prompt.length > 4000) {
-            throw new Error('El prompt excede el límite de 4000 caracteres');
-        }
+        return attachments.some(attachment => {
+            const hasImageExtension = imageExtensions.some(ext =>
+                attachment.name?.toLowerCase().endsWith(ext)
+            );
+            const hasImageMimeType = imageMimeTypes.includes(attachment.contentType?.toLowerCase());
 
-        // Rate limiting por usuario
-        if (!this.checkRateLimit(userId)) {
-            throw new Error('Has excedido el límite de requests. Espera un momento.');
-        }
-
-        // Cooldown entre requests
-        const lastRequest = this.userCooldowns.get(userId) || 0;
-        const timeSinceLastRequest = Date.now() - lastRequest;
-
-        if (timeSinceLastRequest < this.config.cooldownMs) {
-            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
-            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
-        }
-
-        // Agregar a la queue con Promise
-        return new Promise((resolve, reject) => {
-            const request: AIRequest & { client?: any; attachments?: any[] } = {
-                userId,
-                guildId,
-                channelId,
-                prompt: prompt.trim(),
-                priority,
-                timestamp: Date.now(),
-                resolve,
-                reject,
-                aiRolePrompt: options?.aiRolePrompt,
-                meta: options?.meta,
-                messageId,
-                referencedMessageId,
-                client,
-                attachments: options?.attachments
-            };
-
-            // Insertar según prioridad
-            if (priority === 'high') {
-                this.requestQueue.unshift(request);
-            } else {
-                this.requestQueue.push(request);
-            }
-
-            // Timeout automático
-            setTimeout(() => {
-                const index = this.requestQueue.findIndex(r => r === request);
-                if (index !== -1) {
-                    this.requestQueue.splice(index, 1);
-                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
-                }
-            }, this.config.requestTimeout);
-
-            this.userCooldowns.set(userId, Date.now());
+            return hasImageExtension || hasImageMimeType;
         });
     }
 
-
     /**
-     * Parser mejorado de errores de API - Type-safe sin ts-ignore
+     * Procesar imágenes adjuntas para análisis con Gemini Vision
      */
-    private parseAPIError(error: unknown): string {
-        // Extraer mensaje de forma type-safe
-        const message = getErrorMessage(error).toLowerCase();
+    private async processImageAttachments(attachments: any[]): Promise<any[]> {
+        const imageAttachments = [];
 
-        // Verificar si es un error de API estructurado
-        if (isAPIError(error)) {
-            const apiMessage = error.message.toLowerCase();
+        for (const attachment of attachments) {
+            if (this.hasImageAttachments([attachment])) {
+                try {
+                    // Descargar la imagen
+                    const response = await fetch(attachment.url);
+                    if (!response.ok) {
+                        logger.warn(`Error descargando imagen: ${response.statusText}`);
+                        continue;
+                    }
 
-            if (apiMessage.includes('api key') || apiMessage.includes('authentication')) {
-                return 'Error de autenticación con la API de IA';
-            }
-            if (apiMessage.includes('quota') || apiMessage.includes('exceeded')) {
-                return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
-            }
-            if (apiMessage.includes('safety') || apiMessage.includes('blocked')) {
-                return 'Tu mensaje fue bloqueado por las políticas de seguridad';
-            }
-            if (apiMessage.includes('timeout') || apiMessage.includes('deadline')) {
-                return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
-            }
-            if (apiMessage.includes('model not found')) {
-                return 'El modelo de IA no está disponible en este momento';
-            }
-            if (apiMessage.includes('token') || apiMessage.includes('length')) {
-                return 'El mensaje excede los límites permitidos';
-            }
-        }
+                    const arrayBuffer = await response.arrayBuffer();
+                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
 
-        // Manejo genérico para otros tipos de errores
-        if (message.includes('api key') || message.includes('authentication')) {
-            return 'Error de autenticación con la API de IA';
-        }
-        if (message.includes('quota') || message.includes('exceeded')) {
-            return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
-        }
-        if (message.includes('safety') || message.includes('blocked')) {
-            return 'Tu mensaje fue bloqueado por las políticas de seguridad';
-        }
-        if (message.includes('timeout') || message.includes('deadline')) {
-            return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
-        }
-        if (message.includes('model not found')) {
-            return 'El modelo de IA no está disponible en este momento';
-        }
-        if (message.includes('token') || message.includes('length')) {
-            return 'El mensaje excede los límites permitidos';
-        }
+                    // Determinar el tipo MIME
+                    let mimeType = attachment.contentType || 'image/png';
+                    if (!mimeType.startsWith('image/')) {
+                        // Inferir del nombre del archivo
+                        const ext = attachment.name?.toLowerCase().split('.').pop();
+                        switch (ext) {
+                            case 'jpg':
+                            case 'jpeg':
+                                mimeType = 'image/jpeg';
+                                break;
+                            case 'png':
+                                mimeType = 'image/png';
+                                break;
+                            case 'gif':
+                                mimeType = 'image/gif';
+                                break;
+                            case 'webp':
+                                mimeType = 'image/webp';
+                                break;
+                            default:
+                                mimeType = 'image/png';
+                        }
+                    }
 
-        return 'Error temporal del servicio de IA. Intenta de nuevo';
-    }
+                    imageAttachments.push({
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: mimeType
+                        }
+                    });
 
-    /**
-     * Procesa una request de IA con soporte para conversaciones y memoria persistente
-     */
-    async processAIRequestWithMemory(
-        userId: string,
-        prompt: string,
-        guildId?: string,
-        channelId?: string,
-        messageId?: string,
-        referencedMessageId?: string,
-        client?: any,
-        priority: 'low' | 'normal' | 'high' = 'normal',
-        options?: { aiRolePrompt?: string; meta?: string; attachments?: any[] }
-    ): Promise<string> {
-        // Validaciones exhaustivas
-        if (!prompt?.trim()) {
-            throw new Error('El prompt no puede estar vacío');
-        }
+                    logger.info(`Imagen procesada: ${attachment.name} (${mimeType})`);
 
-        if (prompt.length > 4000) {
-            throw new Error('El prompt excede el límite de 4000 caracteres');
-        }
-
-        // Rate limiting por usuario
-        if (!this.checkRateLimit(userId)) {
-            throw new Error('Has excedido el límite de requests. Espera un momento.');
-        }
-
-        // Cooldown entre requests
-        const lastRequest = this.userCooldowns.get(userId) || 0;
-        const timeSinceLastRequest = Date.now() - lastRequest;
-
-        if (timeSinceLastRequest < this.config.cooldownMs) {
-            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
-            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
-        }
-
-        // Agregar a la queue con Promise
-        return new Promise((resolve, reject) => {
-            const request: AIRequest & { client?: any; attachments?: any[] } = {
-                userId,
-                guildId,
-                channelId,
-                prompt: prompt.trim(),
-                priority,
-                timestamp: Date.now(),
-                resolve,
-                reject,
-                aiRolePrompt: options?.aiRolePrompt,
-                meta: options?.meta,
-                messageId,
-                referencedMessageId,
-                client,
-                attachments: options?.attachments
-            };
-
-            // Insertar según prioridad
-            if (priority === 'high') {
-                this.requestQueue.unshift(request);
-            } else {
-                this.requestQueue.push(request);
-            }
-
-            // Timeout automático
-            setTimeout(() => {
-                const index = this.requestQueue.findIndex(r => r === request);
-                if (index !== -1) {
-                    this.requestQueue.splice(index, 1);
-                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
+                } catch (error) {
+                    logger.error(`Error procesando imagen ${attachment.name}: ${getErrorMessage(error)}`);
                 }
-            }, this.config.requestTimeout);
+            }
+        }
 
-            this.userCooldowns.set(userId, Date.now());
-        });
+        return imageAttachments;
     }
 
     /**
@@ -1078,348 +845,36 @@ Responde de forma directa y útil:`;
     }
 
     /**
-     * Detectar si hay imágenes adjuntas en el mensaje para análisis (método público)
+     * Obtener o crear contexto de conversación con carga desde Appwrite
      */
-    public hasImageAttachments(attachments?: any[]): boolean {
-        if (!attachments || attachments.length === 0) return false;
-
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-        const imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
-
-        return attachments.some(attachment => {
-            const hasImageExtension = imageExtensions.some(ext =>
-                attachment.name?.toLowerCase().endsWith(ext)
-            );
-            const hasImageMimeType = imageMimeTypes.includes(attachment.contentType?.toLowerCase());
-
-            return hasImageExtension || hasImageMimeType;
-        });
-    }
-
-    /**
-     * Detectar si hay imágenes adjuntas en el mensaje para análisis (método privado)
-     */
-    private hasImageAttachmentsPrivate(attachments?: any[]): boolean {
-        if (!attachments || attachments.length === 0) return false;
-
-        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
-        const imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
-
-        return attachments.some(attachment => {
-            const hasImageExtension = imageExtensions.some(ext =>
-                attachment.name?.toLowerCase().endsWith(ext)
-            );
-            const hasImageMimeType = imageMimeTypes.includes(attachment.contentType?.toLowerCase());
-
-            return hasImageExtension || hasImageMimeType;
-        });
-    }
-
-    /**
-     * Procesar imágenes adjuntas para análisis con Gemini Vision
-     */
-    private async processImageAttachments(attachments: any[]): Promise<any[]> {
-        const imageAttachments = [];
-
-        for (const attachment of attachments) {
-            if (this.hasImageAttachments([attachment])) {
-                try {
-                    // Descargar la imagen
-                    const response = await fetch(attachment.url);
-                    if (!response.ok) {
-                        logger.warn(`Error descargando imagen: ${response.statusText}`);
-                        continue;
-                    }
-
-                    const arrayBuffer = await response.arrayBuffer();
-                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
-
-                    // Determinar el tipo MIME
-                    let mimeType = attachment.contentType || 'image/png';
-                    if (!mimeType.startsWith('image/')) {
-                        // Inferir del nombre del archivo
-                        const ext = attachment.name?.toLowerCase().split('.').pop();
-                        switch (ext) {
-                            case 'jpg':
-                            case 'jpeg':
-                                mimeType = 'image/jpeg';
-                                break;
-                            case 'png':
-                                mimeType = 'image/png';
-                                break;
-                            case 'gif':
-                                mimeType = 'image/gif';
-                                break;
-                            case 'webp':
-                                mimeType = 'image/webp';
-                                break;
-                            default:
-                                mimeType = 'image/png';
-                        }
-                    }
-
-                    imageAttachments.push({
-                        inlineData: {
-                            data: base64Data,
-                            mimeType: mimeType
-                        }
-                    });
-
-                    logger.debug(`Imagen procesada: ${attachment.name} (${mimeType})`);
-                } catch (error) {
-                    logger.warn(`Error procesando imagen ${attachment.name}: ${getErrorMessage(error)}`);
-                }
-            }
-        }
-
-        return imageAttachments;
-    }
-
-    /**
-     * Procesa una request de IA con soporte para imágenes adjuntas
-     */
-    async processAIRequestWithAttachments(
-        userId: string,
-        prompt: string,
-        attachments: any[],
-        guildId?: string,
-        channelId?: string,
-        messageId?: string,
-        referencedMessageId?: string,
-        client?: any,
-        priority: 'low' | 'normal' | 'high' = 'normal',
-        options?: { aiRolePrompt?: string; meta?: string }
-    ): Promise<string> {
-        // Validaciones exhaustivas
-        if (!prompt?.trim()) {
-            throw new Error('El prompt no puede estar vacío');
-        }
-
-        if (prompt.length > 4000) {
-            throw new Error('El prompt excede el límite de 4000 caracteres');
-        }
-
-        // Rate limiting por usuario
-        if (!this.checkRateLimit(userId)) {
-            throw new Error('Has excedido el límite de requests. Espera un momento.');
-        }
-
-        // Cooldown entre requests
-        const lastRequest = this.userCooldowns.get(userId) || 0;
-        const timeSinceLastRequest = Date.now() - lastRequest;
-
-        if (timeSinceLastRequest < this.config.cooldownMs) {
-            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
-            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
-        }
-
-        // Procesar imágenes adjuntas
-        let imageAnalysisResults = [];
-        if (attachments && attachments.length > 0) {
-            imageAnalysisResults = await this.processImageAttachments(attachments);
-        }
-
-        // Agregar a la queue con Promise
-        return new Promise((resolve, reject) => {
-            const request: AIRequest = {
-                userId,
-                guildId,
-                channelId,
-                prompt: prompt.trim(),
-                priority,
-                timestamp: Date.now(),
-                resolve,
-                reject,
-                aiRolePrompt: options?.aiRolePrompt,
-                meta: options?.meta,
-                messageId,
-                referencedMessageId,
-            };
-
-            // Insertar según prioridad
-            if (priority === 'high') {
-                this.requestQueue.unshift(request);
-            } else {
-                this.requestQueue.push(request);
-            }
-
-            // Timeout automático
-            setTimeout(() => {
-                const index = this.requestQueue.findIndex(r => r === request);
-                if (index !== -1) {
-                    this.requestQueue.splice(index, 1);
-                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
-                }
-            }, this.config.requestTimeout);
-
-            this.userCooldowns.set(userId, Date.now());
-        });
-    }
-
-    /**
-     * Procesar request de IA con imágenes adjuntas
-     */
-    private async processRequestWithAttachments(request: AIRequest, imageAttachments: any[]): Promise<void> {
-        try {
-            const { userId, prompt, guildId, channelId, messageId, referencedMessageId } = request;
-            const context = await this.getOrCreateContextWithMemory(userId, guildId, channelId);
-            const isImageRequest = this.detectImageRequest(prompt);
-
-            // Si el prompt es una solicitud de imagen, pero ya se alcanzó el límite, reiniciar conversación
-            if (isImageRequest && context.imageRequests >= this.config.maxImageRequests) {
-                this.resetConversation(userId, guildId);
-                logger.info(`Conversación reseteada para usuario ${userId} por límite de solicitudes de imagen`);
-            }
-
-            // Verificar límites de tokens
-            const estimatedTokens = this.estimateTokens(prompt);
-            if (context.totalTokens + estimatedTokens > this.config.maxInputTokens * this.config.tokenResetThreshold) {
-                this.resetConversation(userId, guildId);
-                logger.info(`Conversación reseteada para usuario ${userId} por límite de tokens`);
-            }
-
-            // Obtener prompt del sistema (desde opciones o DB)
-            let effectiveAiRolePrompt = request.aiRolePrompt;
-            if (effectiveAiRolePrompt === undefined && guildId) {
-                effectiveAiRolePrompt = (await this.getGuildAiPrompt(guildId)) ?? undefined;
-            }
-
-            // Obtener jerarquía de roles si está en un servidor
-            let roleHierarchy = '';
-            if (guildId) {
-                // Necesitamos acceso al cliente de Discord - lo pasaremos desde el comando
-                const client = (request as any).client;
-                if (client) {
-                    roleHierarchy = await this.getGuildRoleHierarchy(guildId, client);
-                }
-            }
-
-            // Construir metadatos mejorados
-            const enhancedMeta = (request.meta || '') + roleHierarchy;
-
-            // Construir prompt del sistema optimizado
-            const systemPrompt = this.buildSystemPrompt(
-                prompt,
-                context,
-                isImageRequest,
-                effectiveAiRolePrompt,
-                enhancedMeta
-            );
-
-            // Usar la API correcta de Google Generative AI
-            const model = this.genAI.getGenerativeModel({
-                model: "gemini-2.5-flash-preview-09-2025",
-                generationConfig: {
-                    maxOutputTokens: Math.min(this.config.maxOutputTokens, Math.max(1024, estimatedTokens * 0.5)),
-                    temperature: 0.7,
-                    topP: 0.85,
-                    topK: 40,
-                },
-                safetySettings: [
-                    {
-                        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
-                        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-                    },
-                    {
-                        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
-                        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
-                    }
-                ]
-            });
-
-            const result = await model.generateContent(systemPrompt);
-            const response = await result.response;
-            const aiResponse = response.text()?.trim();
-
-            if (!aiResponse) {
-                const error = new Error('La IA no generó una respuesta válida');
-                request.reject(error);
-                return;
-            }
-
-            // Actualizar contexto con memoria persistente
-            await this.updateContextWithMemory(
-                context,
-                prompt,
-                aiResponse,
-                estimatedTokens,
-                isImageRequest,
-                messageId,
-                referencedMessageId
-            );
-
-            request.resolve(aiResponse);
-
-        } catch (error) {
-            // Manejo type-safe de errores sin ts-ignore
-            const errorMessage = this.parseAPIError(error);
-            const logMessage = getErrorMessage(error);
-            logger.error(`Error procesando AI request con imágenes para ${request.userId}: ${logMessage}`);
-
-            // Log adicional si es un Error con stack trace
-            if (isError(error) && error.stack) {
-                logger.error(`Stack trace completo: ${error.stack}`);
-            }
-
-            request.reject(new Error(errorMessage));
-        }
-    }
-
-    /**
-     * Obtener o crear contexto de conversación (método legacy)
-     */
-    private getOrCreateContext(userId: string, guildId?: string): ConversationContext {
+    private async getOrCreateContextWithMemory(userId: string, guildId?: string, channelId?: string): Promise<ConversationContext> {
         const key = `${userId}-${guildId || 'dm'}`;
         let context = this.conversations.get(key);
 
         if (!context) {
-            context = {
-                messages: [],
-                totalTokens: 0,
-                imageRequests: 0,
-                lastActivity: Date.now(),
-                userId,
-                guildId
-            };
+            // Intentar cargar desde Appwrite
+            const loadedContext = await this.loadConversationFromAppwrite(userId, guildId, channelId);
+
+            if (loadedContext) {
+                context = loadedContext;
+            } else {
+                // Crear nuevo contexto si no existe en Appwrite
+                context = {
+                    messages: [],
+                    totalTokens: 0,
+                    imageRequests: 0,
+                    lastActivity: Date.now(),
+                    userId,
+                    guildId,
+                    channelId
+                };
+            }
+
             this.conversations.set(key, context);
         }
 
         context.lastActivity = Date.now();
         return context;
-    }
-
-    /**
-     * Actualizar contexto de forma eficiente (método legacy)
-     */
-    private updateContext(
-        context: ConversationContext,
-        userPrompt: string,
-        aiResponse: string,
-        inputTokens: number,
-        isImageRequest: boolean
-    ): void {
-        const outputTokens = this.estimateTokens(aiResponse);
-        const now = Date.now();
-
-        // Agregar mensajes
-        context.messages.push(
-            { role: 'user', content: userPrompt, timestamp: now, tokens: inputTokens },
-            { role: 'assistant', content: aiResponse, timestamp: now, tokens: outputTokens }
-        );
-
-        // Mantener solo los mensajes más recientes
-        if (context.messages.length > this.config.maxMessageHistory) {
-            const removed = context.messages.splice(0, context.messages.length - this.config.maxMessageHistory);
-            const removedTokens = removed.reduce((sum, msg) => sum + msg.tokens, 0);
-            context.totalTokens -= removedTokens;
-        }
-
-        context.totalTokens += inputTokens + outputTokens;
-        context.lastActivity = now;
-
-        if (isImageRequest) {
-            context.imageRequests++;
-        }
     }
 
     /**
@@ -1475,38 +930,6 @@ Responde de forma directa y útil:`;
         });
     }
 
-    /**
-     * Obtener o crear contexto de conversación con carga desde Appwrite
-     */
-    private async getOrCreateContextWithMemory(userId: string, guildId?: string, channelId?: string): Promise<ConversationContext> {
-        const key = `${userId}-${guildId || 'dm'}`;
-        let context = this.conversations.get(key);
-
-        if (!context) {
-            // Intentar cargar desde Appwrite
-            const loadedContext = await this.loadConversationFromAppwrite(userId, guildId, channelId);
-
-            if (loadedContext) {
-                context = loadedContext;
-            } else {
-                // Crear nuevo contexto si no existe en Appwrite
-                context = {
-                    messages: [],
-                    totalTokens: 0,
-                    imageRequests: 0,
-                    lastActivity: Date.now(),
-                    userId,
-                    guildId,
-                    channelId
-                };
-            }
-
-            this.conversations.set(key, context);
-        }
-
-        context.lastActivity = Date.now();
-        return context;
-    }
 
     /**
      * Limpiar cache pero mantener memoria persistente
