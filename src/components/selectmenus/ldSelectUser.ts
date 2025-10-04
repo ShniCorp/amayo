@@ -43,24 +43,24 @@ export default {
       // Input para puntos totales
       const totalInput = new TextInputBuilder()
         .setCustomId('total_points')
-        .setLabel('Puntos Totales (+ para añadir, - para quitar)')
-        .setPlaceholder('Ejemplo: +50 o -25 o =100 (para establecer)')
+        .setLabel('Puntos Totales')
+        .setPlaceholder('+50 (añadir) / -25 (quitar) / =100 (establecer)')
         .setStyle(TextInputStyle.Short)
         .setRequired(false);
 
       // Input para puntos semanales
       const weeklyInput = new TextInputBuilder()
         .setCustomId('weekly_points')
-        .setLabel('Puntos Semanales (+ para añadir, - para quitar)')
-        .setPlaceholder('Ejemplo: +10 o -5 o =50 (para establecer)')
+        .setLabel('Puntos Semanales')
+        .setPlaceholder('+10 (añadir) / -5 (quitar) / =50 (establecer)')
         .setStyle(TextInputStyle.Short)
         .setRequired(false);
 
       // Input para puntos mensuales
       const monthlyInput = new TextInputBuilder()
         .setCustomId('monthly_points')
-        .setLabel('Puntos Mensuales (+ para añadir, - para quitar)')
-        .setPlaceholder('Ejemplo: +20 o -10 o =75 (para establecer)')
+        .setLabel('Puntos Mensuales')
+        .setPlaceholder('+20 (añadir) / -10 (quitar) / =75 (establecer)')
         .setStyle(TextInputStyle.Short)
         .setRequired(false);
 
