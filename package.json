@@ -25,7 +25,7 @@
     "appwrite": "20.1.0",
     "chrono-node": "2.9.0",
     "discord-api-types": "0.38.24",
-    "discord.js": "14.22.1",
+    "discord.js": "15.0.0-dev.1759363313-f510b5ffa",
     "node-appwrite": "19.1.0",
     "pino": "9.13.0",
     "prisma": "6.16.2",
