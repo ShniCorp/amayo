@@ -172,7 +172,7 @@ export const command: CommandMessage = {
             ]
         };
 
-        const panelMessage = await message.reply({ flags: 32768, components: [helpPanel, categorySelectRow, exportRow] });
+        const panelMessage = await message.reply({ flags: 32768, components: [helpPanel, categorySelectRow] });
 
         const collector = panelMessage.createMessageComponentCollector({
             time: 600000,

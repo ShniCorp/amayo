@@ -104,7 +104,11 @@ async function handleAIReply(message: any) {
 
             const messageMeta = buildMessageMeta(message, emojiResult.names);
 
-            // Procesar con el servicio de AI usando memoria persistente
+            // Verificar si hay imágenes adjuntas
+            const attachments = Array.from(message.attachments.values());
+            const hasImages = attachments.length > 0 && aiService.hasImageAttachments(attachments);
+
+            // Procesar con el servicio de AI usando memoria persistente y soporte para imágenes
             const aiResponse = await aiService.processAIRequestWithMemory(
                 message.author.id,
                 message.content,
@@ -114,7 +118,10 @@ async function handleAIReply(message: any) {
                 message.reference.messageId,
                 message.client,
                 'normal',
-                { meta: messageMeta }
+                {
+                    meta: messageMeta + (hasImages ? ` | Tiene ${attachments.length} imagen(es) adjunta(s)` : ''),
+                    attachments: hasImages ? attachments : undefined
+                }
             );
 
             // Reemplazar emojis personalizados

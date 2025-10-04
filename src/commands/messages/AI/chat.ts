@@ -227,56 +227,23 @@ export const command: CommandMessage = {
 
             // Verificar si hay imágenes adjuntas
             const attachments = Array.from(message.attachments.values());
-            const hasImages = attachments.length > 0 && aiService.hasImageAttachments?.(attachments);
+            const hasImages = attachments.length > 0 && aiService.hasImageAttachments(attachments);
 
-            // Usar el nuevo método con memoria persistente y soporte para imágenes
-            if (hasImages) {
-                // Agregar información sobre las imágenes a los metadatos
-                const imageInfo = attachments
-                    .filter(att => att.contentType?.startsWith('image/') ||
-                                 ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].some(ext =>
-                                     att.name?.toLowerCase().endsWith(ext)))
-                    .map(att => `${att.name} (${att.contentType || 'imagen'})`)
-                    .join(', ');
-
-                const enhancedMeta = messageMeta + (imageInfo ? ` | Imágenes adjuntas: ${imageInfo}` : '');
-
-                // Usar método específico para imágenes
-                const request = {
-                    userId,
-                    guildId,
-                    channelId: message.channel.id,
-                    prompt: prompt.trim(),
-                    priority: 'normal' as const,
-                    timestamp: Date.now(),
-                    aiRolePrompt: undefined,
-                    meta: enhancedMeta,
-                    messageId: message.id,
-                    referencedMessageId,
-                    attachments: attachments,
-                    client: message.client
-                };
-
-                // Procesar con imágenes
-                aiResponse = await new Promise((resolve, reject) => {
-                    request.resolve = resolve;
-                    request.reject = reject;
-                    aiService.requestQueue.push(request as any);
-                });
-            } else {
-                // Método normal sin imágenes
-                aiResponse = await aiService.processAIRequestWithMemory(
-                    userId,
-                    prompt,
-                    guildId,
-                    message.channel.id,
-                    message.id,
-                    referencedMessageId,
-                    message.client,
-                    'normal',
-                    { meta: messageMeta }
-                );
-            }
+            // Usar el método unificado con memoria persistente y soporte para imágenes
+            aiResponse = await aiService.processAIRequestWithMemory(
+                userId,
+                prompt,
+                guildId,
+                message.channel.id,
+                message.id,
+                referencedMessageId,
+                message.client,
+                'normal',
+                {
+                    meta: messageMeta + (hasImages ? ` | Tiene ${attachments.length} imagen(es) adjunta(s)` : ''),
+                    attachments: hasImages ? attachments : undefined
+                }
+            );
 
             // Reemplazar :nombre: por el tag real del emoji, evitando bloques de código
             if (emojiNames.length > 0) {

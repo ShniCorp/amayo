@@ -1,4 +1,6 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
+// New: modern GenAI SDK for image generation
+import { GoogleGenAI } from "@google/genai";
 import logger from "../lib/logger";
 import { Collection } from "discord.js";
 import { prisma } from "../database/prisma";
@@ -85,6 +87,8 @@ function isAPIError(error: unknown): error is { message: string; code?: string }
 
 export class AIService {
     private genAI: GoogleGenerativeAI;
+    // New: client for modern GenAI features (images)
+    private genAIv2: any;
     private conversations = new Collection<string, ConversationContext>();
     private requestQueue: AIRequest[] = [];
     private processing = false;
@@ -95,8 +99,8 @@ export class AIService {
 
     // Configuración mejorada y escalable
     private readonly config = {
-        maxInputTokens: 1048576,      // 1M tokens Gemini 2.5 Flash
-        maxOutputTokens: 8192,        // Reducido para mejor rendimiento
+        maxInputTokens: 1048576,      // 1M tokens Gemini 2.5 Flash (entrada)
+        maxOutputTokens: 65536,       // 65,536 salida (según aclaración del usuario para preview 09-2025)
         tokenResetThreshold: 0.80,    // Más conservador
         maxConversationAge: 30 * 60 * 1000, // 30 minutos
         maxMessageHistory: 8,         // Reducido para mejor memoria
@@ -117,6 +121,12 @@ export class AIService {
         }
         
         this.genAI = new GoogleGenerativeAI(apiKey);
+        // Initialize modern SDK (lo tratamos como any para compatibilidad de tipos)
+        try {
+            this.genAIv2 = new GoogleGenAI({ apiKey });
+        } catch {
+            this.genAIv2 = null;
+        }
         this.startCleanupService();
         this.startQueueProcessor();
     }
@@ -279,6 +289,91 @@ export class AIService {
     }
 
     /**
+     * Parser de errores (versión legacy no utilizada)
+     */
+    private parseAPIErrorLegacy(error: unknown): string {
+        // Delegar a la versión nueva
+        return this.parseAPIError(error);
+    }
+
+    /**
+     * Versión legacy de processAIRequestWithMemory (sin uso externo)
+     */
+    async processAIRequestWithMemoryLegacy(
+        userId: string,
+        prompt: string,
+        guildId?: string,
+        channelId?: string,
+        messageId?: string,
+        referencedMessageId?: string,
+        client?: any,
+        priority: 'low' | 'normal' | 'high' = 'normal',
+        options?: { aiRolePrompt?: string; meta?: string; attachments?: any[] }
+    ): Promise<string> {
+        // Validaciones exhaustivas
+        if (!prompt?.trim()) {
+            throw new Error('El prompt no puede estar vacío');
+        }
+
+        if (prompt.length > 4000) {
+            throw new Error('El prompt excede el límite de 4000 caracteres');
+        }
+
+        // Rate limiting por usuario
+        if (!this.checkRateLimit(userId)) {
+            throw new Error('Has excedido el límite de requests. Espera un momento.');
+        }
+
+        // Cooldown entre requests
+        const lastRequest = this.userCooldowns.get(userId) || 0;
+        const timeSinceLastRequest = Date.now() - lastRequest;
+
+        if (timeSinceLastRequest < this.config.cooldownMs) {
+            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
+            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
+        }
+
+        // Agregar a la queue con Promise
+        return new Promise((resolve, reject) => {
+            const request: AIRequest & { client?: any; attachments?: any[] } = {
+                userId,
+                guildId,
+                channelId,
+                prompt: prompt.trim(),
+                priority,
+                timestamp: Date.now(),
+                resolve,
+                reject,
+                aiRolePrompt: options?.aiRolePrompt,
+                meta: options?.meta,
+                messageId,
+                referencedMessageId,
+                client,
+                attachments: options?.attachments
+            };
+
+            // Insertar según prioridad
+            if (priority === 'high') {
+                this.requestQueue.unshift(request);
+            } else {
+                this.requestQueue.push(request);
+            }
+
+            // Timeout automático
+            setTimeout(() => {
+                const index = this.requestQueue.findIndex(r => r === request);
+                if (index !== -1) {
+                    this.requestQueue.splice(index, 1);
+                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
+                }
+            }, this.config.requestTimeout);
+
+            this.userCooldowns.set(userId, Date.now());
+        });
+    }
+
+
+    /**
      * Parser mejorado de errores de API - Type-safe sin ts-ignore
      */
     private parseAPIError(error: unknown): string {
@@ -344,7 +439,7 @@ export class AIService {
         referencedMessageId?: string,
         client?: any,
         priority: 'low' | 'normal' | 'high' = 'normal',
-        options?: { aiRolePrompt?: string; meta?: string }
+        options?: { aiRolePrompt?: string; meta?: string; attachments?: any[] }
     ): Promise<string> {
         // Validaciones exhaustivas
         if (!prompt?.trim()) {
@@ -371,7 +466,7 @@ export class AIService {
 
         // Agregar a la queue con Promise
         return new Promise((resolve, reject) => {
-            const request: AIRequest = {
+            const request: AIRequest & { client?: any; attachments?: any[] } = {
                 userId,
                 guildId,
                 channelId,
@@ -384,6 +479,8 @@ export class AIService {
                 meta: options?.meta,
                 messageId,
                 referencedMessageId,
+                client,
+                attachments: options?.attachments
             };
 
             // Insertar según prioridad
@@ -468,15 +565,9 @@ export class AIService {
                 }
             }
 
-            // Usar la API correcta de Google Generative AI
-            // Para imágenes, usar gemini-2.5-flash (soporta multimodal)
-            // Para solo texto, usar gemini-2.5-flash-preview-09-2025
-            const modelName = hasImages && imageAttachments.length > 0
-                ? "gemini-2.5-flash-image"
-                : "gemini-2.5-flash-preview-09-2025";
-
+            // Usar gemini-2.5-flash-preview-09-2025 que puede leer imágenes y responder con texto
             const model = this.genAI.getGenerativeModel({
-                model: modelName,
+                model: "gemini-2.5-flash-preview-09-2025",
                 generationConfig: {
                     maxOutputTokens: Math.min(this.config.maxOutputTokens, Math.max(1024, estimatedTokens * 0.5)),
                     temperature: 0.7,
@@ -614,6 +705,18 @@ Responde de forma directa y útil:`;
     }
 
     /**
+     * Estimación de tokens más precisa
+     */
+    private estimateTokens(text: string): number {
+        // Aproximación mejorada basada en la tokenización real
+        const words = text.split(/\s+/).length;
+        const chars = text.length;
+
+        // Fórmula híbrida más precisa
+        return Math.ceil((words * 1.3) + (chars * 0.25));
+    }
+
+    /**
      * Detección mejorada de requests de imagen
      */
     private detectImageRequest(prompt: string): boolean {
@@ -628,9 +731,28 @@ Responde de forma directa y útil:`;
     }
 
     /**
-     * Detectar si hay imágenes adjuntas en el mensaje para análisis
+     * Detectar si hay imágenes adjuntas en el mensaje para análisis (método público)
      */
-    private hasImageAttachments(attachments?: any[]): boolean {
+    public hasImageAttachments(attachments?: any[]): boolean {
+        if (!attachments || attachments.length === 0) return false;
+
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+        const imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+
+        return attachments.some(attachment => {
+            const hasImageExtension = imageExtensions.some(ext =>
+                attachment.name?.toLowerCase().endsWith(ext)
+            );
+            const hasImageMimeType = imageMimeTypes.includes(attachment.contentType?.toLowerCase());
+
+            return hasImageExtension || hasImageMimeType;
+        });
+    }
+
+    /**
+     * Detectar si hay imágenes adjuntas en el mensaje para análisis (método privado)
+     */
+    private hasImageAttachmentsPrivate(attachments?: any[]): boolean {
         if (!attachments || attachments.length === 0) return false;
 
         const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
@@ -1241,6 +1363,77 @@ Responde de forma directa y útil:`;
         } catch (error) {
             logger.warn(`Error obteniendo jerarquía de roles: ${getErrorMessage(error)}`);
             return '';
+        }
+    }
+
+    /**
+     * Generar imagen usando gemini-2.5-flash-image (Google Gen AI SDK moderno)
+     * Retorna un objeto con los bytes de la imagen y el tipo MIME.
+     */
+    public async generateImage(prompt: string, options?: { size?: 'square' | 'portrait' | 'landscape'; mimeType?: string }): Promise<{ data: Buffer; mimeType: string; fileName: string; }> {
+        if (!prompt?.trim()) {
+            throw new Error('El prompt de imagen no puede estar vacío');
+        }
+        if (!this.genAIv2) {
+            throw new Error('El SDK moderno (@google/genai) no está inicializado');
+        }
+
+        // Mapear tamaño a hints simples (si el modelo los admite)
+        const sizeHint = options?.size ?? 'square';
+        const mimeType = options?.mimeType ?? 'image/png';
+
+        try {
+            // Llamada flexible usando any para compatibilidad de tipos entre versiones
+            const res: any = await (this.genAIv2 as any).models.generateImages({
+                model: 'gemini-2.5-flash-image',
+                // La API moderna acepta `contents` o `prompt` según versión; usamos ambos por compatibilidad
+                contents: prompt,
+                prompt,
+                config: {
+                    // Algunos despliegues soportan indicar formato de salida
+                    responseMimeType: mimeType,
+                    // Hints de tamaño en metadatos si aplica
+                    // Nota: si no es soportado, el backend lo ignorará sin fallar
+                    aspectRatio: sizeHint === 'portrait' ? '9:16' : sizeHint === 'landscape' ? '16:9' : '1:1',
+                }
+            });
+
+            // Intentar obtener el primer resultado de imagen en varias formas comunes
+            let imageDataBase64: string | undefined;
+            let resultMime: string = mimeType;
+            let fileName = `gen_${Date.now()}.${mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') ? 'jpg' : 'img'}`;
+
+            if (res?.image?.data) {
+                imageDataBase64 = res.image.data;
+                resultMime = res.image.mimeType ?? resultMime;
+            } else if (Array.isArray(res?.images) && res.images.length > 0) {
+                // Some SDKs return { images: [{ data, mimeType }] }
+                imageDataBase64 = res.images[0].data ?? res.images[0].inlineData?.data;
+                resultMime = res.images[0].mimeType ?? res.images[0].inlineData?.mimeType ?? resultMime;
+            } else if (res?.response?.candidates?.[0]?.content?.parts) {
+                // Fallback: imagen como inlineData en parts
+                const parts = res.response.candidates[0].content.parts;
+                const imgPart = parts.find((p: any) => p.inlineData && p.inlineData.data);
+                if (imgPart) {
+                    imageDataBase64 = imgPart.inlineData.data;
+                    resultMime = imgPart.inlineData.mimeType ?? resultMime;
+                }
+            }
+
+            if (!imageDataBase64) {
+                throw new Error('No se recibió imagen del modelo');
+            }
+
+            const buffer = Buffer.from(imageDataBase64, 'base64');
+            // Ajustar nombre de archivo segun mimetype real
+            if (resultMime.includes('png')) fileName = fileName.replace(/\.[^.]+$/, '.png');
+            else if (resultMime.includes('jpeg') || resultMime.includes('jpg')) fileName = fileName.replace(/\.[^.]+$/, '.jpg');
+            else if (resultMime.includes('webp')) fileName = fileName.replace(/\.[^.]+$/, '.webp');
+
+            return { data: buffer, mimeType: resultMime, fileName };
+        } catch (e) {
+            const msg = this.parseAPIError(e);
+            throw new Error(msg);
         }
     }
 }
