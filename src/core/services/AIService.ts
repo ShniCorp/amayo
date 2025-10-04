@@ -87,8 +87,9 @@ function isAPIError(error: unknown): error is { message: string; code?: string }
 
 export class AIService {
     private genAI: GoogleGenerativeAI;
-    // New: client for modern GenAI features (images)
     private genAIv2: any;
+    // Cache del modelo de imágenes detectado
+    private imageModelName?: string | null;
     private conversations = new Collection<string, ConversationContext>();
     private requestQueue: AIRequest[] = [];
     private processing = false;
@@ -121,7 +122,6 @@ export class AIService {
         }
         
         this.genAI = new GoogleGenerativeAI(apiKey);
-        // Initialize modern SDK (lo tratamos como any para compatibilidad de tipos)
         try {
             this.genAIv2 = new GoogleGenAI({ apiKey });
         } catch {
@@ -129,6 +129,83 @@ export class AIService {
         }
         this.startCleanupService();
         this.startQueueProcessor();
+        // Detectar modelo de imágenes en background (no bloqueante)
+        this.detectImageModel().catch(err => {
+            logger.warn({ err }, 'No se pudo detectar automáticamente un modelo de imágenes');
+        });
+    }
+
+    // Detecta un modelo de imágenes disponible y lo cachea
+    private async detectImageModel(): Promise<string | null> {
+        if (!this.genAIv2) {
+            this.imageModelName = null;
+            return null;
+        }
+
+        // Permitir override por variable de entorno
+        const override = process.env.GENAI_IMAGE_MODEL?.trim();
+        if (override) {
+            this.imageModelName = override;
+            logger.info({ model: override }, 'Usando modelo de imágenes por ENV override');
+            return override;
+        }
+
+        // Lista de candidatos conocidos (orden de preferencia)
+        const candidates = [
+            'gemini-2.5-flash-image', // puede no estar disponible aún en tu proyecto/region/apiVersion
+            'imagen-3.0-generate',
+            'imagen-3.0-fast',
+            'imagen-3.0',
+        ];
+
+        // Intentar listar modelos si el SDK lo soporta
+        try {
+            const listed: any = await (this.genAIv2 as any).models?.listModels?.();
+            const models: string[] = Array.isArray(listed?.models)
+                ? listed.models.map((m: any) => m?.name || m?.model || m?.id).filter(Boolean)
+                : [];
+            if (models.length) {
+                // Buscar modelos que parezcan de imagen
+                const imageLike = models.filter((id: string) => /imagen|image/i.test(id));
+                // Priorizar nuestros candidatos en el orden propuesto; si no, tomar el primero imageLike
+                for (const c of candidates) {
+                    if (imageLike.some((m) => m.includes(c))) {
+                        this.imageModelName = imageLike.find((m) => m.includes(c))!;
+                        logger.info({ model: this.imageModelName }, 'Modelo de imágenes detectado por listModels (preferencia)');
+                        return this.imageModelName;
+                    }
+                }
+                if (imageLike[0]) {
+                    this.imageModelName = imageLike[0];
+                    logger.info({ model: this.imageModelName }, 'Modelo de imágenes detectado por listModels');
+                    return this.imageModelName;
+                }
+            }
+        } catch (e) {
+            // Continuar con prueba directa de candidatos si listModels no existe o falla
+            logger.debug({ err: getErrorMessage(e) }, 'listModels no disponible o falló; probando candidatos conocidos');
+        }
+
+        // Probar generar un ping mínimo con candidatos conocidos (sin coste excesivo)
+        for (const candidate of candidates) {
+            try {
+                // Intento muy ligero: usar generateImages con un prompt mínimo
+                await (this.genAIv2 as any).models.generateImages({
+                    model: candidate,
+                    prompt: 'ping',
+                    config: { imageSize: '1:1' },
+                });
+                this.imageModelName = candidate;
+                logger.info({ model: candidate }, 'Modelo de imágenes detectado por prueba directa');
+                return candidate;
+            } catch (e) {
+                // 404/NOT_FOUND esperado para modelos no disponibles; seguir
+                continue;
+            }
+        }
+
+        this.imageModelName = null;
+        return null;
     }
 
     /**
@@ -1378,14 +1455,19 @@ Responde de forma directa y útil:`;
             throw new Error('El SDK moderno (@google/genai) no está inicializado');
         }
 
+        // Obtener/descubrir el modelo
+        const model = this.imageModelName ?? (await this.detectImageModel());
+        if (!model) {
+            throw new Error('El generador de imágenes no está disponible para tu cuenta o región. Habilita Imagen 3 (por ejemplo, imagen-3.0-fast) en Google AI Studio o define GENAI_IMAGE_MODEL.');
+        }
+
         const mimeType = options?.mimeType ?? 'image/png';
         const size = options?.size ?? 'square';
         const imageSize = size === 'portrait' ? '9:16' : size === 'landscape' ? '16:9' : '1:1';
 
         try {
-            // Preferir generateImages (SDK moderno) cuando está disponible
             const res: any = await (this.genAIv2 as any).models.generateImages({
-                model: 'gemini-2.5-flash-image',
+                model,
                 prompt,
                 config: {
                     responseMimeType: mimeType,
@@ -1393,7 +1475,6 @@ Responde de forma directa y útil:`;
                 }
             });
 
-            // Respuesta típica: { images: [{ data, mimeType }] }
             let base64: string | undefined;
             let outMime: string | undefined;
 
@@ -1402,17 +1483,15 @@ Responde de forma directa y útil:`;
                 base64 = first?.data || first?.b64Data || first?.inlineData?.data;
                 outMime = first?.mimeType || first?.inlineData?.mimeType;
             }
-
-            // Fallbacks para formas alternativas
             if (!base64 && res?.image?.data) {
                 base64 = res.image.data;
                 outMime = res.image.mimeType;
             }
 
-            // Fallback a generateContent si generateImages no retorna 'images'
             if (!base64) {
+                // Fallback a generateContent para algunas implementaciones
                 const alt: any = await (this.genAIv2 as any).models.generateContent({
-                    model: 'gemini-2.5-flash-image',
+                    model,
                     contents: prompt,
                     config: {
                         responseMimeType: mimeType,
@@ -1437,7 +1516,7 @@ Responde de forma directa y útil:`;
             }
 
             if (!base64) {
-                logger.error({ res }, 'Respuesta de imagen sin datos de imagen');
+                logger.error({ res, model }, 'Respuesta de imagen sin datos de imagen');
                 throw new Error('No se recibió imagen del modelo');
             }
 
@@ -1449,11 +1528,10 @@ Responde de forma directa y útil:`;
 
             return { data: Buffer.from(base64, 'base64'), mimeType: finalMime, fileName };
         } catch (e) {
-            // Log completo del error original para depuración
-            logger.error(e as any, 'Fallo en generateImage');
+            logger.error({ err: e as any, model }, 'Fallo en generateImage');
             const parsed = this.parseAPIError(e);
             const original = getErrorMessage(e);
-            // Conservar mensaje original si el parser no aporta más contexto
+            // Si el parser no aporta, usa el original del backend
             const message = parsed === 'Error temporal del servicio de IA. Intenta de nuevo' ? original : parsed;
             throw new Error(message || parsed);
         }
