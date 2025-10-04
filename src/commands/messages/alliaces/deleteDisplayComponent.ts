@@ -215,7 +215,7 @@ async function handlePanelInteractions(
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
                     content: "❌ Ocurrió un error al procesar la interacción.",
-                    ephemeral: true
+                    flags: 64 // Use flags instead of ephemeral
                 });
             }
         }
@@ -283,12 +283,14 @@ async function handleBlockSelection(
         filter: (i: MessageComponentInteraction) => i.user.id === interaction.user.id
     });
 
-    finalCollector.on("collect", async (finalInteraction: ButtonInteraction) => {
+    finalCollector.on("collect", async (finalInteraction: MessageComponentInteraction) => {
         try {
-            if (finalInteraction.customId === "cancel_delete_final") {
-                await handleCancellation(finalInteraction);
-            } else if (finalInteraction.customId === `confirm_delete_${selectedBlock.id}`) {
-                await executeBlockDeletion(finalInteraction, client, selectedBlock);
+            if (finalInteraction.isButton()) {
+                if (finalInteraction.customId === "cancel_delete_final") {
+                    await handleCancellation(finalInteraction);
+                } else if (finalInteraction.customId === `confirm_delete_${selectedBlock.id}`) {
+                    await executeBlockDeletion(finalInteraction, client, selectedBlock);
+                }
             }
             finalCollector.stop();
         } catch (error) {
@@ -314,12 +316,14 @@ async function handleConfirmationInteraction(
         filter: (interaction: MessageComponentInteraction) => interaction.user.id === originalMessage.author.id
     });
 
-    collector.on("collect", async (interaction: ButtonInteraction) => {
+    collector.on("collect", async (interaction: MessageComponentInteraction) => {
         try {
-            if (interaction.customId === "cancel_delete") {
-                await handleCancellation(interaction);
-            } else if (interaction.customId === `confirm_delete_${block.id}`) {
-                await executeBlockDeletion(interaction, client, { name: block.name, id: block.id });
+            if (interaction.isButton()) {
+                if (interaction.customId === "cancel_delete") {
+                    await handleCancellation(interaction);
+                } else if (interaction.customId === `confirm_delete_${block.id}`) {
+                    await executeBlockDeletion(interaction, client, { name: block.name, id: block.id });
+                }
             }
             collector.stop();
         } catch (error) {
