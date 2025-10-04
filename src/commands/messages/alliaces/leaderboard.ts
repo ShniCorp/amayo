@@ -3,6 +3,7 @@
 import { CommandMessage } from "../../../core/types/commands";
 import { prisma } from "../../../core/database/prisma";
 import type { Message } from "discord.js";
+import { PermissionFlagsBits } from "discord.js";
 
 const MAX_ENTRIES = 10;
 
@@ -40,7 +41,7 @@ function codeBlock(lines: string[]): string {
   ].join('\n');
 }
 
-export async function buildLeaderboardPanel(message: Message) {
+export async function buildLeaderboardPanel(message: Message, isAdmin: boolean = false) {
   const guild = message.guild!;
   const guildId = guild.id;
   const userId = message.author.id;
@@ -99,6 +100,18 @@ export async function buildLeaderboardPanel(message: Message) {
   const now = new Date();
   const ts = now.toISOString().replace('T', ' ').split('.')[0];
 
+  // Botón base que todos ven
+  const buttons: any[] = [
+    { type: 2, style: 2, emoji: '1420539242643193896', label: 'Refrescar', custom_id: 'ld_refresh' }
+  ];
+
+  // Si es admin, añadir botón de gestión
+  if (isAdmin) {
+    buttons.push(
+      { type: 2, style: 1, emoji: '⚙️', label: 'Gestionar Puntos', custom_id: 'ld_manage_points' }
+    );
+  }
+
   // @ts-ignore - estructura de Display Components V2
   const panel = {
     type: 17,
@@ -126,9 +139,7 @@ export async function buildLeaderboardPanel(message: Message) {
       { type: 14, divider: false, spacing: 1 },
       {
         type: 1,
-        components: [
-          { type: 2, style: 2, emoji: '1420539242643193896', label: 'Refrescar', custom_id: 'ld_refresh' }
-        ]
+        components: buttons
       }
     ]
   };
@@ -150,7 +161,11 @@ export const command: CommandMessage = {
       return;
     }
 
-    const panel = await buildLeaderboardPanel(message);
+    // Verificar si el usuario es administrador
+    const member = await message.guild.members.fetch(message.author.id);
+    const isAdmin = member.permissions.has(PermissionFlagsBits.ManageGuild);
+
+    const panel = await buildLeaderboardPanel(message, isAdmin);
     await message.reply({
       // @ts-ignore Flag de componentes V2
       flags: 32768,

@@ -1,5 +1,5 @@
 import logger from "../../core/lib/logger";
-import { ButtonInteraction, MessageFlags } from 'discord.js';
+import { ButtonInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
 import { buildLeaderboardPanel } from '../../commands/messages/alliaces/leaderboard';
 
 export default {
@@ -10,9 +10,14 @@ export default {
     }
     try {
       await interaction.deferUpdate();
+
+      // Verificar si el usuario es administrador
+      const member = await interaction.guild.members.fetch(interaction.user.id);
+      const isAdmin = member.permissions.has(PermissionFlagsBits.ManageGuild);
+
       // Reusar el builder esperando un objeto con guild y author
       const fakeMessage: any = { guild: interaction.guild, author: interaction.user };
-      const panel = await buildLeaderboardPanel(fakeMessage);
+      const panel = await buildLeaderboardPanel(fakeMessage, isAdmin);
       await interaction.message.edit({ components: [panel] });
     } catch (e) {
       // @ts-ignore
