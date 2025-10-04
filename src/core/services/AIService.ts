@@ -472,7 +472,7 @@ export class AIService {
             // Para imágenes, usar gemini-2.5-flash (soporta multimodal)
             // Para solo texto, usar gemini-2.5-flash-preview-09-2025
             const modelName = hasImages && imageAttachments.length > 0
-                ? "gemini-2.5-flash"
+                ? "gemini-2.5-flash-image"
                 : "gemini-2.5-flash-preview-09-2025";
 
             const model = this.genAI.getGenerativeModel({
