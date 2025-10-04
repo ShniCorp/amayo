@@ -112,7 +112,16 @@ const updateEditor = async (msg: any, data: any) => {
     const payload: any = { ...data };
     delete payload.display;
     payload.components = components;
-    if (payload.flags === undefined) payload.flags = 32768; // según formato real en tu entorno
+
+    if (payload.flags === undefined) {
+        payload.flags = MessageFlags.IsComponentsV2;
+    }
+
+    // Si usamos Components V2, no podemos incluir content
+    if (payload.flags === MessageFlags.IsComponentsV2) {
+        delete payload.content;
+    }
+
     await msg.edit(payload);
 };
 
