@@ -14,23 +14,33 @@ function formatRow(index: number, displayName: string, points: number): string {
 }
 
 async function getLeaderboardData(guildId: string) {
-  const [weekly, monthly, total] = await Promise.all([
-    prisma.partnershipStats.findMany({ where: { guildId }, orderBy: { weeklyPoints: 'desc' }, take: MAX_ENTRIES }),
-    prisma.partnershipStats.findMany({ where: { guildId }, orderBy: { monthlyPoints: 'desc' }, take: MAX_ENTRIES }),
-    prisma.partnershipStats.findMany({ where: { guildId }, orderBy: { totalPoints: 'desc' }, take: MAX_ENTRIES }),
-  ]);
-  return { weekly, monthly, total };
+  try {
+    const [weekly, monthly, total] = await Promise.all([
+      prisma.partnershipStats.findMany({ where: { guildId }, orderBy: { weeklyPoints: 'desc' }, take: MAX_ENTRIES }),
+      prisma.partnershipStats.findMany({ where: { guildId }, orderBy: { monthlyPoints: 'desc' }, take: MAX_ENTRIES }),
+      prisma.partnershipStats.findMany({ where: { guildId }, orderBy: { totalPoints: 'desc' }, take: MAX_ENTRIES }),
+    ]);
+    return { weekly, monthly, total, error: null };
+  } catch (error) {
+    console.error('Error fetching leaderboard data:', error);
+    return { weekly: [], monthly: [], total: [], error: error as Error };
+  }
 }
 
 async function getSelfRanks(guildId: string, userId: string) {
-  const self = await prisma.partnershipStats.findUnique({ where: { userId_guildId: { userId, guildId } } });
-  if (!self) return { weekly: 0, monthly: 0, total: 0 };
-  const [wHigher, mHigher, tHigher] = await Promise.all([
-    prisma.partnershipStats.count({ where: { guildId, weeklyPoints: { gt: self.weeklyPoints } } }),
-    prisma.partnershipStats.count({ where: { guildId, monthlyPoints: { gt: self.monthlyPoints } } }),
-    prisma.partnershipStats.count({ where: { guildId, totalPoints: { gt: self.totalPoints } } }),
-  ]);
-  return { weekly: wHigher + 1, monthly: mHigher + 1, total: tHigher + 1 };
+  try {
+    const self = await prisma.partnershipStats.findUnique({ where: { userId_guildId: { userId, guildId } } });
+    if (!self) return { weekly: 0, monthly: 0, total: 0 };
+    const [wHigher, mHigher, tHigher] = await Promise.all([
+      prisma.partnershipStats.count({ where: { guildId, weeklyPoints: { gt: self.weeklyPoints } } }),
+      prisma.partnershipStats.count({ where: { guildId, monthlyPoints: { gt: self.monthlyPoints } } }),
+      prisma.partnershipStats.count({ where: { guildId, totalPoints: { gt: self.totalPoints } } }),
+    ]);
+    return { weekly: wHigher + 1, monthly: mHigher + 1, total: tHigher + 1 };
+  } catch (error) {
+    console.error('Error fetching self ranks:', error);
+    return { weekly: 0, monthly: 0, total: 0 };
+  }
 }
 
 function codeBlock(lines: string[]): string {
@@ -50,6 +60,39 @@ export async function buildLeaderboardPanel(message: Message, isAdmin: boolean =
     getLeaderboardData(guildId),
     getSelfRanks(guildId, userId)
   ]);
+
+  // Si hay error de base de datos, mostrar panel de error
+  if (boards.error) {
+    const errorPanel = {
+      type: 17,
+      accent_color: 0xff6b6b, // Color rojo para error
+      components: [
+        { type: 10, content: '## ⚠️ Error de Conexión' },
+        { type: 10, content: '-# No se pudo conectar con la base de datos.' },
+        { type: 14, divider: true, spacing: 1 },
+
+        { type: 10, content: '### 🔌 Problema de Conectividad' },
+        { type: 10, content: 'No se puede acceder a los datos del leaderboard en este momento.' },
+        { type: 10, content: 'Esto puede ser debido a:' },
+        { type: 10, content: '• Mantenimiento de la base de datos' },
+        { type: 10, content: '• Problemas de conectividad temporal' },
+        { type: 10, content: '• Sobrecarga del servidor' },
+
+        { type: 14, divider: true, spacing: 1 },
+        { type: 10, content: '### 🔄 ¿Qué hacer?' },
+        { type: 10, content: 'Intenta nuevamente en unos minutos. Si el problema persiste, contacta a un administrador.' },
+
+        { type: 14, divider: false, spacing: 1 },
+        {
+          type: 1,
+          components: [
+            { type: 2, style: 2, emoji: '🔄', label: 'Reintentar', custom_id: 'ld_refresh' }
+          ]
+        }
+      ]
+    };
+    return errorPanel;
+  }
 
   // Construir mapa de nombres visibles para los usuarios presentes en los top
   const ids = new Set<string>();
