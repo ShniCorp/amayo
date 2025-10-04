@@ -2,6 +2,7 @@ import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/ge
 import logger from "../lib/logger";
 import { Collection } from "discord.js";
 import { prisma } from "../database/prisma";
+import { getDatabases, APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_AI_CONVERSATIONS_ID, isAIConversationsConfigured } from "../api/appwrite";
 
 // Tipos mejorados para mejor type safety
 interface ConversationContext {
@@ -10,17 +11,22 @@ interface ConversationContext {
         content: string;
         timestamp: number;
         tokens: number;
+        messageId?: string; // ID del mensaje de Discord
+        referencedMessageId?: string; // ID del mensaje al que responde
     }>;
     totalTokens: number;
     imageRequests: number;
     lastActivity: number;
     userId: string;
     guildId?: string;
+    channelId?: string;
+    conversationId?: string; // ID único de la conversación
 }
 
 interface AIRequest {
     userId: string;
     guildId?: string;
+    channelId?: string;
     prompt: string;
     priority: 'low' | 'normal' | 'high';
     timestamp: number;
@@ -28,6 +34,24 @@ interface AIRequest {
     reject: (error: Error) => void;
     aiRolePrompt?: string;
     meta?: string;
+    messageId?: string;
+    referencedMessageId?: string;
+}
+
+interface AppwriteConversation {
+    userId: string;
+    guildId?: string;
+    channelId?: string;
+    conversationId: string;
+    messages: Array<{
+        role: 'user' | 'assistant';
+        content: string;
+        timestamp: number;
+        messageId?: string;
+        referencedMessageId?: string;
+    }>;
+    lastActivity: number;
+    createdAt: number;
 }
 
 // Utility function para manejar errores de forma type-safe
@@ -39,7 +63,7 @@ function getErrorMessage(error: unknown): string {
         return error;
     }
     if (error && typeof error === 'object' && 'message' in error) {
-        return String(error.message);
+        return String((error as any).message);
     }
     return 'Error desconocido';
 }
@@ -225,13 +249,172 @@ export class AIService {
     }
 
     /**
-     * Procesa una request individual con manejo completo de errores
+     * Resetear conversación
+     */
+    private resetConversation(userId: string, guildId?: string): void {
+        const key = `${userId}-${guildId || 'dm'}`;
+        this.conversations.delete(key);
+    }
+
+    /**
+     * Servicio de limpieza automática
+     */
+    private startCleanupService(): void {
+        setInterval(() => {
+            const now = Date.now();
+            const toDelete: string[] = [];
+
+            this.conversations.forEach((context, key) => {
+                if (now - context.lastActivity > this.config.maxConversationAge) {
+                    toDelete.push(key);
+                }
+            });
+
+            toDelete.forEach(key => this.conversations.delete(key));
+
+            if (toDelete.length > 0) {
+                logger.info(`Limpieza automática: ${toDelete.length} conversaciones expiradas eliminadas`);
+            }
+        }, this.config.cleanupInterval);
+    }
+
+    /**
+     * Parser mejorado de errores de API - Type-safe sin ts-ignore
+     */
+    private parseAPIError(error: unknown): string {
+        // Extraer mensaje de forma type-safe
+        const message = getErrorMessage(error).toLowerCase();
+
+        // Verificar si es un error de API estructurado
+        if (isAPIError(error)) {
+            const apiMessage = error.message.toLowerCase();
+
+            if (apiMessage.includes('api key') || apiMessage.includes('authentication')) {
+                return 'Error de autenticación con la API de IA';
+            }
+            if (apiMessage.includes('quota') || apiMessage.includes('exceeded')) {
+                return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
+            }
+            if (apiMessage.includes('safety') || apiMessage.includes('blocked')) {
+                return 'Tu mensaje fue bloqueado por las políticas de seguridad';
+            }
+            if (apiMessage.includes('timeout') || apiMessage.includes('deadline')) {
+                return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
+            }
+            if (apiMessage.includes('model not found')) {
+                return 'El modelo de IA no está disponible en este momento';
+            }
+            if (apiMessage.includes('token') || apiMessage.includes('length')) {
+                return 'El mensaje excede los límites permitidos';
+            }
+        }
+
+        // Manejo genérico para otros tipos de errores
+        if (message.includes('api key') || message.includes('authentication')) {
+            return 'Error de autenticación con la API de IA';
+        }
+        if (message.includes('quota') || message.includes('exceeded')) {
+            return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
+        }
+        if (message.includes('safety') || message.includes('blocked')) {
+            return 'Tu mensaje fue bloqueado por las políticas de seguridad';
+        }
+        if (message.includes('timeout') || message.includes('deadline')) {
+            return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
+        }
+        if (message.includes('model not found')) {
+            return 'El modelo de IA no está disponible en este momento';
+        }
+        if (message.includes('token') || message.includes('length')) {
+            return 'El mensaje excede los límites permitidos';
+        }
+
+        return 'Error temporal del servicio de IA. Intenta de nuevo';
+    }
+
+    /**
+     * Procesa una request de IA con soporte para conversaciones y memoria persistente
+     */
+    async processAIRequestWithMemory(
+        userId: string,
+        prompt: string,
+        guildId?: string,
+        channelId?: string,
+        messageId?: string,
+        referencedMessageId?: string,
+        client?: any,
+        priority: 'low' | 'normal' | 'high' = 'normal',
+        options?: { aiRolePrompt?: string; meta?: string }
+    ): Promise<string> {
+        // Validaciones exhaustivas
+        if (!prompt?.trim()) {
+            throw new Error('El prompt no puede estar vacío');
+        }
+
+        if (prompt.length > 4000) {
+            throw new Error('El prompt excede el límite de 4000 caracteres');
+        }
+
+        // Rate limiting por usuario
+        if (!this.checkRateLimit(userId)) {
+            throw new Error('Has excedido el límite de requests. Espera un momento.');
+        }
+
+        // Cooldown entre requests
+        const lastRequest = this.userCooldowns.get(userId) || 0;
+        const timeSinceLastRequest = Date.now() - lastRequest;
+
+        if (timeSinceLastRequest < this.config.cooldownMs) {
+            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
+            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
+        }
+
+        // Agregar a la queue con Promise
+        return new Promise((resolve, reject) => {
+            const request: AIRequest = {
+                userId,
+                guildId,
+                channelId,
+                prompt: prompt.trim(),
+                priority,
+                timestamp: Date.now(),
+                resolve,
+                reject,
+                aiRolePrompt: options?.aiRolePrompt,
+                meta: options?.meta,
+                messageId,
+                referencedMessageId,
+            };
+
+            // Insertar según prioridad
+            if (priority === 'high') {
+                this.requestQueue.unshift(request);
+            } else {
+                this.requestQueue.push(request);
+            }
+
+            // Timeout automático
+            setTimeout(() => {
+                const index = this.requestQueue.findIndex(r => r === request);
+                if (index !== -1) {
+                    this.requestQueue.splice(index, 1);
+                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
+                }
+            }, this.config.requestTimeout);
+
+            this.userCooldowns.set(userId, Date.now());
+        });
+    }
+
+    /**
+     * Procesa una request individual con manejo completo de errores y memoria persistente
      */
     private async processRequest(request: AIRequest): Promise<void> {
         try {
-            const { userId, prompt, guildId } = request;
-            const context = this.getOrCreateContext(userId, guildId);
+            const { userId, prompt, guildId, channelId, messageId, referencedMessageId } = request;
+            const context = await this.getOrCreateContextWithMemory(userId, guildId, channelId);
             const isImageRequest = this.detectImageRequest(prompt);
+
             if (isImageRequest && context.imageRequests >= this.config.maxImageRequests) {
                 const error = new Error(`Has alcanzado el límite de ${this.config.maxImageRequests} solicitudes de imagen. La conversación se ha reiniciado.`);
                 request.reject(error);
@@ -241,7 +424,7 @@ export class AIService {
             // Verificar límites de tokens
             const estimatedTokens = this.estimateTokens(prompt);
             if (context.totalTokens + estimatedTokens > this.config.maxInputTokens * this.config.tokenResetThreshold) {
-                this.resetConversation(userId);
+                this.resetConversation(userId, guildId);
                 logger.info(`Conversación reseteada para usuario ${userId} por límite de tokens`);
             }
 
@@ -251,13 +434,26 @@ export class AIService {
                 effectiveAiRolePrompt = (await this.getGuildAiPrompt(guildId)) ?? undefined;
             }
 
+            // Obtener jerarquía de roles si está en un servidor
+            let roleHierarchy = '';
+            if (guildId) {
+                // Necesitamos acceso al cliente de Discord - lo pasaremos desde el comando
+                const client = (request as any).client;
+                if (client) {
+                    roleHierarchy = await this.getGuildRoleHierarchy(guildId, client);
+                }
+            }
+
+            // Construir metadatos mejorados
+            const enhancedMeta = (request.meta || '') + roleHierarchy;
+
             // Construir prompt del sistema optimizado
             const systemPrompt = this.buildSystemPrompt(
                 prompt,
                 context,
                 isImageRequest,
                 effectiveAiRolePrompt,
-                request.meta
+                enhancedMeta
             );
 
             // Usar la API correcta de Google Generative AI
@@ -291,11 +487,19 @@ export class AIService {
                 return;
             }
 
-            // Actualizar contexto de forma eficiente
-            this.updateContext(context, prompt, aiResponse, estimatedTokens, isImageRequest);
-            
+            // Actualizar contexto con memoria persistente
+            await this.updateContextWithMemory(
+                context,
+                prompt,
+                aiResponse,
+                estimatedTokens,
+                isImageRequest,
+                messageId,
+                referencedMessageId
+            );
+
             request.resolve(aiResponse);
-            
+
         } catch (error) {
             // Manejo type-safe de errores sin ts-ignore
             const errorMessage = this.parseAPIError(error);
@@ -360,7 +564,7 @@ Responde de forma directa y útil:`;
     private checkRateLimit(userId: string): boolean {
         const now = Date.now();
         const userLimit = this.rateLimitTracker.get(userId);
-        
+
         if (!userLimit || now > userLimit.resetTime) {
             this.rateLimitTracker.set(userId, {
                 count: 1,
@@ -368,11 +572,11 @@ Responde de forma directa y útil:`;
             });
             return true;
         }
-        
+
         if (userLimit.count >= this.config.rateLimitMax) {
             return false;
         }
-        
+
         userLimit.count++;
         return true;
     }
@@ -386,7 +590,7 @@ Responde de forma directa y útil:`;
             'generar imagen', 'create image', 'picture', 'foto',
             'ilustración', 'arte', 'pintura', 'sketch'
         ];
-        
+
         const lowerPrompt = prompt.toLowerCase();
         return imageKeywords.some(keyword => lowerPrompt.includes(keyword));
     }
@@ -398,18 +602,18 @@ Responde de forma directa y útil:`;
         // Aproximación mejorada basada en la tokenización real
         const words = text.split(/\s+/).length;
         const chars = text.length;
-        
+
         // Fórmula híbrida más precisa
         return Math.ceil((words * 1.3) + (chars * 0.25));
     }
 
     /**
-     * Obtener o crear contexto de conversación
+     * Obtener o crear contexto de conversación (método legacy)
      */
     private getOrCreateContext(userId: string, guildId?: string): ConversationContext {
         const key = `${userId}-${guildId || 'dm'}`;
         let context = this.conversations.get(key);
-        
+
         if (!context) {
             context = {
                 messages: [],
@@ -421,127 +625,149 @@ Responde de forma directa y útil:`;
             };
             this.conversations.set(key, context);
         }
-        
+
         context.lastActivity = Date.now();
         return context;
     }
 
     /**
-     * Actualizar contexto de forma eficiente
+     * Actualizar contexto de forma eficiente (método legacy)
      */
     private updateContext(
-        context: ConversationContext, 
-        userPrompt: string, 
-        aiResponse: string, 
+        context: ConversationContext,
+        userPrompt: string,
+        aiResponse: string,
         inputTokens: number,
         isImageRequest: boolean
     ): void {
         const outputTokens = this.estimateTokens(aiResponse);
         const now = Date.now();
-        
+
         // Agregar mensajes
         context.messages.push(
             { role: 'user', content: userPrompt, timestamp: now, tokens: inputTokens },
             { role: 'assistant', content: aiResponse, timestamp: now, tokens: outputTokens }
         );
-        
+
         // Mantener solo los mensajes más recientes
         if (context.messages.length > this.config.maxMessageHistory) {
             const removed = context.messages.splice(0, context.messages.length - this.config.maxMessageHistory);
             const removedTokens = removed.reduce((sum, msg) => sum + msg.tokens, 0);
             context.totalTokens -= removedTokens;
         }
-        
+
         context.totalTokens += inputTokens + outputTokens;
         context.lastActivity = now;
-        
+
         if (isImageRequest) {
             context.imageRequests++;
         }
     }
 
     /**
-     * Resetear conversación
+     * Actualizar contexto de forma eficiente con guardado en Appwrite
      */
-    private resetConversation(userId: string, guildId?: string): void {
+    private async updateContextWithMemory(
+        context: ConversationContext,
+        userPrompt: string,
+        aiResponse: string,
+        inputTokens: number,
+        isImageRequest: boolean,
+        messageId?: string,
+        referencedMessageId?: string
+    ): Promise<void> {
+        const outputTokens = this.estimateTokens(aiResponse);
+        const now = Date.now();
+
+        // Agregar mensajes con IDs de Discord
+        context.messages.push(
+            {
+                role: 'user',
+                content: userPrompt,
+                timestamp: now,
+                tokens: inputTokens,
+                messageId,
+                referencedMessageId
+            },
+            {
+                role: 'assistant',
+                content: aiResponse,
+                timestamp: now,
+                tokens: outputTokens
+            }
+        );
+
+        // Mantener solo los mensajes más recientes
+        if (context.messages.length > this.config.maxMessageHistory) {
+            const removed = context.messages.splice(0, context.messages.length - this.config.maxMessageHistory);
+            const removedTokens = removed.reduce((sum, msg) => sum + msg.tokens, 0);
+            context.totalTokens -= removedTokens;
+        }
+
+        context.totalTokens += inputTokens + outputTokens;
+        context.lastActivity = now;
+
+        if (isImageRequest) {
+            context.imageRequests++;
+        }
+
+        // Guardar en Appwrite de forma asíncrona
+        this.saveConversationToAppwrite(context).catch(error => {
+            logger.warn(`Error guardando conversación: ${getErrorMessage(error)}`);
+        });
+    }
+
+    /**
+     * Obtener o crear contexto de conversación con carga desde Appwrite
+     */
+    private async getOrCreateContextWithMemory(userId: string, guildId?: string, channelId?: string): Promise<ConversationContext> {
         const key = `${userId}-${guildId || 'dm'}`;
-        this.conversations.delete(key);
+        let context = this.conversations.get(key);
+
+        if (!context) {
+            // Intentar cargar desde Appwrite
+            const loadedContext = await this.loadConversationFromAppwrite(userId, guildId, channelId);
+
+            if (loadedContext) {
+                context = loadedContext;
+            } else {
+                // Crear nuevo contexto si no existe en Appwrite
+                context = {
+                    messages: [],
+                    totalTokens: 0,
+                    imageRequests: 0,
+                    lastActivity: Date.now(),
+                    userId,
+                    guildId,
+                    channelId
+                };
+            }
+
+            this.conversations.set(key, context);
+        }
+
+        context.lastActivity = Date.now();
+        return context;
     }
 
     /**
-     * Servicio de limpieza automática
+     * Limpiar cache pero mantener memoria persistente
      */
-    private startCleanupService(): void {
-        setInterval(() => {
-            const now = Date.now();
-            const toDelete: string[] = [];
-            
-            this.conversations.forEach((context, key) => {
-                if (now - context.lastActivity > this.config.maxConversationAge) {
-                    toDelete.push(key);
-                }
-            });
-            
-            toDelete.forEach(key => this.conversations.delete(key));
-            
-            if (toDelete.length > 0) {
-                logger.info(`Limpieza automática: ${toDelete.length} conversaciones expiradas eliminadas`);
-            }
-        }, this.config.cleanupInterval);
+    public clearCache(): void {
+        this.conversations.clear();
+        this.userCooldowns.clear();
+        this.rateLimitTracker.clear();
+        this.guildPromptCache.clear();
+        logger.info('Cache de AI limpiado, memoria persistente mantenida');
     }
 
     /**
-     * Parser mejorado de errores de API - Type-safe sin ts-ignore
+     * Reset completo pero mantener memoria persistente
      */
-    private parseAPIError(error: unknown): string {
-        // Extraer mensaje de forma type-safe
-        const message = getErrorMessage(error).toLowerCase();
-
-        // Verificar si es un error de API estructurado
-        if (isAPIError(error)) {
-            const apiMessage = error.message.toLowerCase();
-
-            if (apiMessage.includes('api key') || apiMessage.includes('authentication')) {
-                return 'Error de autenticación con la API de IA';
-            }
-            if (apiMessage.includes('quota') || apiMessage.includes('exceeded')) {
-                return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
-            }
-            if (apiMessage.includes('safety') || apiMessage.includes('blocked')) {
-                return 'Tu mensaje fue bloqueado por las políticas de seguridad';
-            }
-            if (apiMessage.includes('timeout') || apiMessage.includes('deadline')) {
-                return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
-            }
-            if (apiMessage.includes('model not found')) {
-                return 'El modelo de IA no está disponible en este momento';
-            }
-            if (apiMessage.includes('token') || apiMessage.includes('length')) {
-                return 'El mensaje excede los límites permitidos';
-            }
-        }
-
-        // Manejo genérico para otros tipos de errores
-        if (message.includes('api key') || message.includes('authentication')) {
-            return 'Error de autenticación con la API de IA';
-        }
-        if (message.includes('quota') || message.includes('exceeded')) {
-            return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
-        }
-        if (message.includes('safety') || message.includes('blocked')) {
-            return 'Tu mensaje fue bloqueado por las políticas de seguridad';
-        }
-        if (message.includes('timeout') || message.includes('deadline')) {
-            return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
-        }
-        if (message.includes('model not found')) {
-            return 'El modelo de IA no está disponible en este momento';
-        }
-        if (message.includes('token') || message.includes('length')) {
-            return 'El mensaje excede los límites permitidos';
-        }
-        
-        return 'Error temporal del servicio de IA. Intenta de nuevo';
+    public fullReset(): void {
+        this.clearCache();
+        this.requestQueue.length = 0;
+        logger.info('AI completamente reseteada, memoria persistente mantenida');
     }
 
     /**
@@ -559,6 +785,137 @@ Responde de forma directa y útil:`;
             totalRequests: this.userCooldowns.size,
             averageResponseTime: 0
         };
+    }
+
+    /**
+     * Guardar conversación en Appwrite para memoria persistente
+     */
+    private async saveConversationToAppwrite(context: ConversationContext): Promise<void> {
+        if (!isAIConversationsConfigured()) {
+            return; // Si no está configurado, no guardamos
+        }
+
+        try {
+            const databases = getDatabases();
+            if (!databases) return;
+
+            const conversationId = context.conversationId || `${context.userId}-${context.guildId || 'dm'}-${Date.now()}`;
+            context.conversationId = conversationId;
+
+            const appwriteData: AppwriteConversation = {
+                userId: context.userId,
+                guildId: context.guildId,
+                channelId: context.channelId,
+                conversationId,
+                messages: context.messages.map(msg => ({
+                    role: msg.role,
+                    content: msg.content,
+                    timestamp: msg.timestamp,
+                    messageId: msg.messageId,
+                    referencedMessageId: msg.referencedMessageId
+                })),
+                lastActivity: context.lastActivity,
+                createdAt: Date.now()
+            };
+
+            await databases.createDocument(
+                APPWRITE_DATABASE_ID,
+                APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
+                conversationId,
+                appwriteData
+            );
+
+            logger.debug(`Conversación guardada en Appwrite: ${conversationId}`);
+        } catch (error) {
+            logger.warn(`Error guardando conversación en Appwrite: ${getErrorMessage(error)}`);
+        }
+    }
+
+    /**
+     * Cargar conversación desde Appwrite
+     */
+    private async loadConversationFromAppwrite(userId: string, guildId?: string, channelId?: string): Promise<ConversationContext | null> {
+        if (!isAIConversationsConfigured()) {
+            return null;
+        }
+
+        try {
+            const databases = getDatabases();
+            if (!databases) return null;
+
+            // Buscar conversaciones recientes del usuario
+            const response = await databases.listDocuments(
+                APPWRITE_DATABASE_ID,
+                APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
+                [
+                    `userId=${userId}`,
+                    guildId ? `guildId=${guildId}` : '',
+                    channelId ? `channelId=${channelId}` : ''
+                ].filter(Boolean)
+            );
+
+            if (response.documents.length === 0) {
+                return null;
+            }
+
+            // Obtener la conversación más reciente
+            const latestDoc = response.documents.sort((a: any, b: any) => b.lastActivity - a.lastActivity)[0];
+            const data = latestDoc as any as AppwriteConversation;
+
+            // Crear contexto desde los datos de Appwrite
+            const context: ConversationContext = {
+                messages: data.messages.map(msg => ({
+                    ...msg,
+                    tokens: this.estimateTokens(msg.content)
+                })),
+                totalTokens: data.messages.reduce((sum, msg) => sum + this.estimateTokens(msg.content), 0),
+                imageRequests: 0, // Resetear conteo de imágenes
+                lastActivity: data.lastActivity,
+                userId: data.userId,
+                guildId: data.guildId,
+                channelId: data.channelId,
+                conversationId: data.conversationId
+            };
+
+            logger.debug(`Conversación cargada desde Appwrite: ${data.conversationId}`);
+            return context;
+        } catch (error) {
+            logger.warn(`Error cargando conversación desde Appwrite: ${getErrorMessage(error)}`);
+            return null;
+        }
+    }
+
+    /**
+     * Obtener jerarquía de roles de un servidor
+     */
+    private async getGuildRoleHierarchy(guildId: string, client: any): Promise<string> {
+        try {
+            const guild = await client.guilds.fetch(guildId);
+            if (!guild) return '';
+
+            const roles = await guild.roles.fetch();
+            const sortedRoles = roles
+                .filter((role: any) => role.id !== guild.id) // Excluir @everyone
+                .sort((a: any, b: any) => b.position - a.position)
+                .map((role: any) => {
+                    const permissions = [];
+                    if (role.permissions.has('Administrator')) permissions.push('Admin');
+                    if (role.permissions.has('ManageGuild')) permissions.push('Manage Server');
+                    if (role.permissions.has('ManageChannels')) permissions.push('Manage Channels');
+                    if (role.permissions.has('ManageMessages')) permissions.push('Manage Messages');
+                    if (role.permissions.has('ModerateMembers')) permissions.push('Moderate Members');
+
+                    const permStr = permissions.length > 0 ? ` (${permissions.join(', ')})` : '';
+                    return `- ${role.name}${permStr}`;
+                })
+                .slice(0, 15) // Limitar a 15 roles principales
+                .join('\n');
+
+            return sortedRoles ? `\n## Jerarquía de roles del servidor:\n${sortedRoles}\n` : '';
+        } catch (error) {
+            logger.warn(`Error obteniendo jerarquía de roles: ${getErrorMessage(error)}`);
+            return '';
+        }
     }
 }
 

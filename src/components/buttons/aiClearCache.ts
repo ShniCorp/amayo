@@ -19,12 +19,12 @@ export default {
     try {
       await interaction.deferUpdate();
       
-      // Limpiar cache de conversaciones
+      // Limpiar cache pero mantener memoria persistente
       const stats = aiService.getStats();
       const conversationsCleared = stats.activeConversations;
       
-      // Aquí iría la lógica real de limpieza:
-      // aiService.clearAllConversations();
+      // Usar el nuevo método que mantiene memoria persistente
+      aiService.clearCache();
 
       // Crear panel de éxito usando objetos planos
       const successPanel = {

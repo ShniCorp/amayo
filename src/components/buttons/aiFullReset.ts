@@ -22,8 +22,8 @@ export default {
       const conversationsCleared = statsBefore.activeConversations;
       const requestsCleared = statsBefore.queueLength;
       
-      // Aquí irían las funciones reales de reset del servicio:
-      // aiService.fullReset();
+      // Usar el nuevo método que mantiene memoria persistente
+      aiService.fullReset();
 
       const resetTimestamp = new Date().toISOString().replace('T', ' ').split('.')[0];
       

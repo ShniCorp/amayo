@@ -195,28 +195,59 @@ export const command: CommandMessage = {
             return;
         }
 
-        // Emojis personalizados del servidor
-        const { names: emojiNames, map: emojiMap } = await getGuildCustomEmojis(message);
-
-        // Construir metadatos del mensaje para mejor contexto (incluye emojis)
-        const meta = buildMessageMeta(message, emojiNames);
-
-        // Indicador de escritura mejorado
+        // Indicador de que está escribiendo
         const typingInterval = setInterval(() => {
             channel.sendTyping().catch(() => {});
         }, 5000);
 
-        try {
-            // Usar el servicio mejorado con manejo de prioridad
-            const priority = message.member?.permissions.has('Administrator') ? 'high' : 'normal';
+        // Emojis personalizados del servidor
+        const { names: emojiNames, map: emojiMap } = await getGuildCustomEmojis(message);
 
-            let aiResponse = await aiService.processAIRequest(
-                userId,
-                prompt,
-                guildId,
-                priority,
-                { meta }
-            );
+        // Construir metadatos del mensaje para mejor contexto (incluye emojis)
+        const messageMeta = buildMessageMeta(message, emojiNames);
+
+        // Verificar si es una respuesta a un mensaje de la AI
+        let referencedMessageId: string | undefined;
+        let isReplyToAI = false;
+
+        if (message.reference?.messageId) {
+            try {
+                const referencedMessage = await message.channel.messages.fetch(message.reference.messageId);
+                if (referencedMessage.author.id === message.client.user?.id) {
+                    isReplyToAI = true;
+                    referencedMessageId = message.reference.messageId;
+                }
+            } catch (error) {
+                // Mensaje referenciado no encontrado, ignorar
+            }
+        }
+
+        try {
+            let aiResponse: string;
+
+            // Usar el nuevo método con memoria persistente
+            if (isReplyToAI || true) { // Siempre usar memoria por ahora
+                aiResponse = await aiService.processAIRequestWithMemory(
+                    userId,
+                    prompt,
+                    guildId,
+                    message.channel.id,
+                    message.id,
+                    referencedMessageId,
+                    message.client,
+                    'normal',
+                    { meta: messageMeta }
+                );
+            } else {
+                // Método legacy para compatibilidad
+                aiResponse = await aiService.processAIRequest(
+                    userId,
+                    prompt,
+                    guildId,
+                    'normal',
+                    { meta: messageMeta }
+                );
+            }
 
             // Reemplazar :nombre: por el tag real del emoji, evitando bloques de código
             if (emojiNames.length > 0) {
