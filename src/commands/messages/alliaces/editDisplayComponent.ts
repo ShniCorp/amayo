@@ -1,6 +1,6 @@
 import { CommandMessage } from "../../../core/types/commands";
-// @ts-ignore
-import { ComponentType, ButtonStyle, ModalBuilder, TextInputBuilder, TextInputStyle, ActionRowBuilder, MessageFlags } from "discord.js";
+import { MessageFlags } from "discord.js";
+import { ComponentType, ButtonStyle, TextInputStyle } from "discord-api-types/v10";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
 
 // Botones de edición (máx 5 por fila)
@@ -35,7 +35,7 @@ const btns = (disabled = false) => ([
 
 const isValidUrl = isValidUrlOrVariable;
 
-const validateContent = (content: string): string => {
+const validateContent = (content: string | undefined | null): string => {
     if (!content || typeof content !== 'string') return "Sin contenido";
     const cleaned = content.trim();
     if (!cleaned) return "Sin contenido";
@@ -215,84 +215,143 @@ export const command: CommandMessage = {
                         return;
                     }
                     case "edit_title": {
-                        const modal = new ModalBuilder().setCustomId('edit_title_modal').setTitle('📝 Editar Título del Block');
-                        const titleInput = new TextInputBuilder().setCustomId('title_input').setLabel('Nuevo Título').setStyle(TextInputStyle.Short).setPlaceholder('Escribe el nuevo título aquí...').setValue(blockState.title || '').setMaxLength(256).setRequired(true);
-                        const row = new ActionRowBuilder().addComponents(titleInput);
-                        //@ts-ignore
-                        modal.addComponents(row);
-                        // @ts-ignore
+                        const modal = {
+                            title: '📝 Editar Título del Block',
+                            customId: 'edit_title_modal',
+                            components: [{
+                                type: ComponentType.Label,
+                                label: 'Nuevo Título',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'title_input',
+                                    style: TextInputStyle.Short,
+                                    required: true,
+                                    placeholder: 'Escribe el nuevo título aquí...',
+                                    value: blockState.title || '',
+                                    maxLength: 256
+                                }
+                            }]
+                        } as const;
                         await i.showModal(modal);
                         break;
                     }
                     case "edit_description": {
-                        const modal = new ModalBuilder().setCustomId('edit_description_modal').setTitle('📄 Editar Descripción');
-                        //@ts-ignore
                         const descComp = blockState.components.find((c: any) => c.type === 10);
                         const currentDesc = descComp ? descComp.content : '';
-                        const descInput = new TextInputBuilder().setCustomId('description_input').setLabel('Nueva Descripción').setStyle(TextInputStyle.Paragraph).setPlaceholder('Escribe la nueva descripción aquí...').setValue(currentDesc || '').setMaxLength(2000).setRequired(true);
-                        const row = new ActionRowBuilder().addComponents(descInput);
-                        //@ts-ignore
-                        modal.addComponents(row);
-                        // @ts-ignore
+                        const modal = {
+                            title: '📄 Editar Descripción',
+                            customId: 'edit_description_modal',
+                            components: [{
+                                type: ComponentType.Label,
+                                label: 'Nueva Descripción',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'description_input',
+                                    style: TextInputStyle.Paragraph,
+                                    required: true,
+                                    placeholder: 'Escribe la nueva descripción aquí...',
+                                    value: currentDesc || '',
+                                    maxLength: 2000
+                                }
+                            }]
+                        } as const;
                         await i.showModal(modal);
                         break;
                     }
                     case "edit_color": {
-                        const modal = new ModalBuilder().setCustomId('edit_color_modal').setTitle('🎨 Editar Color del Block');
                         const currentColor = blockState.color ? `#${blockState.color.toString(16).padStart(6, '0')}` : '';
-                        const colorInput = new TextInputBuilder().setCustomId('color_input').setLabel('Color en formato HEX').setStyle(TextInputStyle.Short).setPlaceholder('#FF5733 o FF5733').setValue(currentColor).setMaxLength(7).setRequired(false);
-                        const row = new ActionRowBuilder().addComponents(colorInput);
-                        //@ts-ignore
-                        modal.addComponents(row);
-                        // @ts-ignore
+                        const modal = {
+                            title: '🎨 Editar Color del Block',
+                            customId: 'edit_color_modal',
+                            components: [{
+                                type: ComponentType.Label,
+                                label: 'Color en formato HEX',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'color_input',
+                                    style: TextInputStyle.Short,
+                                    required: false,
+                                    placeholder: '#FF5733 o FF5733',
+                                    value: currentColor,
+                                    maxLength: 7
+                                }
+                            }]
+                        } as const;
                         await i.showModal(modal);
                         break;
                     }
                     case "add_content": {
-                        const modal = new ModalBuilder().setCustomId('add_content_modal').setTitle('➕ Agregar Nuevo Contenido');
-                        const contentInput = new TextInputBuilder().setCustomId('content_input').setLabel('Contenido del Texto').setStyle(TextInputStyle.Paragraph).setPlaceholder('Escribe el contenido aquí...').setMaxLength(2000).setRequired(true);
-                        const row = new ActionRowBuilder().addComponents(contentInput);
-                        //@ts-ignore
-                        modal.addComponents(row);
-                        // @ts-ignore
+                        const modal = {
+                            title: '➕ Agregar Nuevo Contenido',
+                            customId: 'add_content_modal',
+                            components: [{
+                                type: ComponentType.Label,
+                                label: 'Contenido del Texto',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'content_input',
+                                    style: TextInputStyle.Paragraph,
+                                    required: true,
+                                    placeholder: 'Escribe el contenido aquí...',
+                                    maxLength: 2000
+                                }
+                            }]
+                        } as const;
                         await i.showModal(modal);
                         break;
                     }
                     case "add_image": {
-                        const modal = new ModalBuilder().setCustomId('add_image_modal').setTitle('🖼️ Agregar Nueva Imagen');
-                        const imageUrlInput = new TextInputBuilder().setCustomId('image_url_input').setLabel('URL de la Imagen').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/imagen.png').setMaxLength(2000).setRequired(true);
-                        const row = new ActionRowBuilder().addComponents(imageUrlInput);
-                        //@ts-ignore
-                        modal.addComponents(row);
-                        // @ts-ignore
+                        const modal = {
+                            title: '🖼️ Agregar Nueva Imagen',
+                            customId: 'add_image_modal',
+                            components: [{
+                                type: ComponentType.Label,
+                                label: 'URL de la Imagen',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'image_url_input',
+                                    style: TextInputStyle.Short,
+                                    required: true,
+                                    placeholder: 'https://ejemplo.com/imagen.png',
+                                    maxLength: 2000
+                                }
+                            }]
+                        } as const;
                         await i.showModal(modal);
                         break;
                     }
                     case "cover_image": {
                         if (blockState.coverImage) {
-                            // @ts-ignore
-                            const reply = await i.reply({ flags: 64, content: "Ya tienes una imagen de portada. ¿Qué quieres hacer?", components: [{ type: 1, components: [
+                            await i.reply({ flags: 64, content: "Ya tienes una imagen de portada. ¿Qué quieres hacer?", components: [{ type: 1, components: [
                                 { type: 2, style: ButtonStyle.Primary, label: "✏️ Editar", custom_id: "edit_cover_modal" },
                                 { type: 2, style: ButtonStyle.Danger, label: "🗑️ Eliminar", custom_id: "delete_cover" }
                             ] }] });
-                            // @ts-ignore
                             const replyMsg = await i.fetchReply();
-                            // @ts-ignore
                             const coverCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
                             coverCollector.on('collect', async (b: any) => {
                                 if (b.customId === 'edit_cover_modal') {
-                                    const modal = new ModalBuilder().setCustomId('edit_cover_modal').setTitle('🖼️ Editar Imagen de Portada');
-                                    const coverInput = new TextInputBuilder().setCustomId('cover_input').setLabel('URL de la Imagen de Portada').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/portada.png').setValue(blockState.coverImage || '').setMaxLength(2000).setRequired(true);
-                                    const row = new ActionRowBuilder().addComponents(coverInput);
-                                    //@ts-ignore
-                                    modal.addComponents(row);
-                                    // @ts-ignore
+                                    const modal = {
+                                        title: '🖼️ Editar Imagen de Portada',
+                                        customId: 'edit_cover_modal',
+                                        components: [{
+                                            type: ComponentType.Label,
+                                            label: 'URL de la Imagen de Portada',
+                                            component: {
+                                                type: ComponentType.TextInput,
+                                                customId: 'cover_input',
+                                                style: TextInputStyle.Short,
+                                                required: true,
+                                                placeholder: 'https://ejemplo.com/portada.png',
+                                                value: blockState.coverImage || '',
+                                                maxLength: 2000
+                                            }
+                                        }]
+                                    } as const;
                                     await b.showModal(modal);
                                 } else if (b.customId === 'delete_cover') {
-                                    //@ts-ignore
                                     blockState.coverImage = null;
                                     await b.update({ content: '✅ Imagen de portada eliminada.', components: [] });
-                                    await updateEditor(editorMessage, { // @ts-ignore
+                                    await updateEditor(editorMessage, {
                                         display: await renderPreview(blockState, message.member, message.guild),
                                         components: btns(false)
                                     });
@@ -300,12 +359,22 @@ export const command: CommandMessage = {
                                 coverCollector.stop();
                             });
                         } else {
-                            const modal = new ModalBuilder().setCustomId('add_cover_modal').setTitle('🖼️ Agregar Imagen de Portada');
-                            const coverInput = new TextInputBuilder().setCustomId('cover_input').setLabel('URL de la Imagen de Portada').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/portada.png').setMaxLength(2000).setRequired(true);
-                            const row = new ActionRowBuilder().addComponents(coverInput);
-                            //@ts-ignore
-                            modal.addComponents(row);
-                            // @ts-ignore
+                            const modal = {
+                                title: '🖼️ Agregar Imagen de Portada',
+                                customId: 'add_cover_modal',
+                                components: [{
+                                    type: ComponentType.Label,
+                                    label: 'URL de la Imagen de Portada',
+                                    component: {
+                                        type: ComponentType.TextInput,
+                                        customId: 'cover_input',
+                                        style: TextInputStyle.Short,
+                                        required: true,
+                                        placeholder: 'https://ejemplo.com/portada.png',
+                                        maxLength: 2000
+                                    }
+                                }]
+                            } as const;
                             await i.showModal(modal);
                         }
                         break;
@@ -318,7 +387,7 @@ export const command: CommandMessage = {
                             description: c.type === 10 && (c.thumbnail || c.linkButton) ? (c.thumbnail ? 'Con thumbnail' : 'Con botón link') : undefined
                         }));
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Selecciona el bloque que quieres mover:', components: [{ type: 1, components: [ { type: 3, custom_id: 'move_block_select', placeholder: 'Elige un bloque', options } ] }] });
+                        await i.reply({ flags: 64, content: 'Selecciona el bloque que quieres mover:', components: [{ type: 1, components: [ { type: 3, custom_id: 'move_block_select', placeholder: 'Elige un bloque', options } ] }] });
                         // @ts-ignore
                         const replyMsg = await i.fetchReply();
                         // @ts-ignore
@@ -335,11 +404,8 @@ export const command: CommandMessage = {
                                 if (b.customId.startsWith('move_up_')) {
                                     const i2 = parseInt(b.customId.replace('move_up_', ''));
                                     if (i2 > 0) {
-                                        //@ts-ignore
                                         const item = blockState.components[i2];
-                                        //@ts-ignore
                                         blockState.components.splice(i2, 1);
-                                        //@ts-ignore
                                         blockState.components.splice(i2 - 1, 0, item);
                                     }
                                     await b.update({ content: '✅ Bloque movido arriba.', components: [] });
@@ -465,12 +531,22 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "import_json": {
-                        const modal = new ModalBuilder().setCustomId('import_json_modal').setTitle('📥 Importar JSON');
-                        const jsonInput = new TextInputBuilder().setCustomId('json_input').setLabel('Pega tu configuración JSON aquí').setStyle(TextInputStyle.Paragraph).setPlaceholder('{"title": "...", "components": [...]}').setMaxLength(4000).setRequired(true);
-                        const row = new ActionRowBuilder().addComponents(jsonInput);
-                        //@ts-ignore
-                        modal.addComponents(row);
-                        // @ts-ignore
+                        const modal = {
+                            title: '📥 Importar JSON',
+                            customId: 'import_json_modal',
+                            components: [{
+                                type: ComponentType.Label,
+                                label: 'Pega tu configuración JSON aquí',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'json_input',
+                                    style: TextInputStyle.Paragraph,
+                                    required: true,
+                                    placeholder: '{"title": "...", "components": [...]}',
+                                    maxLength: 4000
+                                }
+                            }]
+                        } as const;
                         await i.showModal(modal);
                         break;
                     }
@@ -482,14 +558,35 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "add_separator": {
-                        const modal = new ModalBuilder().setCustomId('add_separator_modal').setTitle('➖ Agregar Separador');
-                        const visibleInput = new TextInputBuilder().setCustomId('separator_visible').setLabel('¿Separador visible? (true/false)').setStyle(TextInputStyle.Short).setPlaceholder('true o false').setValue('true').setMaxLength(5).setRequired(true);
-                        const spacingInput = new TextInputBuilder().setCustomId('separator_spacing').setLabel('Espaciado (1-3)').setStyle(TextInputStyle.Short).setPlaceholder('1, 2 o 3').setValue('1').setMaxLength(1).setRequired(false);
-                        const r1 = new ActionRowBuilder().addComponents(visibleInput);
-                        const r2 = new ActionRowBuilder().addComponents(spacingInput);
-                        //@ts-ignore
-                        modal.addComponents(r1, r2);
-                        // @ts-ignore
+                        const modal = {
+                            title: '➖ Agregar Separador',
+                            customId: 'add_separator_modal',
+                            components: [{
+                                type: ComponentType.Label,
+                                label: '¿Separador visible? (true/false)',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'separator_visible',
+                                    style: TextInputStyle.Short,
+                                    placeholder: 'true o false',
+                                    value: 'true',
+                                    maxLength: 5,
+                                    required: true
+                                }
+                            }, {
+                                type: ComponentType.Label,
+                                label: 'Espaciado (1-3)',
+                                component: {
+                                    type: ComponentType.TextInput,
+                                    customId: 'separator_spacing',
+                                    style: TextInputStyle.Short,
+                                    placeholder: '1, 2 o 3',
+                                    value: '1',
+                                    maxLength: 1,
+                                    required: false
+                                }
+                            }]
+                        } as const;
                         await i.showModal(modal);
                         break;
                     }
@@ -511,13 +608,23 @@ export const command: CommandMessage = {
                         selCollector.on('collect', async (sel: any) => {
                             const idx = parseInt(sel.values[0]);
                             const textComp = blockState.components[idx];
-                            const modal = new ModalBuilder().setCustomId(`edit_thumbnail_modal_${idx}`).setTitle('📎 Editar Thumbnail');
-                            const thumbnailInput = new TextInputBuilder().setCustomId('thumbnail_input').setLabel('URL del Thumbnail').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com/thumbnail.png o dejar vacío para eliminar').setValue(textComp?.thumbnail || '').setMaxLength(2000).setRequired(false);
-                            const row = new ActionRowBuilder().addComponents(thumbnailInput);
-                            //@ts-ignore
-                            modal.addComponents(row);
-                            // Abrir modal directamente sin update previo
-                            // @ts-ignore
+                            const modal = {
+                                title: '📎 Editar Thumbnail',
+                                customId: `edit_thumbnail_modal_${idx}`,
+                                components: [{
+                                    type: ComponentType.Label,
+                                    label: 'URL del Thumbnail',
+                                    component: {
+                                        type: ComponentType.TextInput,
+                                        customId: 'thumbnail_input',
+                                        style: TextInputStyle.Short,
+                                        placeholder: 'https://ejemplo.com/thumbnail.png o dejar vacío para eliminar',
+                                        value: textComp?.thumbnail || '',
+                                        maxLength: 2000,
+                                        required: false
+                                    }
+                                }]
+                            } as const;
                             await sel.showModal(modal);
                         });
                         break;
@@ -555,17 +662,47 @@ export const command: CommandMessage = {
                                 const btnCollector = sub.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === message.author.id });
                                 btnCollector.on('collect', async (b: any) => {
                                     if (b.customId.startsWith('edit_link_button_modal_')) {
-                                        const modal = new ModalBuilder().setCustomId(`edit_link_button_modal_${idx}`).setTitle('🔗 Editar Botón Link');
-                                        const urlInput = new TextInputBuilder().setCustomId('link_url_input').setLabel('URL del botón (obligatoria)').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com').setValue(textComp.linkButton?.url || '').setMaxLength(2000).setRequired(true);
-                                        const labelInput = new TextInputBuilder().setCustomId('link_label_input').setLabel('Etiqueta (opcional)').setStyle(TextInputStyle.Short).setPlaceholder('Texto del botón o vacío para usar solo emoji').setValue(textComp.linkButton?.label || '').setMaxLength(80).setRequired(false);
-                                        const emojiInput = new TextInputBuilder().setCustomId('link_emoji_input').setLabel('Emoji (opcional)').setStyle(TextInputStyle.Short).setPlaceholder('Ej: 🔗 o <:name:id>').setValue(textComp.linkButton?.emoji || '').setMaxLength(64).setRequired(false);
-                                        const r1 = new ActionRowBuilder().addComponents(urlInput);
-                                        const r2 = new ActionRowBuilder().addComponents(labelInput);
-                                        const r3 = new ActionRowBuilder().addComponents(emojiInput);
-                                        //@ts-ignore
-                                        modal.addComponents(r1, r2, r3);
-                                        // Abrir modal directamente sobre el botón sin update previo
-                                        // @ts-ignore
+                                        const modal = {
+                                            title: '🔗 Editar Botón Link',
+                                            customId: `edit_link_button_modal_${idx}`,
+                                            components: [{
+                                                type: ComponentType.Label,
+                                                label: 'URL del botón (obligatoria)',
+                                                component: {
+                                                    type: ComponentType.TextInput,
+                                                    customId: 'link_url_input',
+                                                    style: TextInputStyle.Short,
+                                                    placeholder: 'https://ejemplo.com',
+                                                    value: textComp.linkButton?.url || '',
+                                                    maxLength: 2000,
+                                                    required: true
+                                                }
+                                            }, {
+                                                type: ComponentType.Label,
+                                                label: 'Etiqueta (opcional)',
+                                                component: {
+                                                    type: ComponentType.TextInput,
+                                                    customId: 'link_label_input',
+                                                    style: TextInputStyle.Short,
+                                                    placeholder: 'Texto del botón o vacío para usar solo emoji',
+                                                    value: textComp.linkButton?.label || '',
+                                                    maxLength: 80,
+                                                    required: false
+                                                }
+                                            }, {
+                                                type: ComponentType.Label,
+                                                label: 'Emoji (opcional)',
+                                                component: {
+                                                    type: ComponentType.TextInput,
+                                                    customId: 'link_emoji_input',
+                                                    style: TextInputStyle.Short,
+                                                    placeholder: 'Ej: 🔗 o <:name:id>',
+                                                    value: textComp.linkButton?.emoji || '',
+                                                    maxLength: 64,
+                                                    required: false
+                                                }
+                                            }]
+                                        } as const;
                                         await b.showModal(modal);
                                     } else if (b.customId.startsWith('delete_link_button_')) {
                                         delete textComp.linkButton;
@@ -577,17 +714,44 @@ export const command: CommandMessage = {
                                     }
                                 });
                             } else {
-                                const modal = new ModalBuilder().setCustomId(`create_link_button_modal_${idx}`).setTitle('🔗 Crear Botón Link');
-                                const urlInput = new TextInputBuilder().setCustomId('link_url_input').setLabel('URL del botón (obligatoria)').setStyle(TextInputStyle.Short).setPlaceholder('https://ejemplo.com').setMaxLength(2000).setRequired(true);
-                                const labelInput = new TextInputBuilder().setCustomId('link_label_input').setLabel('Etiqueta (opcional)').setStyle(TextInputStyle.Short).setPlaceholder('Texto del botón o vacío para usar solo emoji').setMaxLength(80).setRequired(false);
-                                const emojiInput = new TextInputBuilder().setCustomId('link_emoji_input').setLabel('Emoji (opcional)').setStyle(TextInputStyle.Short).setPlaceholder('Ej: 🔗 o <:name:id>').setMaxLength(64).setRequired(false);
-                                const r1 = new ActionRowBuilder().addComponents(urlInput);
-                                const r2 = new ActionRowBuilder().addComponents(labelInput);
-                                const r3 = new ActionRowBuilder().addComponents(emojiInput);
-                                //@ts-ignore
-                                modal.addComponents(r1, r2, r3);
-                                // Abrir modal directamente sin update previo
-                                // @ts-ignore
+                                const modal = {
+                                    title: '🔗 Crear Botón Link',
+                                    customId: `create_link_button_modal_${idx}`,
+                                    components: [{
+                                        type: ComponentType.Label,
+                                        label: 'URL del botón (obligatoria)',
+                                        component: {
+                                            type: ComponentType.TextInput,
+                                            customId: 'link_url_input',
+                                            style: TextInputStyle.Short,
+                                            placeholder: 'https://ejemplo.com',
+                                            maxLength: 2000,
+                                            required: true
+                                        }
+                                    }, {
+                                        type: ComponentType.Label,
+                                        label: 'Etiqueta (opcional)',
+                                        component: {
+                                            type: ComponentType.TextInput,
+                                            customId: 'link_label_input',
+                                            style: TextInputStyle.Short,
+                                            placeholder: 'Texto del botón o vacío para usar solo emoji',
+                                            maxLength: 80,
+                                            required: false
+                                        }
+                                    }, {
+                                        type: ComponentType.Label,
+                                        label: 'Emoji (opcional)',
+                                        component: {
+                                            type: ComponentType.TextInput,
+                                            customId: 'link_emoji_input',
+                                            style: TextInputStyle.Short,
+                                            placeholder: 'Ej: 🔗 o <:name:id>',
+                                            maxLength: 64,
+                                            required: false
+                                        }
+                                    }]
+                                } as const;
                                 await sel.showModal(modal);
                             }
                         });
