@@ -26,6 +26,7 @@
     "chrono-node": "2.9.0",
     "discord-api-types": "0.38.26",
     "discord.js": "15.0.0-dev.1759363313-f510b5ffa",
+    "dotenv": "16.6.1",
     "node-appwrite": "19.1.0",
     "pino": "9.13.0",
     "prisma": "6.16.2",

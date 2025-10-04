@@ -1,3 +1,5 @@
+import "dotenv/config";
+
 import Amayo from "./core/client";
 import { loadCommands } from "./core/loaders/loader";
 import { loadEvents } from "./core/loaders/loaderEvents";
