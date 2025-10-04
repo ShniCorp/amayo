@@ -2,11 +2,10 @@ import logger from "../../core/lib/logger";
 import { 
   ButtonInteraction, 
   MessageFlags, 
-  PermissionFlagsBits,
-  StringSelectMenuBuilder,
-  ActionRowBuilder
+  PermissionFlagsBits
 } from 'discord.js';
 import { prisma } from '../../core/database/prisma';
+import { ComponentType, TextInputStyle } from 'discord-api-types/v10';
 
 export default {
   customId: 'ld_manage_points',
@@ -28,7 +27,7 @@ export default {
     }
 
     try {
-      // Obtener todos los usuarios con puntos en este servidor
+      // Obtener todos los usuarios con puntos en este servidor (limitado a 25 para el UserSelect)
       const stats = await prisma.partnershipStats.findMany({
         where: { guildId: interaction.guild.id },
         orderBy: { totalPoints: 'desc' },
@@ -42,47 +41,50 @@ export default {
         });
       }
 
-      // Construir opciones del select menu
-      const options = await Promise.all(
-        stats.map(async (stat) => {
-          let displayName = 'Usuario desconocido';
-          try {
-            const member = await interaction.guild!.members.fetch(stat.userId);
-            displayName = member.displayName || member.user.username;
-          } catch {
-            try {
-              const user = await interaction.client.users.fetch(stat.userId);
-              displayName = user.username;
-            } catch {
-              // Mantener el nombre por defecto
-            }
-          }
+      // Crear modal con TextInput y UserSelect usando el nuevo formato de discord.js dev
+      const modal = {
+        title: 'Gestionar Puntos de Alianza',
+        customId: 'ld_points_modal',
+        components: [
+          {
+            type: ComponentType.TextDisplay,
+            content: 'Selecciona un usuario del leaderboard y modifica sus puntos.'
+          },
+          {
+            type: ComponentType.Label,
+            label: 'Modificar Puntos Totales',
+            component: {
+              type: ComponentType.TextInput,
+              customId: 'points_input',
+              style: TextInputStyle.Short,
+              required: true,
+              placeholder: '+50 (añadir) / -20 (quitar) / =100 (establecer)',
+              minLength: 1,
+              maxLength: 10
+            },
+          },
+          {
+            type: ComponentType.Label,
+            label: 'Selecciona el usuario (del leaderboard)',
+            component: {
+              type: ComponentType.UserSelect,
+              customId: 'user_select',
+              required: true,
+              minValues: 1,
+              maxValues: 1,
+              placeholder: 'Elige un usuario...',
+              // Filtrar solo usuarios que están en el leaderboard
+              defaultUsers: stats.map(s => s.userId)
+            },
+          },
+        ],
+      } as const;
 
-          return {
-            label: displayName,
-            description: `Total: ${stat.totalPoints} | Semanal: ${stat.weeklyPoints} | Mensual: ${stat.monthlyPoints}`,
-            value: stat.userId
-          };
-        })
-      );
-
-      const selectMenu = new StringSelectMenuBuilder()
-        .setCustomId('ld_select_user')
-        .setPlaceholder('Selecciona un usuario para gestionar sus puntos')
-        .addOptions(options);
-
-      const row = new ActionRowBuilder<StringSelectMenuBuilder>()
-        .addComponents(selectMenu);
-
-      await interaction.reply({
-        content: '### ⚙️ Gestión de Puntos\nSelecciona el usuario al que deseas modificar los puntos:',
-        components: [row],
-        flags: MessageFlags.Ephemeral
-      });
+      await interaction.showModal(modal);
     } catch (e) {
       logger.error({ err: e }, 'Error en ldManagePoints');
       await interaction.reply({
-        content: '❌ Error al cargar la lista de usuarios.',
+        content: '❌ Error al abrir el modal de gestión.',
         flags: MessageFlags.Ephemeral
       });
     }
