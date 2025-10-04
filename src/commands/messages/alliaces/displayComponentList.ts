@@ -102,8 +102,8 @@ async function handleEmptyBlocksList(message: Message): Promise<void> {
         filter: (interaction: MessageComponentInteraction) => interaction.user.id === message.author.id
     });
 
-    helpCollector.on("collect", async (interaction: ButtonInteraction) => {
-        if (interaction.customId === "show_create_help") {
+    helpCollector.on("collect", async (interaction: MessageComponentInteraction) => {
+        if (interaction.isButton() && interaction.customId === "show_create_help") {
             const helpEmbed: APIEmbed = {
                 color: 0x57f287,
                 title: "📖 Guía de Creación de Bloques",
@@ -278,7 +278,7 @@ async function handleInteractions(
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
                     content: "❌ Ocurrió un error al procesar la interacción.",
-                    ephemeral: true
+                    flags: 64 // Use flags instead of ephemeral
                 });
             }
         }
@@ -336,14 +336,14 @@ async function handleButtonInteraction(
         case "show_create_commands":
             await interaction.reply({
                 content: `🔧 **Crear nuevos bloques:**\n\n• \`!crear-embed <nombre>\` - Crear bloque básico\n• \`!editar-embed <nombre>\` - Editor avanzado\n\n💡 **Ejemplo:** \`!crear-embed bienvenida\`\n\n📖 **Guía completa:** Los bloques usan DisplayComponents para crear interfaces modernas e interactivas.`,
-                ephemeral: true
+                flags: 64
             });
             break;
 
         case "show_delete_commands":
             await interaction.reply({
                 content: `⚠️ **Eliminar bloques:**\n\n• \`!eliminar-embed\` - Panel interactivo de eliminación\n• \`!eliminar-embed <nombre>\` - Eliminación directa\n\n❗ **Advertencia:** La eliminación es irreversible.`,
-                ephemeral: true
+                flags: 64
             });
             break;
 
@@ -356,7 +356,7 @@ async function handleButtonInteraction(
 
             await interaction.reply({
                 content: `📋 **Lista Exportada:**\n\`\`\`\n${exportText}\`\`\``,
-                ephemeral: true
+                flags: 64
             });
             break;
 
@@ -440,25 +440,25 @@ async function handleSpecificBlockActions(interaction: ButtonInteraction): Promi
         const blockName = customId.replace("edit_block_", "");
         await interaction.reply({
             content: `Usa: \`!editar-embed ${blockName}\``,
-            ephemeral: true
+            flags: 64
         });
     } else if (customId.startsWith("delete_block_")) {
         const blockName = customId.replace("delete_block_", "");
         await interaction.reply({
             content: `Usa: \`!eliminar-embed ${blockName}\` para eliminar este bloque de forma segura.`,
-            ephemeral: true
+            flags: 64
         });
     } else if (customId.startsWith("preview_block_")) {
         const blockName = customId.replace("preview_block_", "");
         await interaction.reply({
             content: `Vista previa de \`${blockName}\` - Funcionalidad en desarrollo`,
-            ephemeral: true
+            flags: 64
         });
     } else if (customId.startsWith("duplicate_block_")) {
         const blockName = customId.replace("duplicate_block_", "");
         await interaction.reply({
             content: `Funcionalidad de duplicación de \`${blockName}\` en desarrollo`,
-            ephemeral: true
+            flags: 64
         });
     }
 }
