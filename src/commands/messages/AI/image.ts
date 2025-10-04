@@ -46,8 +46,7 @@ export const command: CommandMessage = {
                 return;
             }
 
-            //@ts-ignore
-            await message.channel.sendTyping().catch(() => {});
+            (message.channel as any)?.sendTyping?.().catch(() => {});
             const result = await aiService.generateImage(prompt, { size });
 
             await message.reply({
@@ -55,7 +54,7 @@ export const command: CommandMessage = {
                 files: [{ attachment: result.data, name: result.fileName }]
             });
         } catch (error: any) {
-            logger.error('Error generando imagen:', error);
+            logger.error(error, 'Error generando imagen');
             await message.reply({ content: `❌ Error generando imagen: ${error?.message || 'Error desconocido'}` });
         }
     }

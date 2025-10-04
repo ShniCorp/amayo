@@ -1378,59 +1378,64 @@ Responde de forma directa y útil:`;
             throw new Error('El SDK moderno (@google/genai) no está inicializado');
         }
 
-        // Mapear tamaño a hints simples (si el modelo los admite)
-        const sizeHint = options?.size ?? 'square';
         const mimeType = options?.mimeType ?? 'image/png';
 
         try {
-            // Llamada flexible usando any para compatibilidad de tipos entre versiones
-            const res: any = await (this.genAIv2 as any).models.generateImages({
+            const res: any = await (this.genAIv2 as any).models.generateContent({
                 model: 'gemini-2.5-flash-image',
-                // La API moderna acepta `contents` o `prompt` según versión; usamos ambos por compatibilidad
                 contents: prompt,
                 prompt,
                 config: {
-                    // Algunos despliegues soportan indicar formato de salida
                     responseMimeType: mimeType,
-                    // Hints de tamaño en metadatos si aplica
-                    // Nota: si no es soportado, el backend lo ignorará sin fallar
-                    aspectRatio: sizeHint === 'portrait' ? '9:16' : sizeHint === 'landscape' ? '16:9' : '1:1',
+                    responseModalities: ['IMAGE'],
                 }
             });
 
-            // Intentar obtener el primer resultado de imagen en varias formas comunes
-            let imageDataBase64: string | undefined;
-            let resultMime: string = mimeType;
-            let fileName = `gen_${Date.now()}.${mimeType.includes('png') ? 'png' : mimeType.includes('jpeg') ? 'jpg' : 'img'}`;
+            // Normalize response shape
+            const response = res?.response ?? res;
+            const candidates = response?.candidates ?? [];
+            const parts = candidates[0]?.content?.parts ?? [];
+            let base64: string | undefined;
+            let outMime: string | undefined;
 
-            if (res?.image?.data) {
-                imageDataBase64 = res.image.data;
-                resultMime = res.image.mimeType ?? resultMime;
-            } else if (Array.isArray(res?.images) && res.images.length > 0) {
-                // Some SDKs return { images: [{ data, mimeType }] }
-                imageDataBase64 = res.images[0].data ?? res.images[0].inlineData?.data;
-                resultMime = res.images[0].mimeType ?? res.images[0].inlineData?.mimeType ?? resultMime;
-            } else if (res?.response?.candidates?.[0]?.content?.parts) {
-                // Fallback: imagen como inlineData en parts
-                const parts = res.response.candidates[0].content.parts;
-                const imgPart = parts.find((p: any) => p.inlineData && p.inlineData.data);
-                if (imgPart) {
-                    imageDataBase64 = imgPart.inlineData.data;
-                    resultMime = imgPart.inlineData.mimeType ?? resultMime;
+            const imgPart = parts.find((p: any) => p?.inlineData?.data || p?.imageData?.data || p?.media?.data);
+            if (imgPart?.inlineData?.data) {
+                base64 = imgPart.inlineData.data;
+                outMime = imgPart.inlineData.mimeType;
+            } else if (imgPart?.imageData?.data) {
+                base64 = imgPart.imageData.data;
+                outMime = imgPart.imageData.mimeType;
+            } else if (imgPart?.media?.data) {
+                base64 = imgPart.media.data;
+                outMime = imgPart.media.mimeType;
+            }
+
+            if (!base64) {
+                // Try other top-level shapes
+                if (res?.image?.data) {
+                    base64 = res.image.data;
+                    outMime = res.image.mimeType;
+                } else if (Array.isArray(res?.images) && res.images.length > 0) {
+                    const first = res.images[0];
+                    base64 = first.data || first.b64Data || first.inlineData?.data;
+                    outMime = first.mimeType || first.inlineData?.mimeType;
+                } else if (response?.media?.data) {
+                    base64 = response.media.data;
+                    outMime = response.media.mimeType;
                 }
             }
 
-            if (!imageDataBase64) {
+            if (!base64) {
                 throw new Error('No se recibió imagen del modelo');
             }
 
-            const buffer = Buffer.from(imageDataBase64, 'base64');
-            // Ajustar nombre de archivo segun mimetype real
-            if (resultMime.includes('png')) fileName = fileName.replace(/\.[^.]+$/, '.png');
-            else if (resultMime.includes('jpeg') || resultMime.includes('jpg')) fileName = fileName.replace(/\.[^.]+$/, '.jpg');
-            else if (resultMime.includes('webp')) fileName = fileName.replace(/\.[^.]+$/, '.webp');
+            const finalMime = outMime || mimeType;
+            let fileName = `gen_${Date.now()}.img`;
+            if (finalMime.includes('png')) fileName = fileName.replace(/\.img$/, '.png');
+            else if (finalMime.includes('jpeg') || finalMime.includes('jpg')) fileName = fileName.replace(/\.img$/, '.jpg');
+            else if (finalMime.includes('webp')) fileName = fileName.replace(/\.img$/, '.webp');
 
-            return { data: buffer, mimeType: resultMime, fileName };
+            return { data: Buffer.from(base64, 'base64'), mimeType: finalMime, fileName };
         } catch (e) {
             const msg = this.parseAPIError(e);
             throw new Error(msg);
