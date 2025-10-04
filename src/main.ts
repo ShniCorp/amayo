@@ -1,7 +1,3 @@
-// Cargar .env localmente solo si Node soporta process.loadEnvFile (Node.js 20.6+)
-if (typeof (process as any).loadEnvFile === 'function') {
-    (process as any).loadEnvFile();
-}
 
 import Amayo from "./core/client";
 import { loadCommands } from "./core/loaders/loader";
