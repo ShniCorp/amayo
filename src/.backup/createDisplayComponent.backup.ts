@@ -1,11 +1,13 @@
 import {
+    ActionRowBuilder,
     ButtonInteraction,
     Message,
     MessageComponentInteraction,
     MessageFlags,
-    TextChannel,
+    ModalBuilder, TextChannel,
+    TextInputBuilder,
+    TextInputStyle,
 } from "discord.js";
-import { ComponentType, TextInputStyle, ButtonStyle } from "discord-api-types/v10";
 import logger from "../../../core/lib/logger";
 import {CommandMessage} from "../../../core/types/commands";
 import {listVariables} from "../../../core/lib/vars";
@@ -32,11 +34,6 @@ async function updateEditor(message: Message, data: EditorData): Promise<void> {
 
     if (payload.flags === undefined) {
         payload.flags = MessageFlags.IsComponentsV2;
-    }
-
-    // Si usamos Components V2, debemos limpiar explícitamente el content legado en el servidor
-    if (payload.flags === MessageFlags.IsComponentsV2) {
-        payload.content = null;
     }
 
     await message.edit(payload);
@@ -131,10 +128,7 @@ async function handleEditorInteractions(
         filter: (interaction: MessageComponentInteraction) => interaction.user.id === originalMessage.author.id
     });
 
-    collector.on("collect", async (interaction: MessageComponentInteraction) => {
-        // Verificar que sea una interacción de botón
-        if (!interaction.isButton()) return;
-
+    collector.on("collect", async (interaction: ButtonInteraction) => {
         try {
             await handleButtonInteraction(
                 interaction,
@@ -202,113 +196,6 @@ async function handleButtonInteraction(
             await handleCoverImage(interaction, editorMessage, originalMessage, blockState);
             break;
 
-        case "move_block": {
-            const options = blockState.components.map((c: any, idx: number) => ({
-                label: c.type === 10 ? `Texto: ${c.content?.slice(0, 30) || '...'}` : c.type === 14 ? 'Separador' : c.type === 12 ? `Imagen: ${c.url?.slice(-30) || '...'}` : `Componente ${c.type}`,
-                value: String(idx),
-                description: c.type === 10 && (c.thumbnail || c.linkButton) ? (c.thumbnail ? 'Con thumbnail' : 'Con botón link') : undefined,
-            }));
-
-            await interaction.reply({
-                flags: MessageFlags.Ephemeral,
-                content: 'Selecciona el bloque que quieres mover:',
-                components: [
-                    { type: 1, components: [ { type: 3, custom_id: 'move_block_select', placeholder: 'Elige un bloque', options } ] },
-                ],
-            });
-            const replyMsg = await interaction.fetchReply();
-            // @ts-ignore
-            const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === originalMessage.author.id });
-            selCollector.on('collect', async (sel: any) => {
-                const idx = parseInt(sel.values[0]);
-                await sel.update({
-                    content: '¿Quieres mover este bloque?',
-                    components: [
-                        { type: 1, components: [
-                            { type: 2, style: ButtonStyle.Secondary, label: '⬆️ Subir', custom_id: `move_up_${idx}`, disabled: idx === 0 },
-                            { type: 2, style: ButtonStyle.Secondary, label: '⬇️ Bajar', custom_id: `move_down_${idx}`, disabled: idx === blockState.components.length - 1 },
-                        ]},
-                    ],
-                });
-                // @ts-ignore
-                const btnCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.Button, max: 1, time: 60000, filter: (b: any) => b.user.id === originalMessage.author.id });
-                btnCollector.on('collect', async (b: any) => {
-                    if (b.customId.startsWith('move_up_')) {
-                        const i2 = parseInt(b.customId.replace('move_up_', ''));
-                        if (i2 > 0) {
-                            const item = blockState.components[i2];
-                            blockState.components.splice(i2, 1);
-                            blockState.components.splice(i2 - 1, 0, item);
-                        }
-                        await b.update({ content: '✅ Bloque movido arriba.', components: [] });
-                    } else if (b.customId.startsWith('move_down_')) {
-                        const i2 = parseInt(b.customId.replace('move_down_', ''));
-                        if (i2 < blockState.components.length - 1) {
-                            const item = blockState.components[i2];
-                            blockState.components.splice(i2, 1);
-                            blockState.components.splice(i2 + 1, 0, item);
-                        }
-                        await b.update({ content: '✅ Bloque movido abajo.', components: [] });
-                    }
-
-                    await updateEditor(editorMessage, {
-                        display: await DisplayComponentUtils.renderPreview(blockState, originalMessage.member!, originalMessage.guild!),
-                        components: DisplayComponentUtils.createEditorButtons(false),
-                    });
-                    btnCollector.stop();
-                    selCollector.stop();
-                });
-            });
-            break;
-        }
-
-        case "delete_block": {
-            const options: any[] = [];
-            if (blockState.coverImage) options.push({ label: '🖼️ Imagen de Portada', value: 'cover_image', description: 'Imagen principal del bloque' });
-            blockState.components.forEach((c: any, idx: number) => options.push({
-                label: c.type === 10 ? `Texto: ${c.content?.slice(0, 30) || '...'}` : c.type === 14 ? `Separador ${c.divider ? '(Visible)' : '(Invisible)'}` : c.type === 12 ? `Imagen: ${c.url?.slice(-30) || '...'}` : `Componente ${c.type}`,
-                value: String(idx),
-                description: c.type === 10 && (c.thumbnail || c.linkButton) ? (c.thumbnail ? 'Con thumbnail' : 'Con botón link') : undefined,
-            }));
-
-            if (options.length === 0) {
-                await interaction.deferReply({ flags: MessageFlags.Ephemeral });
-                // @ts-ignore
-                await interaction.editReply({ content: '❌ No hay elementos para eliminar.' });
-                break;
-            }
-
-            await interaction.reply({
-                flags: MessageFlags.Ephemeral,
-                content: 'Selecciona el elemento que quieres eliminar:',
-                components: [
-                    { type: 1, components: [ { type: 3, custom_id: 'delete_block_select', placeholder: 'Elige un elemento', options } ] },
-                ],
-            });
-            const replyMsg = await interaction.fetchReply();
-            // @ts-ignore
-            const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === originalMessage.author.id });
-            selCollector.on('collect', async (sel: any) => {
-                const selectedValue = sel.values[0];
-                if (selectedValue === 'cover_image') {
-                    // @ts-ignore
-                    blockState.coverImage = null;
-                    await sel.update({ content: '✅ Imagen de portada eliminada.', components: [] });
-                } else {
-                    const idx = parseInt(selectedValue);
-                    blockState.components.splice(idx, 1);
-                    await sel.update({ content: '✅ Elemento eliminado.', components: [] });
-                }
-
-                await updateEditor(editorMessage, {
-                    display: await DisplayComponentUtils.renderPreview(blockState, originalMessage.member!, originalMessage.guild!),
-                    components: DisplayComponentUtils.createEditorButtons(false),
-                });
-                selCollector.stop();
-            });
-            break;
-        }
-
         case "show_variables":
             await handleShowVariables(interaction);
             break;
@@ -328,7 +215,7 @@ async function handleButtonInteraction(
         default:
             await interaction.reply({
                 content: `⚠️ Funcionalidad \`${customId}\` en desarrollo.`,
-                flags: MessageFlags.Ephemeral,
+                flags: MessageFlags.Ephemeral
             });
             break;
     }
@@ -340,31 +227,27 @@ async function handleEditTitle(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = {
-        title: "Editar Título del Bloque",
-        customId: "edit_title_modal",
-        components: [
-            {
-                type: ComponentType.Label,
-                label: "Título",
-                component: {
-                    type: ComponentType.TextInput,
-                    customId: "title_input",
-                    style: TextInputStyle.Short,
-                    required: true,
-                    placeholder: "Escribe el título del bloque...",
-                    value: blockState.title || "",
-                    maxLength: 256
-                }
-            }
-        ]
-    } as const;
+    const modal = new ModalBuilder()
+        .setCustomId("edit_title_modal")
+        .setTitle("Editar Título del Bloque");
+
+    const titleInput = new TextInputBuilder()
+        .setCustomId("title_input")
+        .setLabel("Título")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("Escribe el título del bloque...")
+        .setValue(blockState.title || "")
+        .setRequired(true)
+        .setMaxLength(256);
+
+    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput);
+    modal.addComponents(actionRow);
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const newTitle = modalInteraction.components.getTextInputValue("title_input").trim();
+        const newTitle = modalInteraction.fields.getTextInputValue("title_input").trim();
 
         if (newTitle) {
             blockState.title = newTitle;
@@ -380,6 +263,7 @@ async function handleEditTitle(
         });
     } catch {
         // Modal timed out or error occurred
+        // no-op
     }
 }
 
@@ -389,31 +273,27 @@ async function handleEditDescription(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = {
-        title: "Editar Descripción del Bloque",
-        customId: "edit_description_modal",
-        components: [
-            {
-                type: ComponentType.Label,
-                label: "Descripción",
-                component: {
-                    type: ComponentType.TextInput,
-                    customId: "description_input",
-                    style: TextInputStyle.Paragraph,
-                    required: false,
-                    placeholder: "Escribe la descripción del bloque...",
-                    value: blockState.description || "",
-                    maxLength: 4000
-                }
-            }
-        ]
-    } as const;
+    const modal = new ModalBuilder()
+        .setCustomId("edit_description_modal")
+        .setTitle("Editar Descripción del Bloque");
+
+    const descriptionInput = new TextInputBuilder()
+        .setCustomId("description_input")
+        .setLabel("Descripción")
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder("Escribe la descripción del bloque...")
+        .setValue(blockState.description || "")
+        .setRequired(false)
+        .setMaxLength(4000);
+
+    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
+    modal.addComponents(actionRow);
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const newDescription = modalInteraction.components.getTextInputValue("description_input").trim();
+        const newDescription = modalInteraction.fields.getTextInputValue("description_input").trim();
 
         blockState.description = newDescription || undefined;
         await updateEditor(editorMessage, {
@@ -436,31 +316,27 @@ async function handleEditColor(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = {
-        title: "Editar Color del Bloque",
-        customId: "edit_color_modal",
-        components: [
-            {
-                type: ComponentType.Label,
-                label: "Color (formato HEX)",
-                component: {
-                    type: ComponentType.TextInput,
-                    customId: "color_input",
-                    style: TextInputStyle.Short,
-                    required: false,
-                    placeholder: "#FF5733 o FF5733",
-                    value: blockState.color ? `#${blockState.color.toString(16).padStart(6, '0')}` : "",
-                    maxLength: 7
-                }
-            }
-        ]
-    } as const;
+    const modal = new ModalBuilder()
+        .setCustomId("edit_color_modal")
+        .setTitle("Editar Color del Bloque");
+
+    const colorInput = new TextInputBuilder()
+        .setCustomId("color_input")
+        .setLabel("Color (formato HEX)")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("#FF5733 o FF5733")
+        .setValue(blockState.color ? `#${blockState.color.toString(16).padStart(6, '0')}` : "")
+        .setRequired(false)
+        .setMaxLength(7);
+
+    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(colorInput);
+    modal.addComponents(actionRow);
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const colorValue = modalInteraction.components.getTextInputValue("color_input").trim();
+        const colorValue = modalInteraction.fields.getTextInputValue("color_input").trim();
 
         if (colorValue) {
             const cleanColor = colorValue.replace('#', '');
@@ -506,30 +382,26 @@ async function handleAddContent(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = {
-        title: "Añadir Contenido de Texto",
-        customId: "add_content_modal",
-        components: [
-            {
-                type: ComponentType.Label,
-                label: "Contenido",
-                component: {
-                    type: ComponentType.TextInput,
-                    customId: "content_input",
-                    style: TextInputStyle.Paragraph,
-                    required: true,
-                    placeholder: "Escribe el contenido de texto...",
-                    maxLength: 4000
-                }
-            }
-        ]
-    } as const;
+    const modal = new ModalBuilder()
+        .setCustomId("add_content_modal")
+        .setTitle("Añadir Contenido de Texto");
+
+    const contentInput = new TextInputBuilder()
+        .setCustomId("content_input")
+        .setLabel("Contenido")
+        .setStyle(TextInputStyle.Paragraph)
+        .setPlaceholder("Escribe el contenido de texto...")
+        .setRequired(true)
+        .setMaxLength(4000);
+
+    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput);
+    modal.addComponents(actionRow);
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const content = modalInteraction.components.getTextInputValue("content_input").trim();
+        const content = modalInteraction.fields.getTextInputValue("content_input").trim();
 
         if (content) {
             blockState.components.push({
@@ -582,30 +454,26 @@ async function handleAddImage(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = {
-        title: "Añadir Imagen",
-        customId: "add_image_modal",
-        components: [
-            {
-                type: ComponentType.Label,
-                label: "URL de la Imagen",
-                component: {
-                    type: ComponentType.TextInput,
-                    customId: "image_input",
-                    style: TextInputStyle.Short,
-                    required: true,
-                    placeholder: "https://ejemplo.com/imagen.png",
-                    maxLength: 512
-                }
-            }
-        ]
-    } as const;
+    const modal = new ModalBuilder()
+        .setCustomId("add_image_modal")
+        .setTitle("Añadir Imagen");
+
+    const imageInput = new TextInputBuilder()
+        .setCustomId("image_input")
+        .setLabel("URL de la Imagen")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("https://ejemplo.com/imagen.png")
+        .setRequired(true)
+        .setMaxLength(512);
+
+    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(imageInput);
+    modal.addComponents(actionRow);
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const imageUrl = modalInteraction.components.getTextInputValue("image_input").trim();
+        const imageUrl = modalInteraction.fields.getTextInputValue("image_input").trim();
 
         if (imageUrl && DisplayComponentUtils.isValidUrl(imageUrl)) {
             blockState.components.push({
@@ -620,12 +488,12 @@ async function handleAddImage(
 
             await modalInteraction.reply({
                 content: "✅ Imagen añadida correctamente.",
-                flags: MessageFlags.Ephemeral
+                ephemeral: true
             });
         } else {
             await modalInteraction.reply({
                 content: "❌ URL de imagen inválida.",
-                flags: MessageFlags.Ephemeral
+                ephemeral: true
             });
         }
     } catch {
@@ -639,31 +507,27 @@ async function handleCoverImage(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = {
-        title: "Imagen de Portada",
-        customId: "cover_image_modal",
-        components: [
-            {
-                type: ComponentType.Label,
-                label: "URL de la Imagen de Portada",
-                component: {
-                    type: ComponentType.TextInput,
-                    customId: "cover_input",
-                    style: TextInputStyle.Short,
-                    required: false,
-                    placeholder: "https://ejemplo.com/portada.png",
-                    value: blockState.coverImage || "",
-                    maxLength: 512
-                }
-            }
-        ]
-    } as const;
+    const modal = new ModalBuilder()
+        .setCustomId("cover_image_modal")
+        .setTitle("Imagen de Portada");
+
+    const coverInput = new TextInputBuilder()
+        .setCustomId("cover_input")
+        .setLabel("URL de la Imagen de Portada")
+        .setStyle(TextInputStyle.Short)
+        .setPlaceholder("https://ejemplo.com/portada.png")
+        .setValue(blockState.coverImage || "")
+        .setRequired(false)
+        .setMaxLength(512);
+
+    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(coverInput);
+    modal.addComponents(actionRow);
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const coverUrl = modalInteraction.components.getTextInputValue("cover_input").trim();
+        const coverUrl = modalInteraction.fields.getTextInputValue("cover_input").trim();
 
         if (coverUrl && DisplayComponentUtils.isValidUrl(coverUrl)) {
             blockState.coverImage = coverUrl;
@@ -678,7 +542,7 @@ async function handleCoverImage(
 
         await modalInteraction.reply({
             content: coverUrl ? "✅ Imagen de portada actualizada." : "✅ Imagen de portada removida.",
-            flags: MessageFlags.Ephemeral
+            ephemeral: true
         });
     } catch {
         // ignore
@@ -734,32 +598,19 @@ async function handleSaveBlock(
 }
 
 async function handleCancelBlock(interaction: ButtonInteraction, editorMessage: Message): Promise<void> {
-    try {
-        await interaction.deferUpdate();
-    } catch {}
-    await updateEditor(editorMessage, {
-        display: {
-            type: 17,
-            components: [
-                { type: 10, content: "❌ **Editor cancelado**" },
-                { type: 10, content: "La creación del bloque ha sido cancelada." }
-            ]
-        } as any,
-        components: []
+    await interaction.update({
+        content: "❌ **Editor cancelado**\n\nLa creación del bloque ha sido cancelada.",
+        components: [],
+        embeds: []
     });
 }
 
 async function handleEditorTimeout(editorMessage: Message): Promise<void> {
     try {
-        await updateEditor(editorMessage, {
-            display: {
-                type: 17,
-                components: [
-                    { type: 10, content: "⏰ **Editor expirado**" },
-                    { type: 10, content: "El editor ha expirado por inactividad. Usa el comando nuevamente para crear un bloque." }
-                ]
-            } as any,
-            components: []
+        await editorMessage.edit({
+            content: "⏰ **Editor expirado**\n\nEl editor ha expirado por inactividad. Usa el comando nuevamente para crear un bloque.",
+            components: [],
+            embeds: []
         });
     } catch {
         // message likely deleted
