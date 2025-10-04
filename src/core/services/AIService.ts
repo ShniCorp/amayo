@@ -4,6 +4,10 @@ import logger from "../lib/logger";
 import { Collection } from "discord.js";
 import { prisma } from "../database/prisma";
 import { getDatabases, APPWRITE_DATABASE_ID, APPWRITE_COLLECTION_AI_CONVERSATIONS_ID, isAIConversationsConfigured } from "../api/appwrite";
+import { ensureAIConversationsSchema } from "../api/aiConversationsSchema";
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const sdk: any = require('node-appwrite');
 
 // Tipos mejorados para mejor type safety
 interface ConversationContext {
@@ -40,19 +44,14 @@ interface AIRequest {
 }
 
 interface AppwriteConversation {
+    $id?: string;
     userId: string;
-    guildId?: string;
-    channelId?: string;
+    guildId?: string | null;
+    channelId?: string | null;
     conversationId: string;
-    messages: Array<{
-        role: 'user' | 'assistant';
-        content: string;
-        timestamp: number;
-        messageId?: string;
-        referencedMessageId?: string;
-    }>;
-    lastActivity: number;
-    createdAt: number;
+    messagesJson?: string; // JSON serializado del historial
+    lastActivity: string; // ISO
+    createdAt: string; // ISO
 }
 
 // Utility function para manejar errores de forma type-safe
@@ -151,8 +150,15 @@ export class AIService {
             return null;
         }
 
-        // Lista de candidatos de modelos de imagen ordenados por preferencia (actualizada + retrocompatibilidad)
+        // Lista de candidatos de modelos de imagen ordenados por preferencia (Imagen 4.0 primero, con retrocompatibilidad)
         const candidates = [
+            'models/imagen-4.0-generate-001',
+            'imagen-4.0-generate-001',
+            'models/imagen-3.0-fast',
+            'imagen-3.0-fast',
+            'models/imagen-3.0',
+            'imagen-3.0',
+            'models/gemini-2.5-flash-image',
             'gemini-2.5-flash-image',
         ];
 
@@ -986,57 +992,54 @@ Responde de forma directa y útil:`;
         }
 
         try {
+            await ensureAIConversationsSchema();
             const databases = getDatabases();
             if (!databases) return;
 
-            // Generar un ID válido para Appwrite (máximo 36 caracteres, solo a-z, A-Z, 0-9, ., -, _)
+            // Asegurar conversationId válido y corto para Appwrite
             let conversationId = context.conversationId;
             if (!conversationId) {
-                // Crear un ID más corto y válido
-                const userIdShort = context.userId.slice(-8); // Últimos 8 caracteres del userId
+                const userIdShort = context.userId.slice(-8);
                 const guildIdShort = context.guildId ? context.guildId.slice(-8) : 'dm';
-                const timestamp = Date.now().toString(36); // Base36 para hacer más corto
-                conversationId = `ai_${userIdShort}_${guildIdShort}_${timestamp}`;
-
-                // Asegurar que no exceda 36 caracteres
-                if (conversationId.length > 36) {
-                    conversationId = conversationId.slice(0, 36);
-                }
-
+                const timestamp = Date.now().toString(36);
+                conversationId = `ai_${userIdShort}_${guildIdShort}_${timestamp}`.slice(0, 36);
                 context.conversationId = conversationId;
             }
 
-            const appwriteData: AppwriteConversation = {
+            // Serializar mensajes a JSON
+            const messagesPayload = context.messages.map(m => ({
+                role: m.role,
+                content: m.content,
+                timestamp: m.timestamp,
+                messageId: m.messageId,
+                referencedMessageId: m.referencedMessageId,
+            }));
+            const messagesJson = JSON.stringify(messagesPayload);
+
+            const data: AppwriteConversation = {
                 userId: context.userId,
-                guildId: context.guildId,
-                channelId: context.channelId,
+                guildId: context.guildId ?? null,
+                channelId: context.channelId ?? null,
                 conversationId,
-                messages: context.messages.map(msg => ({
-                    role: msg.role,
-                    content: msg.content,
-                    timestamp: msg.timestamp,
-                    messageId: msg.messageId,
-                    referencedMessageId: msg.referencedMessageId
-                })),
-                lastActivity: context.lastActivity,
-                createdAt: Date.now()
+                messagesJson,
+                lastActivity: new Date(context.lastActivity).toISOString(),
+                createdAt: new Date().toISOString(),
             };
 
-            // Usar upsert para actualizar si ya existe
+            // Upsert por ID estable
             try {
                 await databases.updateDocument(
                     APPWRITE_DATABASE_ID,
                     APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
                     conversationId,
-                    appwriteData
+                    data
                 );
             } catch (updateError) {
-                // Si no existe, crearlo
                 await databases.createDocument(
                     APPWRITE_DATABASE_ID,
                     APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
                     conversationId,
-                    appwriteData
+                    data
                 );
             }
 
@@ -1055,56 +1058,49 @@ Responde de forma directa y útil:`;
         }
 
         try {
+            await ensureAIConversationsSchema();
             const databases = getDatabases();
             if (!databases) return null;
 
-            // Construir queries válidas para Appwrite
-            const queries = [];
+            const queries: any[] = [sdk.Query.equal('userId', userId)];
+            if (guildId) queries.push(sdk.Query.equal('guildId', guildId));
+            if (channelId) queries.push(sdk.Query.equal('channelId', channelId));
+            queries.push(sdk.Query.orderDesc('lastActivity'));
+            queries.push(sdk.Query.limit(1));
 
-            // Query por userId (siempre requerido)
-            queries.push(`userId="${userId}"`);
-
-            // Query por guildId si existe
-            if (guildId) {
-                queries.push(`guildId="${guildId}"`);
-            }
-
-            // Query por channelId si existe
-            if (channelId) {
-                queries.push(`channelId="${channelId}"`);
-            }
-
-            // Buscar conversaciones recientes del usuario
             const response = await databases.listDocuments(
                 APPWRITE_DATABASE_ID,
                 APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
                 queries
-            );
+            ) as unknown as { documents: AppwriteConversation[] };
 
-            if (response.documents.length === 0) {
-                return null;
-            }
+            const docs = (response?.documents || []) as AppwriteConversation[];
+            if (!docs.length) return null;
 
-            // Obtener la conversación más reciente
-            const latestDoc = response.documents.sort((a: any, b: any) => (b.lastActivity || 0) - (a.lastActivity || 0))[0];
-            const data = latestDoc as any as AppwriteConversation;
+            const latest = docs[0];
+            const messagesArray: any[] = (() => {
+                try { return latest.messagesJson ? JSON.parse(latest.messagesJson) : []; } catch { return []; }
+            })();
 
-            // Crear contexto desde los datos de Appwrite
             const context: ConversationContext = {
-                messages: (data.messages || []).map(msg => ({
-                    ...msg,
-                    tokens: this.estimateTokens(msg.content)
+                messages: messagesArray.map((msg: any) => ({
+                    role: msg.role === 'assistant' ? 'assistant' : 'user',
+                    content: String(msg.content || ''),
+                    timestamp: Number(msg.timestamp || Date.now()),
+                    tokens: this.estimateTokens(String(msg.content || '')),
+                    messageId: msg.messageId,
+                    referencedMessageId: msg.referencedMessageId,
                 })),
-                totalTokens: (data.messages || []).reduce((sum, msg) => sum + this.estimateTokens(msg.content), 0),
-                imageRequests: 0, // Resetear conteo de imágenes
-                lastActivity: data.lastActivity || Date.now(),
-                userId: data.userId,
-                guildId: data.guildId,
-                channelId: data.channelId,
-                conversationId: data.conversationId
+                totalTokens: messagesArray.reduce((sum: number, m: any) => sum + this.estimateTokens(String(m.content || '')), 0),
+                imageRequests: 0,
+                lastActivity: Date.parse(latest.lastActivity || new Date().toISOString()) || Date.now(),
+                userId: latest.userId,
+                guildId: latest.guildId || undefined,
+                channelId: latest.channelId || undefined,
+                conversationId: latest.conversationId,
             };
 
-            logger.debug(`Conversación cargada desde Appwrite: ${data.conversationId}`);
+            logger.debug(`Conversación cargada desde Appwrite: ${latest.conversationId}`);
             return context;
         } catch (error) {
             logger.warn(`Error cargando conversación desde Appwrite: ${getErrorMessage(error)}`);
