@@ -1,5 +1,5 @@
 import { CommandMessage } from "../../../core/types/commands";
-import { ContainerBuilder, TextDisplayBuilder, SectionBuilder, ButtonBuilder, ButtonStyle, MessageFlags } from "discord.js";
+import { ComponentType, ButtonStyle } from "discord-api-types/v10";
 import { aiService } from "../../../core/services/AIService";
 import logger from "../../../core/lib/logger";
 
@@ -26,7 +26,7 @@ function formatBytesMB(bytes: number): string {
 }
 
 /**
- * Construir panel de administración de IA usando la API REAL de Discord.js 14.22.1
+ * Construir panel de administración de IA usando formato de objetos planos
  */
 function buildAIAdminPanel() {
     const stats = aiService.getStats();
@@ -45,53 +45,53 @@ function buildAIAdminPanel() {
     const heapTotal = formatBytesMB(memoryUsage.heapTotal);
     const external = formatBytesMB(memoryUsage.external);
 
-    // Crear texto de header
-    const headerText = new TextDisplayBuilder()
-        .setContent('## 🌸 Panel de Administración - Gemini-chan\n-# Gestiona el sistema de IA y monitorea estadísticas en tiempo real.');
-
-    // Crear secciones con estadísticas
-    const statsSection1 = new SectionBuilder()
-        .addTextDisplayComponents(
-            new TextDisplayBuilder()
-                .setContent(`🔄 **Conversaciones Activas:** ${stats.activeConversations}`)
-        )
-        .setButtonAccessory(
-            new ButtonBuilder()
-                .setCustomId('ai_clear_cache')
-                .setLabel('Limpiar Cache')
-                .setEmoji('🧹')
-                .setStyle(ButtonStyle.Primary)
-        );
-
-    const statsSection2 = new SectionBuilder()
-        .addTextDisplayComponents(
-            new TextDisplayBuilder()
-                .setContent(`📊 **Requests en Cola:** ${stats.queueLength} | **Estado:** ${queueStatus}`)
-        )
-        .setButtonAccessory(
-            new ButtonBuilder()
-                .setCustomId('ai_refresh_stats')
-                .setLabel('Refrescar Stats')
-                .setEmoji('🔄')
-                .setStyle(ButtonStyle.Primary)
-        );
-
-    const configSection = new SectionBuilder()
-        .addTextDisplayComponents(
-            new TextDisplayBuilder()
-                .setContent(`⏱️ **Total Requests:** ${stats.totalRequests} | **Uptime:** ${formatUptime(uptime)}`)
-        )
-        .setButtonAccessory(
-            new ButtonBuilder()
-                .setCustomId('ai_config')
-                .setLabel('Configuración')
-                .setEmoji('🔧')
-                .setStyle(ButtonStyle.Secondary)
-        );
-
-    // Texto de memoria
-    const memoryText = new TextDisplayBuilder()
-        .setContent(`## 🧠 Uso de Memoria del Sistema IA
+    // Construir panel usando Display Components V2 (objetos planos)
+    return {
+        type: ComponentType.Container,
+        components: [
+            { type: ComponentType.TextDisplay, content: '## 🌸 Panel de Administración - Gemini-chan\n-# Gestiona el sistema de IA y monitorea estadísticas en tiempo real.' },
+            {
+                type: ComponentType.Section,
+                components: [
+                    { type: ComponentType.TextDisplay, content: `🔄 **Conversaciones Activas:** ${stats.activeConversations}` }
+                ],
+                accessory: {
+                    type: ComponentType.Button,
+                    custom_id: 'ai_clear_cache',
+                    label: 'Limpiar Cache',
+                    emoji: { name: '🧹' },
+                    style: ButtonStyle.Primary
+                }
+            },
+            {
+                type: ComponentType.Section,
+                components: [
+                    { type: ComponentType.TextDisplay, content: `📊 **Requests en Cola:** ${stats.queueLength} | **Estado:** ${queueStatus}` }
+                ],
+                accessory: {
+                    type: ComponentType.Button,
+                    custom_id: 'ai_refresh_stats',
+                    label: 'Refrescar Stats',
+                    emoji: { name: '🔄' },
+                    style: ButtonStyle.Primary
+                }
+            },
+            {
+                type: ComponentType.Section,
+                components: [
+                    { type: ComponentType.TextDisplay, content: `⏱️ **Total Requests:** ${stats.totalRequests} | **Uptime:** ${formatUptime(uptime)}` }
+                ],
+                accessory: {
+                    type: ComponentType.Button,
+                    custom_id: 'ai_config',
+                    label: 'Configuración',
+                    emoji: { name: '🔧' },
+                    style: ButtonStyle.Secondary
+                }
+            },
+            {
+                type: ComponentType.TextDisplay,
+                content: `## 🧠 Uso de Memoria del Sistema IA
 \`\`\`
 ┌─────────────────┬──────────────┬──────────┐
 │ Memory Type     │ Usage        │ Status   │
@@ -104,30 +104,23 @@ function buildAIAdminPanel() {
 
 📈 Configuración: 20 req/min | 3s cooldown | 1M/8K tokens | 3 concurrent
 \`\`\`
-🔄 Última actualización: ${ts} UTC`);
-
-    // Sección de reset
-    const resetSection = new SectionBuilder()
-        .addTextDisplayComponents(
-            new TextDisplayBuilder()
-                .setContent("**REINICIAR** todo el sistema de IA")
-        )
-        .setButtonAccessory(
-            new ButtonBuilder()
-                .setCustomId('ai_full_reset')
-                .setLabel('RESET COMPLETO')
-                .setEmoji('⚠️')
-                .setStyle(ButtonStyle.Danger)
-        );
-
-    // Construir container principal
-    const container = new ContainerBuilder()
-        .addTextDisplayComponents(headerText)
-        .addSectionComponents(statsSection1, statsSection2, configSection)
-        .addTextDisplayComponents(memoryText)
-        .addSectionComponents(resetSection);
-
-    return container;
+🔄 Última actualización: ${ts} UTC`
+            },
+            {
+                type: ComponentType.Section,
+                components: [
+                    { type: ComponentType.TextDisplay, content: "**REINICIAR** todo el sistema de IA" }
+                ],
+                accessory: {
+                    type: ComponentType.Button,
+                    custom_id: 'ai_full_reset',
+                    label: 'RESET COMPLETO',
+                    emoji: { name: '⚠️' },
+                    style: ButtonStyle.Danger
+                }
+            }
+        ]
+    };
 }
 
 export const command: CommandMessage = {
@@ -150,15 +143,20 @@ export const command: CommandMessage = {
 
             // Reset del sistema si se solicita
             if (action === 'reset') {
-                const resetContainer = new ContainerBuilder()
-                    .addTextDisplayComponents(
-                        new TextDisplayBuilder()
-                            .setContent('## ✅ Sistema de IA Reiniciado\nLas estadísticas, cache y conversaciones han sido limpiados exitosamente.\n\n🔄 **Estado:** Sistema reiniciado\n⏰ **Timestamp:** ' + new Date().toISOString().replace('T', ' ').split('.')[0] + ' UTC\n👤 **Dueño:** ' + message.author.username)
-                    );
+                const resetPanel = {
+                    type: ComponentType.Container,
+                    components: [
+                        {
+                            type: ComponentType.TextDisplay,
+                            content: '## ✅ Sistema de IA Reiniciado\nLas estadísticas, cache y conversaciones han sido limpiados exitosamente.\n\n🔄 **Estado:** Sistema reiniciado\n⏰ **Timestamp:** ' + new Date().toISOString().replace('T', ' ').split('.')[0] + ' UTC\n👤 **Dueño:** ' + message.author.username
+                        }
+                    ]
+                };
 
                 await message.reply({
-                    components: [resetContainer],
-                    flags: MessageFlags.IsComponentsV2
+                    // @ts-ignore - Flag de componentes V2
+                    flags: 32768,
+                    components: [resetPanel]
                 });
                 logger.info(`Sistema de IA reiniciado por el dueño ${message.author.username} (${message.author.id})`);
                 return;
@@ -168,22 +166,28 @@ export const command: CommandMessage = {
             const adminPanel = buildAIAdminPanel();
 
             await message.reply({
-                components: [adminPanel],
-                flags: MessageFlags.IsComponentsV2
+                // @ts-ignore - Flag de componentes V2
+                flags: 32768,
+                components: [adminPanel]
             });
 
         } catch (error: any) {
             logger.error('Error obteniendo estadísticas de IA:', error);
             
-            const errorContainer = new ContainerBuilder()
-                .addTextDisplayComponents(
-                    new TextDisplayBuilder()
-                        .setContent('## ❌ Error del Sistema\nNo se pudieron obtener las estadísticas del sistema de IA.\n\n**Error:** ' + (error.message || 'Error desconocido') + '\n**Timestamp:** ' + new Date().toISOString())
-                );
+            const errorPanel = {
+                type: ComponentType.Container,
+                components: [
+                    {
+                        type: ComponentType.TextDisplay,
+                        content: '## ❌ Error del Sistema\nNo se pudieron obtener las estadísticas del sistema de IA.\n\n**Error:** ' + (error.message || 'Error desconocido') + '\n**Timestamp:** ' + new Date().toISOString()
+                    }
+                ]
+            };
 
             await message.reply({
-                components: [errorContainer],
-                flags: MessageFlags.IsComponentsV2
+                // @ts-ignore - Flag de componentes V2
+                flags: 32768,
+                components: [errorPanel]
             });
         }
     }
