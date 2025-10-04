@@ -1,6 +1,6 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 // New: modern GenAI SDK for image generation
-import { GoogleGenAI } from "@google/genai";
+import { GoogleGenAI, PersonGeneration } from "@google/genai";
 import logger from "../lib/logger";
 import { Collection } from "discord.js";
 import { prisma } from "../database/prisma";
@@ -145,9 +145,11 @@ export class AIService {
             return null;
         }
 
-        // Lista de candidatos de modelos de imagen ordenados por preferencia
+        // Lista de candidatos de modelos de imagen ordenados por preferencia (actualizada según Google AI Studio)
         const candidates = [
+            'models/imagen-4.0-generate-001',
             'imagen-4.0-generate-001',
+            'models/gemini-2.5-flash-image',
             'gemini-2.5-flash-image',
         ];
 
@@ -157,8 +159,7 @@ export class AIService {
             if (listed?.models && Array.isArray(listed.models)) {
                 const models: string[] = listed.models
                     .map((m: any) => m?.name || m?.model || m?.id || m?.displayName)
-                    .filter(Boolean)
-                    .map((name: string) => name.replace(/^models\//, '')); // Quitar prefijo models/
+                    .filter(Boolean);
 
                 logger.debug({ availableModels: models }, 'Modelos disponibles detectados');
 
@@ -171,7 +172,12 @@ export class AIService {
                 if (imageModels.length > 0) {
                     // Priorizar según orden de candidatos
                     for (const candidate of candidates) {
-                        const found = imageModels.find(m => m.includes(candidate.replace(/^models\//, '')));
+                        const candidateBase = candidate.replace(/^models\//, '');
+                        const found = imageModels.find(m =>
+                            m === candidate ||
+                            m === candidateBase ||
+                            m.includes(candidateBase)
+                        );
                         if (found) {
                             this.imageModelName = found;
                             logger.info({ model: found, source: 'listModels' }, 'Modelo de imágenes detectado automáticamente');
@@ -189,20 +195,22 @@ export class AIService {
             logger.debug({ err: getErrorMessage(e) }, 'listModels no disponible');
         }
 
-        // Fallback: probar modelos uno por uno con generateContent usando responseMimeType
+        // Fallback: probar modelos uno por uno
         for (const candidate of candidates) {
             try {
-                // Usar generateContent con responseMimeType image/* como detector
-                const testRes: any = await (this.genAIv2 as any).models.generateContent({
+                // Probar con la nueva API de generateImages
+                const testRes: any = await (this.genAIv2 as any).models.generateImages({
                     model: candidate,
-                    contents: [{ text: 'test' }],
+                    prompt: 'test',
                     config: {
-                        responseMimeType: 'image/png',
-                        maxOutputTokens: 1,
+                        numberOfImages: 1,
+                        outputMimeType: 'image/jpeg',
+                        aspectRatio: '1:1',
+                        imageSize: '1K',
                     }
                 });
 
-                // Si no lanza error 404, el modelo existe
+                // Si no lanza error, el modelo existe
                 this.imageModelName = candidate;
                 logger.info({ model: candidate, source: 'direct-test' }, 'Modelo de imágenes detectado por prueba directa');
                 return candidate;
@@ -1136,10 +1144,15 @@ Responde de forma directa y útil:`;
     }
 
     /**
-     * Generar imagen usando gemini-2.5-flash-image (Google Gen AI SDK moderno)
+     * Generar imagen usando la nueva API de @google/genai (basada en Google AI Studio)
      * Retorna un objeto con los bytes de la imagen y el tipo MIME.
      */
-    public async generateImage(prompt: string, options?: { size?: 'square' | 'portrait' | 'landscape'; mimeType?: string }): Promise<{ data: Buffer; mimeType: string; fileName: string; }> {
+    public async generateImage(prompt: string, options?: {
+        size?: 'square' | 'portrait' | 'landscape';
+        mimeType?: string;
+        numberOfImages?: number;
+        personGeneration?: boolean;
+    }): Promise<{ data: Buffer; mimeType: string; fileName: string; }> {
         if (!prompt?.trim()) {
             throw new Error('El prompt de imagen no puede estar vacío');
         }
@@ -1150,80 +1163,81 @@ Responde de forma directa y útil:`;
         // Obtener/descubrir el modelo
         const model = this.imageModelName ?? (await this.detectImageModel());
         if (!model) {
-            throw new Error('El generador de imágenes no está disponible para tu cuenta o región. Habilita Imagen 3 (por ejemplo, imagen-3.0-fast) en Google AI Studio o define GENAI_IMAGE_MODEL.');
+            throw new Error('El generador de imágenes no está disponible para tu cuenta o región. Habilita Imagen 4.0 (imagen-4.0-generate-001) en Google AI Studio.');
         }
 
-        const mimeType = options?.mimeType ?? 'image/png';
+        const mimeType = options?.mimeType ?? 'image/jpeg';
         const size = options?.size ?? 'square';
-        const imageSize = size === 'portrait' ? '9:16' : size === 'landscape' ? '16:9' : '1:1';
+        const numberOfImages = options?.numberOfImages ?? 1;
+        const personGeneration = options?.personGeneration ?? true;
+
+        // Mapear tamaño a aspectRatio según la nueva API
+        const aspectRatio = size === 'portrait' ? '9:16' : size === 'landscape' ? '16:9' : '1:1';
 
         try {
-            const res: any = await (this.genAIv2 as any).models.generateImages({
-                model,
-                prompt,
+            logger.info({ model, prompt: prompt.slice(0, 100) }, 'Generando imagen con nueva API');
+
+            const response: any = await (this.genAIv2 as any).models.generateImages({
+                model: model,
+                prompt: prompt,
                 config: {
-                    responseMimeType: mimeType,
-                    imageSize,
+                    numberOfImages: numberOfImages,
+                    outputMimeType: mimeType,
+                    personGeneration: personGeneration ? PersonGeneration.ALLOW_ALL : PersonGeneration.DONT_ALLOW,
+                    aspectRatio: aspectRatio,
+                    imageSize: '1K', // Usar 1K como tamaño estándar
                 }
             });
 
-            let base64: string | undefined;
-            let outMime: string | undefined;
-
-            if (Array.isArray(res?.images) && res.images.length > 0) {
-                const first = res.images[0];
-                base64 = first?.data || first?.b64Data || first?.inlineData?.data;
-                outMime = first?.mimeType || first?.inlineData?.mimeType;
-            }
-            if (!base64 && res?.image?.data) {
-                base64 = res.image.data;
-                outMime = res.image.mimeType;
+            if (!response?.generatedImages || !Array.isArray(response.generatedImages) || response.generatedImages.length === 0) {
+                logger.error({ response, model }, 'No se generaron imágenes en la respuesta');
+                throw new Error('No se generaron imágenes');
             }
 
-            if (!base64) {
-                // Fallback a generateContent para algunas implementaciones
-                const alt: any = await (this.genAIv2 as any).models.generateContent({
-                    model,
-                    contents: prompt,
-                    config: {
-                        responseMimeType: mimeType,
-                        responseModalities: ['IMAGE'],
-                        imageSize,
-                    }
-                });
-                const response = alt?.response ?? alt;
-                const candidates = response?.candidates ?? [];
-                const parts = candidates[0]?.content?.parts ?? [];
-                const imgPart = parts.find((p: any) => p?.inlineData?.data || p?.imageData?.data || p?.media?.data);
-                if (imgPart?.inlineData?.data) {
-                    base64 = imgPart.inlineData.data;
-                    outMime = imgPart.inlineData.mimeType;
-                } else if (imgPart?.imageData?.data) {
-                    base64 = imgPart.imageData.data;
-                    outMime = imgPart.imageData.mimeType;
-                } else if (imgPart?.media?.data) {
-                    base64 = imgPart.media.data;
-                    outMime = imgPart.media.mimeType;
-                }
+            // Tomar la primera imagen generada
+            const generatedImage = response.generatedImages[0];
+            if (!generatedImage?.image?.imageBytes) {
+                logger.error({ generatedImage, model }, 'La imagen generada no contiene datos de bytes');
+                throw new Error('La imagen generada no contiene datos válidos');
             }
 
-            if (!base64) {
-                logger.error({ res, model }, 'Respuesta de imagen sin datos de imagen');
-                throw new Error('No se recibió imagen del modelo');
-            }
+            const base64Data = generatedImage.image.imageBytes;
+            const buffer = Buffer.from(base64Data, 'base64');
 
-            const finalMime = outMime || mimeType;
-            let fileName = `gen_${Date.now()}.img`;
-            if (finalMime.includes('png')) fileName = fileName.replace(/\.img$/, '.png');
-            else if (finalMime.includes('jpeg') || finalMime.includes('jpg')) fileName = fileName.replace(/\.img$/, '.jpg');
-            else if (finalMime.includes('webp')) fileName = fileName.replace(/\.img$/, '.webp');
+            // Generar nombre de archivo basado en el tipo MIME
+            let fileName = `gen_${Date.now()}`;
+            if (mimeType.includes('png')) fileName += '.png';
+            else if (mimeType.includes('jpeg') || mimeType.includes('jpg')) fileName += '.jpg';
+            else if (mimeType.includes('webp')) fileName += '.webp';
+            else fileName += '.img';
 
-            return { data: Buffer.from(base64, 'base64'), mimeType: finalMime, fileName };
+            logger.info({
+                fileName,
+                mimeType,
+                bufferSize: buffer.length,
+                model
+            }, 'Imagen generada exitosamente');
+
+            return {
+                data: buffer,
+                mimeType: mimeType,
+                fileName: fileName
+            };
+
         } catch (e) {
-            logger.error({ err: e as any, model }, 'Fallo en generateImage');
+            logger.error({ err: e as any, model, prompt: prompt.slice(0, 100) }, 'Error en generateImage');
             const parsed = this.parseAPIError(e);
             const original = getErrorMessage(e);
-            // Si el parser no aporta, usa el original del backend
+
+            // Proporcionar mensajes de error más específicos
+            if (original.includes('not found') || original.includes('404')) {
+                throw new Error('El modelo de generación de imágenes no está disponible. Verifica que Imagen 4.0 esté habilitado en tu cuenta de Google AI Studio.');
+            }
+            if (original.includes('quota') || original.includes('limit')) {
+                throw new Error('Has alcanzado el límite de generación de imágenes. Intenta más tarde.');
+            }
+
+            // Si el parser no aporta información útil, usar el mensaje original
             const message = parsed === 'Error temporal del servicio de IA. Intenta de nuevo' ? original : parsed;
             throw new Error(message || parsed);
         }
