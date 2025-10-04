@@ -42,12 +42,21 @@ bot.on(Events.InteractionCreate, async (interaction: BaseInteraction) => {
 
         // 🔹 Modales
         if (interaction.isModalSubmit()) {
-            const modal = modals.get(interaction.customId);
+            // Primero intentar búsqueda exacta
+            let modal = modals.get(interaction.customId);
+
+            // Si no se encuentra, intentar búsqueda por prefijo (para modales dinámicos)
+            if (!modal) {
+                const prefix = interaction.customId.split(':')[0];
+                modal = modals.get(prefix);
+            }
+
             if (modal) await modal.run(interaction, bot);
         }
     } catch (error) {
         logger.error({ err: error }, "Error ejecutando interacción");
         if (interaction.isRepliable()) {
+            // @ts-ignore
             await interaction.reply({ content: "❌ Hubo un error ejecutando la interacción.", ephemeral: true });
         }
     }

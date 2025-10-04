@@ -10,6 +10,8 @@ import { prisma } from '../../core/database/prisma';
 export default {
   customId: 'ld_points_modal',
   run: async (interaction: ModalSubmitInteraction) => {
+    logger.info(`🔍 Modal ldPointsModal ejecutado. CustomId: ${interaction.customId}`);
+
     if (!interaction.guild) {
       return interaction.reply({ 
         content: '❌ Solo disponible en servidores.', 
@@ -29,6 +31,8 @@ export default {
     try {
       // Extraer el userId del customId (formato: ld_points_modal:userId)
       const userId = interaction.customId.split(':')[1];
+      logger.info(`🔍 UserId extraído: ${userId}`);
+
       if (!userId) {
         return interaction.reply({
           content: '❌ Error al identificar el usuario.',
@@ -39,6 +43,7 @@ export default {
       // Obtener valor del modal
       // @ts-ignore
       const totalInput = interaction.fields.getTextInputValue('total_points').trim();
+      logger.info(`🔍 Input recibido: ${totalInput}`);
 
       if (!totalInput) {
         return interaction.reply({
@@ -58,6 +63,7 @@ export default {
       });
 
       if (!stats) {
+        logger.info(`🔍 Creando nuevo registro de stats para userId: ${userId}`);
         // Crear nuevo registro si no existe
         stats = await prisma.partnershipStats.create({
           data: {
@@ -69,6 +75,8 @@ export default {
           }
         });
       }
+
+      logger.info(`🔍 Stats actuales - Total: ${stats.totalPoints}`);
 
       // Función para parsear el input y calcular el nuevo valor
       const calculateNewValue = (input: string, currentValue: number): number => {
@@ -95,6 +103,7 @@ export default {
 
       // Calcular nuevo valor de puntos totales
       const newTotalPoints = calculateNewValue(totalInput, stats.totalPoints);
+      logger.info(`🔍 Nuevo total calculado: ${newTotalPoints}`);
 
       // Actualizar en base de datos (solo puntos totales)
       await prisma.partnershipStats.update({
@@ -108,6 +117,8 @@ export default {
           totalPoints: newTotalPoints
         }
       });
+
+      logger.info(`✅ Puntos actualizados exitosamente en la base de datos`);
 
       // Obtener nombre del usuario
       let userName = 'Usuario';
@@ -152,12 +163,22 @@ export default {
         flags: MessageFlags.Ephemeral
       });
 
+      logger.info(`✅ Respuesta enviada al usuario`);
+
     } catch (e) {
       logger.error({ err: e }, 'Error en ldPointsModal');
-      await interaction.reply({
-        content: '❌ Error al actualizar los puntos.',
-        flags: MessageFlags.Ephemeral
-      });
+
+      // Intentar responder con el error
+      try {
+        if (!interaction.replied && !interaction.deferred) {
+          await interaction.reply({
+            content: '❌ Error al actualizar los puntos.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      } catch (replyError) {
+        logger.error({ err: replyError }, 'Error al enviar respuesta de error');
+      }
     }
   }
 };
