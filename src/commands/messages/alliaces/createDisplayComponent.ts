@@ -34,9 +34,9 @@ async function updateEditor(message: Message, data: EditorData): Promise<void> {
         payload.flags = MessageFlags.IsComponentsV2;
     }
 
-    // Si usamos Components V2, no podemos incluir content
+    // Si usamos Components V2, debemos limpiar explícitamente el content legado en el servidor
     if (payload.flags === MessageFlags.IsComponentsV2) {
-        delete payload.content;
+        payload.content = null;
     }
 
     await message.edit(payload);
