@@ -1,5 +1,6 @@
 import logger from "../../core/lib/logger";
-import { ButtonInteraction, MessageFlags, ContainerBuilder, TextDisplayBuilder, SectionBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ButtonInteraction, MessageFlags } from 'discord.js';
+import { ComponentType, ButtonStyle } from 'discord-api-types/v10';
 
 const OWNER_ID = '327207082203938818'; // Solo el dueño puede usar este panel
 
@@ -17,11 +18,13 @@ export default {
     try {
       await interaction.deferUpdate();
       
-      // Panel de configuración usando la API real de Discord.js 14.22.1
-      const configContainer = new ContainerBuilder()
-        .addTextDisplayComponents(
-          new TextDisplayBuilder()
-            .setContent(`## ⚙️ Configuración del Sistema de IA
+      // Panel de configuración usando objetos planos
+      const configPanel = {
+        type: ComponentType.Container,
+        components: [
+          {
+            type: ComponentType.TextDisplay,
+            content: `## ⚙️ Configuración del Sistema de IA
 -# Ajustes avanzados y configuración del servicio Gemini-chan.
 
 ## 🔧 Configuración Actual
@@ -51,26 +54,31 @@ model: "gemini-1.5-flash"       # modelo de Google AI
 temperature: 0.7                # creatividad de respuestas
 top_p: 0.85                     # diversidad de tokens
 top_k: 40                       # límite de candidatos
-\`\`\``)
-        )
-        .addSectionComponents(
-          new SectionBuilder()
-            .addTextDisplayComponents(
-              new TextDisplayBuilder()
-                .setContent("🔙 Volver al panel principal de administración")
-            )
-              .setButtonAccessory(
-              new ButtonBuilder()
-                .setCustomId('ai_refresh_stats')
-                .setLabel('Volver al Panel')
-                .setEmoji('🔙')
-                .setStyle(ButtonStyle.Primary)
-            )
-        );
+\`\`\``
+          },
+          {
+            type: ComponentType.Section,
+            components: [
+              {
+                type: ComponentType.TextDisplay,
+                content: "🔙 Volver al panel principal de administración"
+              }
+            ],
+            accessory: {
+              type: ComponentType.Button,
+              custom_id: 'ai_refresh_stats',
+              label: 'Volver al Panel',
+              emoji: { name: '🔙' },
+              style: ButtonStyle.Primary
+            }
+          }
+        ]
+      };
 
       await interaction.message.edit({
-        components: [configContainer],
-        flags: MessageFlags.IsComponentsV2
+        // @ts-ignore - Flag de componentes V2
+        flags: 32768,
+        components: [configPanel]
       });
       logger.info(`Panel de configuración de IA accedido por el dueño ${interaction.user.username} (${interaction.user.id})`);
 
