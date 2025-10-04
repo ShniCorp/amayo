@@ -56,6 +56,21 @@ export async function buildLeaderboardPanel(message: Message, isAdmin: boolean =
   const guildId = guild.id;
   const userId = message.author.id;
 
+  // Validar que el usuario y guild existan antes de proceder
+  if (!guild || !userId) {
+    const errorPanel = {
+      type: 17,
+      accent_color: 0xff6b6b,
+      components: [
+        { type: 10, content: '## ⚠️ Error de Usuario' },
+        { type: 10, content: '-# No se pudo identificar al usuario o servidor.' },
+        { type: 14, divider: true, spacing: 1 },
+        { type: 10, content: 'Por favor, intenta nuevamente el comando.' }
+      ]
+    };
+    return errorPanel;
+  }
+
   const [boards, ranks] = await Promise.all([
     getLeaderboardData(guildId),
     getSelfRanks(guildId, userId)
@@ -96,52 +111,77 @@ export async function buildLeaderboardPanel(message: Message, isAdmin: boolean =
 
   // Construir mapa de nombres visibles para los usuarios presentes en los top
   const ids = new Set<string>();
-  for (const x of boards.weekly) ids.add(x.userId);
-  for (const x of boards.monthly) ids.add(x.userId);
-  for (const x of boards.total) ids.add(x.userId);
+  for (const x of boards.weekly) {
+    if (x && x.userId) ids.add(x.userId);
+  }
+  for (const x of boards.monthly) {
+    if (x && x.userId) ids.add(x.userId);
+  }
+  for (const x of boards.total) {
+    if (x && x.userId) ids.add(x.userId);
+  }
 
   const idList = Array.from(ids);
   const nameMap = new Map<string, string>();
+
   // Intentar primero desde el cache del guild
   for (const id of idList) {
-    const m = guild.members.cache.get(id);
-    if (m) nameMap.set(id, m.displayName || m.user.username || id);
+    try {
+      const m = guild.members.cache.get(id);
+      if (m && m.user) {
+        nameMap.set(id, m.displayName || m.user.username || id);
+      }
+    } catch (error) {
+      console.warn(`Error getting cached member ${id}:`, error);
+    }
   }
+
   // Fetch individual para los que falten (evitar peticiones innecesarias)
   for (const id of idList) {
     if (nameMap.has(id)) continue;
     try {
       const m = await guild.members.fetch(id);
-      if (m) {
+      if (m && m.user) {
         nameMap.set(id, m.displayName || m.user.username || id);
         continue;
       }
-    } catch {}
+    } catch (error) {
+      console.warn(`Error fetching member ${id}:`, error);
+    }
+
     try {
       const u = await message.client.users.fetch(id);
-      if (u) {
-        nameMap.set(id, u.username || id);
+      if (u && u.username) {
+        nameMap.set(id, u.username);
         continue;
       }
-    } catch {}
-    // Fallback: no mostrar ID crudo; usar placeholder
+    } catch (error) {
+      console.warn(`Error fetching user ${id}:`, error);
+    }
+
+    // Fallback: usar placeholder para usuarios no encontrados
     nameMap.set(id, 'Usuario desconocido');
   }
 
   const weeklyLines = boards.weekly.length
-    ? boards.weekly.map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.weeklyPoints))
+    ? boards.weekly.filter(x => x && x.userId).map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.weeklyPoints || 0))
     : ['(sin datos)'];
 
   const monthlyLines = boards.monthly.length
-    ? boards.monthly.map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.monthlyPoints))
+    ? boards.monthly.filter(x => x && x.userId).map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.monthlyPoints || 0))
     : ['(sin datos)'];
 
   const totalLines = boards.total.length
-    ? boards.total.map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.totalPoints))
+    ? boards.total.filter(x => x && x.userId).map((x, i) => formatRow(i, nameMap.get(x.userId) || 'Usuario desconocido', x.totalPoints || 0))
     : ['(sin datos)'];
 
   const now = new Date();
   const ts = now.toISOString().replace('T', ' ').split('.')[0];
+
+  // Mensaje especial si el usuario no tiene datos
+  const userMessage = (ranks.weekly === 0 && ranks.monthly === 0 && ranks.total === 0)
+    ? 'No tienes puntos registrados aún • ¡Empieza a participar!'
+    : `Tus puestos → semanal: ${ranks.weekly || 0} • mensual: ${ranks.monthly || 0} • total: ${ranks.total || 0}`;
 
   // Botón base que todos ven
   const buttons: any[] = [
@@ -176,7 +216,7 @@ export async function buildLeaderboardPanel(message: Message, isAdmin: boolean =
       { type: 10, content: codeBlock(totalLines) },
 
       { type: 14, divider: true, spacing: 1 },
-      { type: 10, content: `Tus puestos → semanal: ${ranks.weekly || 0} • mensual: ${ranks.monthly || 0} • total: ${ranks.total || 0}` },
+      { type: 10, content: userMessage },
       { type: 10, content: `Última actualización: ${ts} UTC` },
 
       { type: 14, divider: false, spacing: 1 },
