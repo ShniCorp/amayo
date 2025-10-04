@@ -1,6 +1,6 @@
 import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
-import { TextChannel, DMChannel, ThreadChannel, EmbedBuilder, ChannelType } from "discord.js";
+import { TextChannel, DMChannel, ThreadChannel, ChannelType } from "discord.js";
 import { aiService } from "../../../core/services/AIService";
 
 /**
@@ -124,17 +124,9 @@ export const command: CommandMessage = {
     run: async (message, args) => {
         // Validaciones básicas
         if (!args || args.length === 0) {
-            const helpEmbed = new EmbedBuilder()
-                .setColor(0xFF69B4)
-                .setTitle('❌ Error: Mensaje requerido')
-                .setDescription(
-                    '**Uso:** `ai <tu mensaje>`\n' +
-                    '**Ejemplo:** `ai ¿Cómo funciona JavaScript?`\n' +
-                    '**Límite:** 4000 caracteres máximo'
-                )
-                .setFooter({ text: 'AI Chat mejorado con Gemini 2.5 Flash' });
-
-            await message.reply({ embeds: [helpEmbed] });
+            await message.reply({
+                content: '**Uso:** `ai <tu mensaje>`\n**Ejemplo:** `ai ¿Cómo funciona JavaScript?`\n**Límite:** 4000 caracteres máximo'
+            });
             return;
         }
 
@@ -145,9 +137,7 @@ export const command: CommandMessage = {
         // Verificar tipo de canal
         const channel = message.channel as TextChannel | DMChannel | ThreadChannel;
         if (!channel || !('send' in channel)) {
-            await message.reply({
-                content: "❌ **Error:** Este comando no se puede usar en este tipo de canal."
-            });
+            await message.reply({ content: "❌ **Error:** Este comando no se puede usar en este tipo de canal." });
             return;
         }
 
@@ -171,49 +161,26 @@ export const command: CommandMessage = {
                 { meta }
             );
 
-            // Crear embed de respuesta mejorado
-            const embed = new EmbedBuilder()
-                .setColor(0xFF69B4)
-                .setTitle('🌸 Gemini-chan')
-                .setDescription(aiResponse)
-                .setFooter({
-                    text: `Solicitado por ${message.author.username}`,
-                    icon_url: message.author.displayAvatarURL({ forceStatic: false })
-                })
-                .setTimestamp();
+            // Discord limita el contenido a ~2000 caracteres
+            const MAX_CONTENT = 2000;
+            if (aiResponse.length > MAX_CONTENT) {
+                const chunks = smartChunkText(aiResponse, MAX_CONTENT);
 
-            // Manejar respuestas largas de forma inteligente
-            if (aiResponse.length > 4000) {
-                // Dividir en chunks preservando markdown
-                const chunks = smartChunkText(aiResponse, 4000);
-
-                for (let i = 0; i < chunks.length && i < 3; i++) {
-                    const chunkEmbed = new EmbedBuilder()
-                        .setColor(0xFF69B4)
-                        .setTitle(i === 0 ? '🌸 Gemini-chan' : `🌸 Gemini-chan (${i + 1}/${chunks.length})`)
-                        .setDescription(chunks[i])
-                        .setFooter({
-                            text: `Solicitado por ${message.author.username} | Parte ${i + 1}`,
-                            icon_url: message.author.displayAvatarURL({ forceStatic: false })
-                        })
-                        .setTimestamp();
-
+                for (let i = 0; i < chunks.length && i < 6; i++) {
                     if (i === 0) {
-                        await message.reply({ embeds: [chunkEmbed] });
+                        await message.reply({ content: chunks[i] });
                     } else {
-                        await channel.send({ embeds: [chunkEmbed] });
+                        await channel.send({ content: chunks[i] });
                         // Pausa entre mensajes para evitar rate limits
-                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        await new Promise(resolve => setTimeout(resolve, 500));
                     }
                 }
 
-                if (chunks.length > 3) {
-                    await channel.send({
-                        content: "⚠️ **Nota:** La respuesta fue truncada. Intenta preguntas más específicas."
-                    });
+                if (chunks.length > 6) {
+                    await channel.send({ content: "⚠️ Nota: La respuesta fue truncada. Intenta una pregunta más específica." });
                 }
             } else {
-                await message.reply({ embeds: [embed] });
+                await message.reply({ content: aiResponse });
             }
 
             // Log para monitoreo (solo en desarrollo)
@@ -221,25 +188,9 @@ export const command: CommandMessage = {
                 const stats = aiService.getStats();
                 logger.info(`AI Request completado - Usuario: ${userId}, Queue: ${stats.queueLength}, Conversaciones activas: ${stats.activeConversations}`);
             }
-
         } catch (error: any) {
             logger.error(`Error en comando AI para usuario ${userId}:`, error);
-
-            // Crear embed de error informativo
-            const errorEmbed = new EmbedBuilder()
-                .setColor(0xFF4444)
-                .setTitle('❌ Error del Servicio de IA')
-                .setDescription(error.message || 'Error desconocido del servicio')
-                .addFields({
-                    name: '💡 Consejos',
-                    value: '• Verifica que tu mensaje no sea demasiado largo\n' +
-                           '• Espera unos segundos entre consultas\n' +
-                           '• Evita contenido inapropiado'
-                })
-                .setFooter({ text: 'Si el problema persiste, contacta a un administrador' })
-                .setTimestamp();
-
-            await message.reply({ embeds: [errorEmbed] });
+            await message.reply({ content: `❌ Error del Servicio de IA: ${error.message || 'Error desconocido del servicio'}` });
         } finally {
             // Limpiar indicador de escritura
             clearInterval(typingInterval);

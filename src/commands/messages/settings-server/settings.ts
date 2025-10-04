@@ -1,6 +1,6 @@
 import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
-import { ComponentType } from "discord-api-types/v10";
+import { ComponentType, TextInputStyle } from "discord-api-types/v10";
 import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 import { aiService } from "../../../core/services/AIService";
 
@@ -212,13 +212,30 @@ export const command: CommandMessage = {
                 const currentAiPrompt = currentServer?.aiRolePrompt ?? '';
                 const aiModal = {
                     title: "🧠 Configurar AI Role Prompt",
-                    custom_id: "ai_role_prompt_modal",
+                    customId: "ai_role_prompt_modal",
                     components: [
-                        { type: 1, components: [ { type: 4, custom_id: "ai_role_prompt_input", label: "Prompt de rol (opcional)", style: 2, placeholder: "Ej: Eres un asistente amistoso del servidor, responde en español, evita spoilers...", required: false, max_length: 1500, value: currentAiPrompt.slice(0, 1500) } ] }
+                        {
+                            type: ComponentType.Label,
+                            label: "Prompt de rol (opcional)",
+                            component: {
+                                type: ComponentType.TextInput,
+                                customId: "ai_role_prompt_input",
+                                style: TextInputStyle.Paragraph,
+                                required: false,
+                                placeholder: "Ej: Eres un asistente amistoso del servidor, responde en español, evita spoilers...",
+                                maxLength: 1500,
+                                value: currentAiPrompt.slice(0, 1500)
+                            }
+                        }
                     ]
-                };
+                } as const;
 
-                await interaction.showModal(aiModal);
+                try {
+                    await interaction.showModal(aiModal);
+                } catch (err) {
+                    try { await interaction.reply({ content: '❌ No se pudo abrir el modal de AI.', flags: 64 }); } catch {}
+                    return;
+                }
 
                 try {
                     const modalInteraction = await interaction.awaitModalSubmit({
@@ -226,7 +243,7 @@ export const command: CommandMessage = {
                         filter: (m: any) => m.customId === 'ai_role_prompt_modal' && m.user.id === message.author.id
                     });
 
-                    const newPromptRaw = modalInteraction.fields.getTextInputValue('ai_role_prompt_input') ?? '';
+                    const newPromptRaw = modalInteraction.components.getTextInputValue('ai_role_prompt_input') ?? '';
                     const newPrompt = newPromptRaw.trim();
                     const toSave: string | null = newPrompt.length > 0 ? newPrompt : null;
 
