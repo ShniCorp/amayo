@@ -225,8 +225,46 @@ export const command: CommandMessage = {
         try {
             let aiResponse: string;
 
-            // Usar el nuevo método con memoria persistente
-            if (isReplyToAI || true) { // Siempre usar memoria por ahora
+            // Verificar si hay imágenes adjuntas
+            const attachments = Array.from(message.attachments.values());
+            const hasImages = attachments.length > 0 && aiService.hasImageAttachments?.(attachments);
+
+            // Usar el nuevo método con memoria persistente y soporte para imágenes
+            if (hasImages) {
+                // Agregar información sobre las imágenes a los metadatos
+                const imageInfo = attachments
+                    .filter(att => att.contentType?.startsWith('image/') ||
+                                 ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'].some(ext =>
+                                     att.name?.toLowerCase().endsWith(ext)))
+                    .map(att => `${att.name} (${att.contentType || 'imagen'})`)
+                    .join(', ');
+
+                const enhancedMeta = messageMeta + (imageInfo ? ` | Imágenes adjuntas: ${imageInfo}` : '');
+
+                // Usar método específico para imágenes
+                const request = {
+                    userId,
+                    guildId,
+                    channelId: message.channel.id,
+                    prompt: prompt.trim(),
+                    priority: 'normal' as const,
+                    timestamp: Date.now(),
+                    aiRolePrompt: undefined,
+                    meta: enhancedMeta,
+                    messageId: message.id,
+                    referencedMessageId,
+                    attachments: attachments,
+                    client: message.client
+                };
+
+                // Procesar con imágenes
+                aiResponse = await new Promise((resolve, reject) => {
+                    request.resolve = resolve;
+                    request.reject = reject;
+                    aiService.requestQueue.push(request as any);
+                });
+            } else {
+                // Método normal sin imágenes
                 aiResponse = await aiService.processAIRequestWithMemory(
                     userId,
                     prompt,
@@ -235,15 +273,6 @@ export const command: CommandMessage = {
                     message.id,
                     referencedMessageId,
                     message.client,
-                    'normal',
-                    { meta: messageMeta }
-                );
-            } else {
-                // Método legacy para compatibilidad
-                aiResponse = await aiService.processAIRequest(
-                    userId,
-                    prompt,
-                    guildId,
                     'normal',
                     { meta: messageMeta }
                 );

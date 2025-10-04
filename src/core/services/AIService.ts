@@ -413,6 +413,10 @@ export class AIService {
         try {
             const { userId, prompt, guildId, channelId, messageId, referencedMessageId } = request;
             const context = await this.getOrCreateContextWithMemory(userId, guildId, channelId);
+
+            // Obtener imágenes adjuntas si existen
+            const messageAttachments = (request as any).attachments || [];
+            const hasImages = this.hasImageAttachments(messageAttachments);
             const isImageRequest = this.detectImageRequest(prompt);
 
             if (isImageRequest && context.imageRequests >= this.config.maxImageRequests) {
@@ -437,7 +441,6 @@ export class AIService {
             // Obtener jerarquía de roles si está en un servidor
             let roleHierarchy = '';
             if (guildId) {
-                // Necesitamos acceso al cliente de Discord - lo pasaremos desde el comando
                 const client = (request as any).client;
                 if (client) {
                     roleHierarchy = await this.getGuildRoleHierarchy(guildId, client);
@@ -448,7 +451,7 @@ export class AIService {
             const enhancedMeta = (request.meta || '') + roleHierarchy;
 
             // Construir prompt del sistema optimizado
-            const systemPrompt = this.buildSystemPrompt(
+            let systemPrompt = this.buildSystemPrompt(
                 prompt,
                 context,
                 isImageRequest,
@@ -456,9 +459,24 @@ export class AIService {
                 enhancedMeta
             );
 
+            // Procesar imágenes si las hay
+            let imageAttachments: any[] = [];
+            if (hasImages) {
+                imageAttachments = await this.processImageAttachments(messageAttachments);
+                if (imageAttachments.length > 0) {
+                    systemPrompt = `${systemPrompt}\n\n## Imágenes adjuntas:\nPor favor, analiza las imágenes proporcionadas y responde de acuerdo al contexto.`;
+                }
+            }
+
             // Usar la API correcta de Google Generative AI
+            // Para imágenes, usar gemini-2.5-flash (soporta multimodal)
+            // Para solo texto, usar gemini-2.5-flash-preview-09-2025
+            const modelName = hasImages && imageAttachments.length > 0
+                ? "gemini-2.5-flash"
+                : "gemini-2.5-flash-preview-09-2025";
+
             const model = this.genAI.getGenerativeModel({
-                model: "gemini-2.5-flash-preview-09-2025",
+                model: modelName,
                 generationConfig: {
                     maxOutputTokens: Math.min(this.config.maxOutputTokens, Math.max(1024, estimatedTokens * 0.5)),
                     temperature: 0.7,
@@ -477,7 +495,21 @@ export class AIService {
                 ]
             });
 
-            const result = await model.generateContent(systemPrompt);
+            // Construir el contenido para la API
+            let content: any;
+            if (hasImages && imageAttachments.length > 0) {
+                // Para multimodal (texto + imágenes)
+                content = [
+                    { text: systemPrompt },
+                    ...imageAttachments
+                ];
+                logger.info(`Procesando ${imageAttachments.length} imagen(es) con Gemini Vision`);
+            } else {
+                // Solo texto
+                content = systemPrompt;
+            }
+
+            const result = await model.generateContent(content);
             const response = await result.response;
             const aiResponse = response.text()?.trim();
 
@@ -493,7 +525,7 @@ export class AIService {
                 prompt,
                 aiResponse,
                 estimatedTokens,
-                isImageRequest,
+                isImageRequest || hasImages,
                 messageId,
                 referencedMessageId
             );
@@ -596,15 +628,272 @@ Responde de forma directa y útil:`;
     }
 
     /**
-     * Estimación de tokens más precisa
+     * Detectar si hay imágenes adjuntas en el mensaje para análisis
      */
-    private estimateTokens(text: string): number {
-        // Aproximación mejorada basada en la tokenización real
-        const words = text.split(/\s+/).length;
-        const chars = text.length;
+    private hasImageAttachments(attachments?: any[]): boolean {
+        if (!attachments || attachments.length === 0) return false;
 
-        // Fórmula híbrida más precisa
-        return Math.ceil((words * 1.3) + (chars * 0.25));
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.webp', '.bmp'];
+        const imageMimeTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp', 'image/bmp'];
+
+        return attachments.some(attachment => {
+            const hasImageExtension = imageExtensions.some(ext =>
+                attachment.name?.toLowerCase().endsWith(ext)
+            );
+            const hasImageMimeType = imageMimeTypes.includes(attachment.contentType?.toLowerCase());
+
+            return hasImageExtension || hasImageMimeType;
+        });
+    }
+
+    /**
+     * Procesar imágenes adjuntas para análisis con Gemini Vision
+     */
+    private async processImageAttachments(attachments: any[]): Promise<any[]> {
+        const imageAttachments = [];
+
+        for (const attachment of attachments) {
+            if (this.hasImageAttachments([attachment])) {
+                try {
+                    // Descargar la imagen
+                    const response = await fetch(attachment.url);
+                    if (!response.ok) {
+                        logger.warn(`Error descargando imagen: ${response.statusText}`);
+                        continue;
+                    }
+
+                    const arrayBuffer = await response.arrayBuffer();
+                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
+
+                    // Determinar el tipo MIME
+                    let mimeType = attachment.contentType || 'image/png';
+                    if (!mimeType.startsWith('image/')) {
+                        // Inferir del nombre del archivo
+                        const ext = attachment.name?.toLowerCase().split('.').pop();
+                        switch (ext) {
+                            case 'jpg':
+                            case 'jpeg':
+                                mimeType = 'image/jpeg';
+                                break;
+                            case 'png':
+                                mimeType = 'image/png';
+                                break;
+                            case 'gif':
+                                mimeType = 'image/gif';
+                                break;
+                            case 'webp':
+                                mimeType = 'image/webp';
+                                break;
+                            default:
+                                mimeType = 'image/png';
+                        }
+                    }
+
+                    imageAttachments.push({
+                        inlineData: {
+                            data: base64Data,
+                            mimeType: mimeType
+                        }
+                    });
+
+                    logger.debug(`Imagen procesada: ${attachment.name} (${mimeType})`);
+                } catch (error) {
+                    logger.warn(`Error procesando imagen ${attachment.name}: ${getErrorMessage(error)}`);
+                }
+            }
+        }
+
+        return imageAttachments;
+    }
+
+    /**
+     * Procesa una request de IA con soporte para imágenes adjuntas
+     */
+    async processAIRequestWithAttachments(
+        userId: string,
+        prompt: string,
+        attachments: any[],
+        guildId?: string,
+        channelId?: string,
+        messageId?: string,
+        referencedMessageId?: string,
+        client?: any,
+        priority: 'low' | 'normal' | 'high' = 'normal',
+        options?: { aiRolePrompt?: string; meta?: string }
+    ): Promise<string> {
+        // Validaciones exhaustivas
+        if (!prompt?.trim()) {
+            throw new Error('El prompt no puede estar vacío');
+        }
+
+        if (prompt.length > 4000) {
+            throw new Error('El prompt excede el límite de 4000 caracteres');
+        }
+
+        // Rate limiting por usuario
+        if (!this.checkRateLimit(userId)) {
+            throw new Error('Has excedido el límite de requests. Espera un momento.');
+        }
+
+        // Cooldown entre requests
+        const lastRequest = this.userCooldowns.get(userId) || 0;
+        const timeSinceLastRequest = Date.now() - lastRequest;
+
+        if (timeSinceLastRequest < this.config.cooldownMs) {
+            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
+            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
+        }
+
+        // Procesar imágenes adjuntas
+        let imageAnalysisResults = [];
+        if (attachments && attachments.length > 0) {
+            imageAnalysisResults = await this.processImageAttachments(attachments);
+        }
+
+        // Agregar a la queue con Promise
+        return new Promise((resolve, reject) => {
+            const request: AIRequest = {
+                userId,
+                guildId,
+                channelId,
+                prompt: prompt.trim(),
+                priority,
+                timestamp: Date.now(),
+                resolve,
+                reject,
+                aiRolePrompt: options?.aiRolePrompt,
+                meta: options?.meta,
+                messageId,
+                referencedMessageId,
+            };
+
+            // Insertar según prioridad
+            if (priority === 'high') {
+                this.requestQueue.unshift(request);
+            } else {
+                this.requestQueue.push(request);
+            }
+
+            // Timeout automático
+            setTimeout(() => {
+                const index = this.requestQueue.findIndex(r => r === request);
+                if (index !== -1) {
+                    this.requestQueue.splice(index, 1);
+                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
+                }
+            }, this.config.requestTimeout);
+
+            this.userCooldowns.set(userId, Date.now());
+        });
+    }
+
+    /**
+     * Procesar request de IA con imágenes adjuntas
+     */
+    private async processRequestWithAttachments(request: AIRequest, imageAttachments: any[]): Promise<void> {
+        try {
+            const { userId, prompt, guildId, channelId, messageId, referencedMessageId } = request;
+            const context = await this.getOrCreateContextWithMemory(userId, guildId, channelId);
+            const isImageRequest = this.detectImageRequest(prompt);
+
+            // Si el prompt es una solicitud de imagen, pero ya se alcanzó el límite, reiniciar conversación
+            if (isImageRequest && context.imageRequests >= this.config.maxImageRequests) {
+                this.resetConversation(userId, guildId);
+                logger.info(`Conversación reseteada para usuario ${userId} por límite de solicitudes de imagen`);
+            }
+
+            // Verificar límites de tokens
+            const estimatedTokens = this.estimateTokens(prompt);
+            if (context.totalTokens + estimatedTokens > this.config.maxInputTokens * this.config.tokenResetThreshold) {
+                this.resetConversation(userId, guildId);
+                logger.info(`Conversación reseteada para usuario ${userId} por límite de tokens`);
+            }
+
+            // Obtener prompt del sistema (desde opciones o DB)
+            let effectiveAiRolePrompt = request.aiRolePrompt;
+            if (effectiveAiRolePrompt === undefined && guildId) {
+                effectiveAiRolePrompt = (await this.getGuildAiPrompt(guildId)) ?? undefined;
+            }
+
+            // Obtener jerarquía de roles si está en un servidor
+            let roleHierarchy = '';
+            if (guildId) {
+                // Necesitamos acceso al cliente de Discord - lo pasaremos desde el comando
+                const client = (request as any).client;
+                if (client) {
+                    roleHierarchy = await this.getGuildRoleHierarchy(guildId, client);
+                }
+            }
+
+            // Construir metadatos mejorados
+            const enhancedMeta = (request.meta || '') + roleHierarchy;
+
+            // Construir prompt del sistema optimizado
+            const systemPrompt = this.buildSystemPrompt(
+                prompt,
+                context,
+                isImageRequest,
+                effectiveAiRolePrompt,
+                enhancedMeta
+            );
+
+            // Usar la API correcta de Google Generative AI
+            const model = this.genAI.getGenerativeModel({
+                model: "gemini-2.5-flash-preview-09-2025",
+                generationConfig: {
+                    maxOutputTokens: Math.min(this.config.maxOutputTokens, Math.max(1024, estimatedTokens * 0.5)),
+                    temperature: 0.7,
+                    topP: 0.85,
+                    topK: 40,
+                },
+                safetySettings: [
+                    {
+                        category: HarmCategory.HARM_CATEGORY_HARASSMENT,
+                        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+                    },
+                    {
+                        category: HarmCategory.HARM_CATEGORY_HATE_SPEECH,
+                        threshold: HarmBlockThreshold.BLOCK_MEDIUM_AND_ABOVE
+                    }
+                ]
+            });
+
+            const result = await model.generateContent(systemPrompt);
+            const response = await result.response;
+            const aiResponse = response.text()?.trim();
+
+            if (!aiResponse) {
+                const error = new Error('La IA no generó una respuesta válida');
+                request.reject(error);
+                return;
+            }
+
+            // Actualizar contexto con memoria persistente
+            await this.updateContextWithMemory(
+                context,
+                prompt,
+                aiResponse,
+                estimatedTokens,
+                isImageRequest,
+                messageId,
+                referencedMessageId
+            );
+
+            request.resolve(aiResponse);
+
+        } catch (error) {
+            // Manejo type-safe de errores sin ts-ignore
+            const errorMessage = this.parseAPIError(error);
+            const logMessage = getErrorMessage(error);
+            logger.error(`Error procesando AI request con imágenes para ${request.userId}: ${logMessage}`);
+
+            // Log adicional si es un Error con stack trace
+            if (isError(error) && error.stack) {
+                logger.error(`Stack trace completo: ${error.stack}`);
+            }
+
+            request.reject(new Error(errorMessage));
+        }
     }
 
     /**
