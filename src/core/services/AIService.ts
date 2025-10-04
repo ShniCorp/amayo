@@ -581,6 +581,248 @@ export class AIService {
     }
 
     /**
+     * Lista modelos de imagen visibles por la clave (si el SDK lo permite)
+     */
+    public async listImageModels(): Promise<string[]> {
+        if (!this.genAIv2 || !(this.genAIv2 as any).models?.listModels) return [];
+        try {
+            const listed: any = await (this.genAIv2 as any).models.listModels();
+            const models: string[] = Array.isArray(listed?.models)
+                ? listed.models.map((m: any) => m?.name || m?.model || m?.id).filter(Boolean)
+                : [];
+            // Filtrar a modelos de imagen de forma heurística
+            return models.filter((id) => /imagen|image/i.test(id));
+        } catch {
+            return [];
+        }
+    }
+
+    // Override manual del modelo de imágenes (útil para runtime)
+    public setImageModel(model: string | null | undefined): void {
+        this.imageModelName = model ?? null;
+        if (this.imageModelName) {
+            logger.info({ model: this.imageModelName }, 'Modelo de imágenes fijado manualmente');
+        } else {
+            logger.info('Modelo de imágenes reseteado; se volverá a detectar automáticamente');
+        }
+    }
+
+    /**
+     * Parser de errores (versión legacy no utilizada)
+     */
+    private parseAPIErrorLegacy(error: unknown): string {
+        // Delegar a la versión nueva
+        return this.parseAPIError(error);
+    }
+
+    /**
+     * Versión legacy de processAIRequestWithMemory (sin uso externo)
+     */
+    async processAIRequestWithMemoryLegacy(
+        userId: string,
+        prompt: string,
+        guildId?: string,
+        channelId?: string,
+        messageId?: string,
+        referencedMessageId?: string,
+        client?: any,
+        priority: 'low' | 'normal' | 'high' = 'normal',
+        options?: { aiRolePrompt?: string; meta?: string; attachments?: any[] }
+    ): Promise<string> {
+        // Validaciones exhaustivas
+        if (!prompt?.trim()) {
+            throw new Error('El prompt no puede estar vacío');
+        }
+
+        if (prompt.length > 4000) {
+            throw new Error('El prompt excede el límite de 4000 caracteres');
+        }
+
+        // Rate limiting por usuario
+        if (!this.checkRateLimit(userId)) {
+            throw new Error('Has excedido el límite de requests. Espera un momento.');
+        }
+
+        // Cooldown entre requests
+        const lastRequest = this.userCooldowns.get(userId) || 0;
+        const timeSinceLastRequest = Date.now() - lastRequest;
+
+        if (timeSinceLastRequest < this.config.cooldownMs) {
+            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
+            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
+        }
+
+        // Agregar a la queue con Promise
+        return new Promise((resolve, reject) => {
+            const request: AIRequest & { client?: any; attachments?: any[] } = {
+                userId,
+                guildId,
+                channelId,
+                prompt: prompt.trim(),
+                priority,
+                timestamp: Date.now(),
+                resolve,
+                reject,
+                aiRolePrompt: options?.aiRolePrompt,
+                meta: options?.meta,
+                messageId,
+                referencedMessageId,
+                client,
+                attachments: options?.attachments
+            };
+
+            // Insertar según prioridad
+            if (priority === 'high') {
+                this.requestQueue.unshift(request);
+            } else {
+                this.requestQueue.push(request);
+            }
+
+            // Timeout automático
+            setTimeout(() => {
+                const index = this.requestQueue.findIndex(r => r === request);
+                if (index !== -1) {
+                    this.requestQueue.splice(index, 1);
+                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
+                }
+            }, this.config.requestTimeout);
+
+            this.userCooldowns.set(userId, Date.now());
+        });
+    }
+
+
+    /**
+     * Parser mejorado de errores de API - Type-safe sin ts-ignore
+     */
+    private parseAPIError(error: unknown): string {
+        // Extraer mensaje de forma type-safe
+        const message = getErrorMessage(error).toLowerCase();
+
+        // Verificar si es un error de API estructurado
+        if (isAPIError(error)) {
+            const apiMessage = error.message.toLowerCase();
+
+            if (apiMessage.includes('api key') || apiMessage.includes('authentication')) {
+                return 'Error de autenticación con la API de IA';
+            }
+            if (apiMessage.includes('quota') || apiMessage.includes('exceeded')) {
+                return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
+            }
+            if (apiMessage.includes('safety') || apiMessage.includes('blocked')) {
+                return 'Tu mensaje fue bloqueado por las políticas de seguridad';
+            }
+            if (apiMessage.includes('timeout') || apiMessage.includes('deadline')) {
+                return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
+            }
+            if (apiMessage.includes('model not found')) {
+                return 'El modelo de IA no está disponible en este momento';
+            }
+            if (apiMessage.includes('token') || apiMessage.includes('length')) {
+                return 'El mensaje excede los límites permitidos';
+            }
+        }
+
+        // Manejo genérico para otros tipos de errores
+        if (message.includes('api key') || message.includes('authentication')) {
+            return 'Error de autenticación con la API de IA';
+        }
+        if (message.includes('quota') || message.includes('exceeded')) {
+            return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
+        }
+        if (message.includes('safety') || message.includes('blocked')) {
+            return 'Tu mensaje fue bloqueado por las políticas de seguridad';
+        }
+        if (message.includes('timeout') || message.includes('deadline')) {
+            return 'La solicitud tardó demasiado tiempo. Intenta de nuevo';
+        }
+        if (message.includes('model not found')) {
+            return 'El modelo de IA no está disponible en este momento';
+        }
+        if (message.includes('token') || message.includes('length')) {
+            return 'El mensaje excede los límites permitidos';
+        }
+
+        return 'Error temporal del servicio de IA. Intenta de nuevo';
+    }
+
+    /**
+     * Procesa una request de IA con soporte para conversaciones y memoria persistente
+     */
+    async processAIRequestWithMemory(
+        userId: string,
+        prompt: string,
+        guildId?: string,
+        channelId?: string,
+        messageId?: string,
+        referencedMessageId?: string,
+        client?: any,
+        priority: 'low' | 'normal' | 'high' = 'normal',
+        options?: { aiRolePrompt?: string; meta?: string; attachments?: any[] }
+    ): Promise<string> {
+        // Validaciones exhaustivas
+        if (!prompt?.trim()) {
+            throw new Error('El prompt no puede estar vacío');
+        }
+
+        if (prompt.length > 4000) {
+            throw new Error('El prompt excede el límite de 4000 caracteres');
+        }
+
+        // Rate limiting por usuario
+        if (!this.checkRateLimit(userId)) {
+            throw new Error('Has excedido el límite de requests. Espera un momento.');
+        }
+
+        // Cooldown entre requests
+        const lastRequest = this.userCooldowns.get(userId) || 0;
+        const timeSinceLastRequest = Date.now() - lastRequest;
+
+        if (timeSinceLastRequest < this.config.cooldownMs) {
+            const waitTime = Math.ceil((this.config.cooldownMs - timeSinceLastRequest) / 1000);
+            throw new Error(`Debes esperar ${waitTime} segundos antes de hacer otra consulta`);
+        }
+
+        // Agregar a la queue con Promise
+        return new Promise((resolve, reject) => {
+            const request: AIRequest & { client?: any; attachments?: any[] } = {
+                userId,
+                guildId,
+                channelId,
+                prompt: prompt.trim(),
+                priority,
+                timestamp: Date.now(),
+                resolve,
+                reject,
+                aiRolePrompt: options?.aiRolePrompt,
+                meta: options?.meta,
+                messageId,
+                referencedMessageId,
+                client,
+                attachments: options?.attachments
+            };
+
+            // Insertar según prioridad
+            if (priority === 'high') {
+                this.requestQueue.unshift(request);
+            } else {
+                this.requestQueue.push(request);
+            }
+
+            // Timeout automático
+            setTimeout(() => {
+                const index = this.requestQueue.findIndex(r => r === request);
+                if (index !== -1) {
+                    this.requestQueue.splice(index, 1);
+                    reject(new Error('Request timeout: La solicitud tardó demasiado tiempo'));
+                }
+            }, this.config.requestTimeout);
+
+            this.userCooldowns.set(userId, Date.now());
+        });
+    }
+
+    /**
      * Procesa una request individual con manejo completo de errores y memoria persistente
      */
     private async processRequest(request: AIRequest): Promise<void> {
