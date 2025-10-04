@@ -181,7 +181,7 @@ export const command: CommandMessage = {
         // @ts-ignore
         await updateEditor(editorMessage, {
             content: null,
-            flags: 32768,
+            flags: MessageFlags.IsComponentsV2,
             display: await renderPreview(blockState, message.member, message.guild),
             components: btns(false)
         });
@@ -196,30 +196,40 @@ export const command: CommandMessage = {
             if (i.isButton()) {
                 switch (i.customId) {
                     case "save_block": {
-                        await i.deferUpdate();
-                        await client.prisma.blockV2Config.update({
-                            where: { guildId_name: { guildId: message.guildId!, name: blockName } },
-                            //@ts-ignore
-                            data: { config: blockState }
-                        });
-                        // Mantener el editor activo y los botones funcionando
-                        await updateEditor(editorMessage, {
-                            // @ts-ignore
-                            display: await renderPreview(blockState, message.member, message.guild),
-                            components: btns(false)
-                        });
-                        // Confirmación efímera
+                        try { await i.deferUpdate(); } catch {}
                         try {
-                            // @ts-ignore
-                            await i.followUp({ flags: 64, content: `✅ Cambios de "${blockName}" guardados.` });
-                        } catch {}
-                        // No detener el collector para permitir mover/eliminar después de guardar
+                            await client.prisma.blockV2Config.update({
+                                where: { guildId_name: { guildId: message.guildId!, name: blockName } },
+                                //@ts-ignore
+                                data: { config: blockState }
+                            });
+                            try {
+                                // @ts-ignore
+                                await i.followUp({ flags: MessageFlags.Ephemeral, content: `✅ Cambios de "${blockName}" guardados.` });
+                            } catch {}
+                            // Intentar borrar el editor; si falla, deshabilitar componentes como fallback
+                            try { await editorMessage.delete(); }
+                            catch {
+                                try {
+                                    await updateEditor(editorMessage, {
+                                        display: { type: 17, components: [ { type: 10, content: '✅ Guardado. Puedes cerrar este mensaje.' } ] },
+                                        components: []
+                                    });
+                                } catch {}
+                            }
+                            collector.stop('saved');
+                        } catch (err) {
+                            try {
+                                // @ts-ignore
+                                await i.followUp({ flags: MessageFlags.Ephemeral, content: '❌ Error al guardar el bloque. Inténtalo de nuevo.' });
+                            } catch {}
+                        }
                         return;
                     }
                     case "cancel_block": {
-                        await i.deferUpdate();
-                        await editorMessage.delete();
-                        collector.stop();
+                        try { await i.deferUpdate(); } catch {}
+                        try { await editorMessage.delete(); } catch {}
+                        collector.stop('cancelled');
                         return;
                     }
                     case "edit_title": {

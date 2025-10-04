@@ -318,7 +318,7 @@ async function handleButtonInteraction(
             break;
 
         case "save_block":
-            await handleSaveBlock(interaction, client, blockName, blockState, originalMessage.guildId!);
+            await handleSaveBlock(interaction, editorMessage, client, blockName, blockState, originalMessage.guildId!);
             break;
 
         case "cancel_block":
@@ -703,6 +703,7 @@ async function handleShowRaw(interaction: ButtonInteraction, blockState: BlockSt
 
 async function handleSaveBlock(
     interaction: ButtonInteraction,
+    editorMessage: Message,
     client: Amayo,
     blockName: string,
     blockState: BlockState,
@@ -722,7 +723,8 @@ async function handleSaveBlock(
             flags: MessageFlags.Ephemeral
         });
 
-        logger.info(`Block created: ${blockName} in guild ${guildId}`);
+        // Cerrar el editor eliminando el mensaje del editor
+        try { await editorMessage.delete(); } catch {}
     } catch (error) {
         //@ts-ignore
         logger.error("Error saving block:", error);
