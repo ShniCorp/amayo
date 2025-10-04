@@ -16,6 +16,7 @@ import type {
 } from "../../../core/types/displayComponents";
 import type Amayo from "../../../core/client";
 import type { JsonValue } from "@prisma/client/runtime/library";
+import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
 interface BlockListItem {
     name: string;
@@ -29,17 +30,17 @@ interface ActionRowBuilder {
 }
 
 export const command: CommandMessage = {
-    name: "lista-embeds",
+    name: "lista-bloques",
     type: "message",
-    aliases: ["embeds", "ver-embeds", "embedlist"],
+    aliases: ["bloques", "ver-bloques", "blocks"],
     cooldown: 10,
     description: "Muestra todos los bloques DisplayComponents configurados en el servidor",
     category: "Alianzas",
-    usage: "lista-embeds",
+    usage: "lista-bloques",
     run: async (message: Message, args: string[], client: Amayo): Promise<void> => {
-        // Permission check
-        if (!message.member?.permissions.has("Administrator")) {
-            await message.reply("❌ No tienes permisos de Administrador.");
+        const allowed = await hasManageGuildOrStaff(message.member, message.guildId!, client.prisma);
+        if (!allowed) {
+            await message.reply("❌ No tienes permisos de ManageGuild ni rol de staff.");
             return;
         }
 

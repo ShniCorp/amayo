@@ -1,11 +1,11 @@
 import logger from "../../core/lib/logger";
 import { 
   ButtonInteraction, 
-  MessageFlags, 
-  PermissionFlagsBits
+  MessageFlags
 } from 'discord.js';
 import { prisma } from '../../core/database/prisma';
 import { ComponentType, TextInputStyle } from 'discord-api-types/v10';
+import { hasManageGuildOrStaff } from "../../core/lib/permissions";
 
 export default {
   customId: 'ld_manage_points',
@@ -17,11 +17,12 @@ export default {
       });
     }
 
-    // Verificar permisos de administrador
+    // Verificar permisos (ManageGuild o rol de staff)
     const member = await interaction.guild.members.fetch(interaction.user.id);
-    if (!member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+    const allowed = await hasManageGuildOrStaff(member, interaction.guild.id, prisma);
+    if (!allowed) {
       return interaction.reply({
-        content: '❌ Solo los administradores pueden gestionar puntos.',
+        content: '❌ Solo admins o staff pueden gestionar puntos.',
         flags: MessageFlags.Ephemeral
       });
     }

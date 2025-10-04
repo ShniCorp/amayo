@@ -12,6 +12,7 @@ import {listVariables} from "../../../core/lib/vars";
 import type Amayo from "../../../core/client";
 import {BlockState, DisplayComponentUtils, EditorActionRow} from "../../../core/types/displayComponentEditor";
 import type {DisplayComponentContainer} from "../../../core/types/displayComponents";
+import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
 interface EditorData {
     content?: string;
@@ -51,8 +52,9 @@ export const command: CommandMessage = {
     category: "Alianzas",
     usage: "crear-embed <nombre>",
     run: async (message, args, client) => {
-        if (!message.member?.permissions.has("Administrator")) {
-            await message.reply("❌ No tienes permisos de Administrador.");
+        const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, client.prisma);
+        if (!allowed) {
+            await message.reply("❌ No tienes permisos de ManageGuild ni rol de staff.");
             return;
         }
 
@@ -719,7 +721,7 @@ async function handleSaveBlock(
         });
 
         await interaction.reply({
-            content: `✅ **Bloque guardado exitosamente!**\n\n📄 **Nombre:** \`${blockName}\`\n🎨 **Componentes:** ${blockState.components.length}\n\n🎯 **Uso:** \`!send ${blockName}\``,
+            content: `✅ **Bloque guardado exitosamente!**\n\n📄 **Nombre:** \`${blockName}\`\n🎨 **Componentes:** ${blockState.components.length}\n\n🎯 **Uso:** \`!send-embed ${blockName}\``,
             flags: MessageFlags.Ephemeral
         });
 

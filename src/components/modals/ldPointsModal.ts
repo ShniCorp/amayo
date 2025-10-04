@@ -2,13 +2,13 @@ import logger from "../../core/lib/logger";
 import { 
   ModalSubmitInteraction, 
   MessageFlags,
-  PermissionFlagsBits,
   EmbedBuilder,
   User,
   Collection,
   Snowflake
 } from 'discord.js';
 import { prisma } from '../../core/database/prisma';
+import { hasManageGuildOrStaff } from "../../core/lib/permissions";
 
 interface UserSelectComponent {
   custom_id: string;
@@ -36,11 +36,12 @@ export default {
       });
     }
 
-    // Verificar permisos
+    // Verificar permisos (ManageGuild o rol staff)
     const member = await interaction.guild.members.fetch(interaction.user.id);
-    if (!member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+    const allowed = await hasManageGuildOrStaff(member, interaction.guild.id, prisma);
+    if (!allowed) {
       return interaction.reply({
-        content: '❌ Solo los administradores pueden gestionar puntos.',
+        content: '❌ Solo admins o staff pueden gestionar puntos.',
         flags: MessageFlags.Ephemeral
       });
     }

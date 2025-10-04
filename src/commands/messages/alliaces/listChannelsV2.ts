@@ -263,13 +263,13 @@ async function buildChannelListPanel(message: Message) {
 }
 
 export const command: CommandMessage = {
-  name: "listar-canales-alianza-v2",
+  name: "lista-canales",
   type: "message",
-  aliases: ["listchannels-alliance-v2", "listalchannel-v2", "channelsally-v2", "alliancechannels-v2"],
+  aliases: ["lca", "channelist", "alliacechannels"],
   cooldown: 5,
   description: "Lista todos los canales configurados para alianzas (versión V2 con components)",
   category: "Alianzas",
-  usage: "listar-canales-alianza-v2",
+  usage: "lista-canales",
   run: async (message) => {
     if (!message.guild) {
       await message.reply({ content: '❌ Este comando solo puede usarse en servidores.' });

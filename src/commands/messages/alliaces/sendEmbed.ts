@@ -3,6 +3,7 @@ import { MessageFlags } from "discord.js";
 import { DisplayComponentUtils } from "../../../core/types/displayComponentEditor";
 import { sendComponentsV2Message } from "../../../core/api/discordAPI";
 import logger from "../../../core/lib/logger";
+import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
 export const command: CommandMessage = {
     name: "send-embed",
@@ -13,9 +14,9 @@ export const command: CommandMessage = {
     category: "Alianzas",
     usage: "send-embed <nombre>",
     run: async (message, args, client) => {
-        // Requiere administrador para evitar abuso mientras se prueba
-        if (!message.member?.permissions.has("Administrator")) {
-            await message.reply("❌ No tienes permisos de Administrador.");
+        const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, client.prisma);
+        if (!allowed) {
+            await message.reply("❌ No tienes permisos de ManageGuild ni rol de staff.");
             return;
         }
 
@@ -35,7 +36,6 @@ export const command: CommandMessage = {
                 return;
             }
 
-            // Renderizamos usando la misma utilidad del editor (fuente: node_modules/discord.js APIs via repo util DisplayComponentUtils)
             const container = await DisplayComponentUtils.renderPreview(
                 // @ts-ignore - guardamos BlockState como config
                 existingBlock.config,
@@ -43,7 +43,6 @@ export const command: CommandMessage = {
                 message.guild!
             );
 
-            // Enviamos como Components v2 (fuente: repositorio local sendComponentsV2Message)
             await sendComponentsV2Message(message.channel.id, {
                 components: [container as any],
                 replyToMessageId: message.id
@@ -59,4 +58,3 @@ export const command: CommandMessage = {
         }
     }
 };
-

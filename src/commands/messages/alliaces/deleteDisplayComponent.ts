@@ -10,6 +10,7 @@ import {
 import { CommandMessage } from "../../../core/types/commands";
 import type Amayo from "../../../core/client";
 import type { JsonValue } from "@prisma/client/runtime/library";
+import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
 interface BlockItem {
     name: string;
@@ -22,16 +23,17 @@ interface ActionRowBuilder {
 }
 
 export const command: CommandMessage = {
-    name: "eliminar-embed",
+    name: "eliminar-bloque",
     type: "message",
-    aliases: ["embed-eliminar", "borrar-embed", "embeddelete"],
+    aliases: ["bloque-eliminar", "bloque-embed", "blockdelete"],
     cooldown: 10,
     description: "Elimina bloques DisplayComponents del servidor",
-    category: "Alianzas",
-    usage: "eliminar-embed [nombre_bloque]",
+    category: "Creacion",
+    usage: "eliminar-bloque [nombre_bloque]",
     run: async (message: Message, args: string[], client: Amayo): Promise<void> => {
-        if (!message.member?.permissions.has("Administrator")) {
-            await message.reply("❌ No tienes permisos de Administrador.");
+        const allowed = await hasManageGuildOrStaff(message.member, message.guildId!, client.prisma);
+        if (!allowed) {
+            await message.reply("❌ No tienes permisos de ManageGuild ni rol de staff.");
             return;
         }
 

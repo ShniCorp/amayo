@@ -2,6 +2,7 @@ import { CommandMessage } from "../../../core/types/commands";
 import { MessageFlags } from "discord.js";
 import { ComponentType, ButtonStyle, TextInputStyle } from "discord-api-types/v10";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
+import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
 // Botones de edición (máx 5 por fila)
 const btns = (disabled = false) => ([
@@ -134,8 +135,9 @@ export const command: CommandMessage = {
     category: "Alianzas",
     usage: "editar-embed <nombre>",
     run: async (message, args, client) => {
-        if (!message.member?.permissions.has("Administrator")) {
-            await message.reply("❌ No tienes permisos de Administrador.");
+        const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, client.prisma);
+        if (!allowed) {
+            await message.reply("❌ No tienes permisos de ManageGuild ni rol de staff.");
             return;
         }
 
@@ -149,7 +151,7 @@ export const command: CommandMessage = {
             where: { guildId: message.guild!.id, name: blockName }
         });
         if (!existingBlock) {
-            await message.reply("❌ Block no encontrado. Usa `!blockcreatev2 <nombre>` para crear uno nuevo.");
+            await message.reply("❌ Block no encontrado. Usa `!editar-bloque <nombre>` para crear uno nuevo.");
             return;
         }
 

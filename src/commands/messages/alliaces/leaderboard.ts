@@ -1,9 +1,10 @@
 // Comando para mostrar el leaderboard de alianzas con botón de refresco
 // @ts-ignore
 import { CommandMessage } from "../../../core/types/commands";
+import { PermissionFlagsBits } from "discord.js";
+import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import { prisma } from "../../../core/database/prisma";
 import type { Message } from "discord.js";
-import { PermissionFlagsBits } from "discord.js";
 
 const MAX_ENTRIES = 10;
 
@@ -236,7 +237,7 @@ export const command: CommandMessage = {
   aliases: ['ld'],
   cooldown: 5,
   description: 'Muestra el leaderboard de alianzas (semanal, mensual y total) con botón de refresco.',
-  category: 'Utilidad',
+  category: 'Alianzas',
   usage: 'leaderboard',
   run: async (message) => {
     if (!message.guild) {
@@ -244,9 +245,9 @@ export const command: CommandMessage = {
       return;
     }
 
-    // Verificar si el usuario es administrador
+    // Verificar si el usuario es admin o staff
     const member = await message.guild.members.fetch(message.author.id);
-    const isAdmin = member.permissions.has(PermissionFlagsBits.ManageGuild);
+    const isAdmin = await hasManageGuildOrStaff(member, message.guild.id, prisma);
 
     const panel = await buildLeaderboardPanel(message, isAdmin);
     await message.reply({
