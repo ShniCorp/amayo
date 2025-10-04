@@ -29,7 +29,7 @@ export default {
     }
 
     try {
-      // Obtener valores del nuevo formato de modal
+      // Obtener valores del modal - usando la estructura de example.ts.txt
       const totalInput = interaction.components.getTextInputValue('points_input').trim();
       const selectedUsers = interaction.components.getSelectedUsers('user_select');
 
@@ -174,7 +174,7 @@ export default {
 
       logger.info(`✅ Puntos actualizados exitosamente en la base de datos`);
 
-      // Obtener nombre del usuario
+      // Obtener nombre del usuario usando la información del UserSelect
       const userName = selectedUser?.tag ?? selectedUser?.username ?? userId;
 
       // Calcular las diferencias
@@ -208,29 +208,23 @@ export default {
             inline: true
           }
         )
-        .setTimestamp()
-        .setFooter({ text: `Modificado por ${interaction.user.username}` });
+        .setFooter({ text: `Actualizado por ${interaction.user.username}` })
+        .setTimestamp();
 
       await interaction.reply({
         embeds: [embed],
         flags: MessageFlags.Ephemeral
       });
 
-      logger.info(`✅ Respuesta enviada al usuario`);
+    } catch (error) {
+        //@ts-ignore
+      logger.error('❌ Error en ldPointsModal:', error);
 
-    } catch (e) {
-      logger.error({ err: e }, 'Error en ldPointsModal');
-
-      // Intentar responder con el error
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: '❌ Error al actualizar los puntos.',
-            flags: MessageFlags.Ephemeral
-          });
-        }
-      } catch (replyError) {
-        logger.error({ err: replyError }, 'Error al enviar respuesta de error');
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: '❌ Error interno al procesar la solicitud. Revisa los logs para más detalles.',
+          flags: MessageFlags.Ephemeral
+        });
       }
     }
   }

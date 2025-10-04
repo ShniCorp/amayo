@@ -27,7 +27,7 @@ export default {
     }
 
     try {
-      // Obtener todos los usuarios con puntos en este servidor (limitado a 25 para el UserSelect)
+      // Obtener estadísticas para filtrar usuarios disponibles
       const stats = await prisma.partnershipStats.findMany({
         where: { guildId: interaction.guild.id },
         orderBy: { totalPoints: 'desc' },
@@ -41,7 +41,7 @@ export default {
         });
       }
 
-      // Crear modal con TextInput y UserSelect usando el nuevo formato de discord.js dev
+      // Crear modal usando la estructura de example.ts.txt (sin Builders)
       const modal = {
         title: 'Gestionar Puntos de Alianza',
         customId: 'ld_points_modal',
@@ -65,14 +65,14 @@ export default {
           },
           {
             type: ComponentType.Label,
-            label: 'Selecciona el usuario (del leaderboard)',
+            label: 'Selecciona el usuario del leaderboard',
             component: {
               type: ComponentType.UserSelect,
               customId: 'user_select',
               required: true,
               minValues: 1,
               maxValues: 1,
-              placeholder: 'Elige un usuario...',
+              placeholder: 'Elige un usuario del leaderboard...',
               // Filtrar solo usuarios que están en el leaderboard
               defaultUsers: stats.map(s => s.userId)
             },
@@ -81,8 +81,10 @@ export default {
       } as const;
 
       await interaction.showModal(modal);
+
     } catch (e) {
-      logger.error({ err: e }, 'Error en ldManagePoints');
+        //@ts-ignore
+      logger.error('Error en ldManagePoints:', e);
       await interaction.reply({
         content: '❌ Error al abrir el modal de gestión.',
         flags: MessageFlags.Ephemeral
