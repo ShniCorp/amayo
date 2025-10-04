@@ -1,13 +1,11 @@
 import {
-    ActionRowBuilder,
     ButtonInteraction,
     Message,
     MessageComponentInteraction,
     MessageFlags,
-    ModalBuilder, TextChannel,
-    TextInputBuilder,
-    TextInputStyle,
+    TextChannel,
 } from "discord.js";
+import { ComponentType, TextInputStyle } from "discord-api-types/v10";
 import logger from "../../../core/lib/logger";
 import {CommandMessage} from "../../../core/types/commands";
 import {listVariables} from "../../../core/lib/vars";
@@ -128,7 +126,10 @@ async function handleEditorInteractions(
         filter: (interaction: MessageComponentInteraction) => interaction.user.id === originalMessage.author.id
     });
 
-    collector.on("collect", async (interaction: ButtonInteraction) => {
+    collector.on("collect", async (interaction: MessageComponentInteraction) => {
+        // Verificar que sea una interacción de botón
+        if (!interaction.isButton()) return;
+
         try {
             await handleButtonInteraction(
                 interaction,
@@ -227,27 +228,31 @@ async function handleEditTitle(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = new ModalBuilder()
-        .setCustomId("edit_title_modal")
-        .setTitle("Editar Título del Bloque");
-
-    const titleInput = new TextInputBuilder()
-        .setCustomId("title_input")
-        .setLabel("Título")
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder("Escribe el título del bloque...")
-        .setValue(blockState.title || "")
-        .setRequired(true)
-        .setMaxLength(256);
-
-    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(titleInput);
-    modal.addComponents(actionRow);
+    const modal = {
+        title: "Editar Título del Bloque",
+        customId: "edit_title_modal",
+        components: [
+            {
+                type: ComponentType.Label,
+                label: "Título",
+                component: {
+                    type: ComponentType.TextInput,
+                    customId: "title_input",
+                    style: TextInputStyle.Short,
+                    required: true,
+                    placeholder: "Escribe el título del bloque...",
+                    value: blockState.title || "",
+                    maxLength: 256
+                }
+            }
+        ]
+    } as const;
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const newTitle = modalInteraction.fields.getTextInputValue("title_input").trim();
+        const newTitle = modalInteraction.components.getTextInputValue("title_input").trim();
 
         if (newTitle) {
             blockState.title = newTitle;
@@ -263,7 +268,6 @@ async function handleEditTitle(
         });
     } catch {
         // Modal timed out or error occurred
-        // no-op
     }
 }
 
@@ -273,27 +277,31 @@ async function handleEditDescription(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = new ModalBuilder()
-        .setCustomId("edit_description_modal")
-        .setTitle("Editar Descripción del Bloque");
-
-    const descriptionInput = new TextInputBuilder()
-        .setCustomId("description_input")
-        .setLabel("Descripción")
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder("Escribe la descripción del bloque...")
-        .setValue(blockState.description || "")
-        .setRequired(false)
-        .setMaxLength(4000);
-
-    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(descriptionInput);
-    modal.addComponents(actionRow);
+    const modal = {
+        title: "Editar Descripción del Bloque",
+        customId: "edit_description_modal",
+        components: [
+            {
+                type: ComponentType.Label,
+                label: "Descripción",
+                component: {
+                    type: ComponentType.TextInput,
+                    customId: "description_input",
+                    style: TextInputStyle.Paragraph,
+                    required: false,
+                    placeholder: "Escribe la descripción del bloque...",
+                    value: blockState.description || "",
+                    maxLength: 4000
+                }
+            }
+        ]
+    } as const;
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const newDescription = modalInteraction.fields.getTextInputValue("description_input").trim();
+        const newDescription = modalInteraction.components.getTextInputValue("description_input").trim();
 
         blockState.description = newDescription || undefined;
         await updateEditor(editorMessage, {
@@ -316,27 +324,31 @@ async function handleEditColor(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = new ModalBuilder()
-        .setCustomId("edit_color_modal")
-        .setTitle("Editar Color del Bloque");
-
-    const colorInput = new TextInputBuilder()
-        .setCustomId("color_input")
-        .setLabel("Color (formato HEX)")
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder("#FF5733 o FF5733")
-        .setValue(blockState.color ? `#${blockState.color.toString(16).padStart(6, '0')}` : "")
-        .setRequired(false)
-        .setMaxLength(7);
-
-    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(colorInput);
-    modal.addComponents(actionRow);
+    const modal = {
+        title: "Editar Color del Bloque",
+        customId: "edit_color_modal",
+        components: [
+            {
+                type: ComponentType.Label,
+                label: "Color (formato HEX)",
+                component: {
+                    type: ComponentType.TextInput,
+                    customId: "color_input",
+                    style: TextInputStyle.Short,
+                    required: false,
+                    placeholder: "#FF5733 o FF5733",
+                    value: blockState.color ? `#${blockState.color.toString(16).padStart(6, '0')}` : "",
+                    maxLength: 7
+                }
+            }
+        ]
+    } as const;
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const colorValue = modalInteraction.fields.getTextInputValue("color_input").trim();
+        const colorValue = modalInteraction.components.getTextInputValue("color_input").trim();
 
         if (colorValue) {
             const cleanColor = colorValue.replace('#', '');
@@ -382,26 +394,30 @@ async function handleAddContent(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = new ModalBuilder()
-        .setCustomId("add_content_modal")
-        .setTitle("Añadir Contenido de Texto");
-
-    const contentInput = new TextInputBuilder()
-        .setCustomId("content_input")
-        .setLabel("Contenido")
-        .setStyle(TextInputStyle.Paragraph)
-        .setPlaceholder("Escribe el contenido de texto...")
-        .setRequired(true)
-        .setMaxLength(4000);
-
-    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(contentInput);
-    modal.addComponents(actionRow);
+    const modal = {
+        title: "Añadir Contenido de Texto",
+        customId: "add_content_modal",
+        components: [
+            {
+                type: ComponentType.Label,
+                label: "Contenido",
+                component: {
+                    type: ComponentType.TextInput,
+                    customId: "content_input",
+                    style: TextInputStyle.Paragraph,
+                    required: true,
+                    placeholder: "Escribe el contenido de texto...",
+                    maxLength: 4000
+                }
+            }
+        ]
+    } as const;
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const content = modalInteraction.fields.getTextInputValue("content_input").trim();
+        const content = modalInteraction.components.getTextInputValue("content_input").trim();
 
         if (content) {
             blockState.components.push({
@@ -454,26 +470,30 @@ async function handleAddImage(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = new ModalBuilder()
-        .setCustomId("add_image_modal")
-        .setTitle("Añadir Imagen");
-
-    const imageInput = new TextInputBuilder()
-        .setCustomId("image_input")
-        .setLabel("URL de la Imagen")
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder("https://ejemplo.com/imagen.png")
-        .setRequired(true)
-        .setMaxLength(512);
-
-    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(imageInput);
-    modal.addComponents(actionRow);
+    const modal = {
+        title: "Añadir Imagen",
+        customId: "add_image_modal",
+        components: [
+            {
+                type: ComponentType.Label,
+                label: "URL de la Imagen",
+                component: {
+                    type: ComponentType.TextInput,
+                    customId: "image_input",
+                    style: TextInputStyle.Short,
+                    required: true,
+                    placeholder: "https://ejemplo.com/imagen.png",
+                    maxLength: 512
+                }
+            }
+        ]
+    } as const;
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const imageUrl = modalInteraction.fields.getTextInputValue("image_input").trim();
+        const imageUrl = modalInteraction.components.getTextInputValue("image_input").trim();
 
         if (imageUrl && DisplayComponentUtils.isValidUrl(imageUrl)) {
             blockState.components.push({
@@ -488,12 +508,12 @@ async function handleAddImage(
 
             await modalInteraction.reply({
                 content: "✅ Imagen añadida correctamente.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         } else {
             await modalInteraction.reply({
                 content: "❌ URL de imagen inválida.",
-                ephemeral: true
+                flags: MessageFlags.Ephemeral
             });
         }
     } catch {
@@ -507,27 +527,31 @@ async function handleCoverImage(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
-    const modal = new ModalBuilder()
-        .setCustomId("cover_image_modal")
-        .setTitle("Imagen de Portada");
-
-    const coverInput = new TextInputBuilder()
-        .setCustomId("cover_input")
-        .setLabel("URL de la Imagen de Portada")
-        .setStyle(TextInputStyle.Short)
-        .setPlaceholder("https://ejemplo.com/portada.png")
-        .setValue(blockState.coverImage || "")
-        .setRequired(false)
-        .setMaxLength(512);
-
-    const actionRow = new ActionRowBuilder<TextInputBuilder>().addComponents(coverInput);
-    modal.addComponents(actionRow);
+    const modal = {
+        title: "Imagen de Portada",
+        customId: "cover_image_modal",
+        components: [
+            {
+                type: ComponentType.Label,
+                label: "URL de la Imagen de Portada",
+                component: {
+                    type: ComponentType.TextInput,
+                    customId: "cover_input",
+                    style: TextInputStyle.Short,
+                    required: false,
+                    placeholder: "https://ejemplo.com/portada.png",
+                    value: blockState.coverImage || "",
+                    maxLength: 512
+                }
+            }
+        ]
+    } as const;
 
     await interaction.showModal(modal);
 
     try {
         const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
-        const coverUrl = modalInteraction.fields.getTextInputValue("cover_input").trim();
+        const coverUrl = modalInteraction.components.getTextInputValue("cover_input").trim();
 
         if (coverUrl && DisplayComponentUtils.isValidUrl(coverUrl)) {
             blockState.coverImage = coverUrl;
@@ -542,7 +566,7 @@ async function handleCoverImage(
 
         await modalInteraction.reply({
             content: coverUrl ? "✅ Imagen de portada actualizada." : "✅ Imagen de portada removida.",
-            ephemeral: true
+            flags: MessageFlags.Ephemeral
         });
     } catch {
         // ignore
