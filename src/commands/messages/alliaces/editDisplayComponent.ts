@@ -202,19 +202,18 @@ export const command: CommandMessage = {
                             //@ts-ignore
                             data: { config: blockState }
                         });
+                        // Mantener el editor activo y los botones funcionando
                         await updateEditor(editorMessage, {
                             // @ts-ignore
-                            display: {
-                                type: 17,
-                                accent_color: blockState.color ?? null,
-                                components: [
-                                    { type: 10, content: `✅ Actualizado: ${blockName}` },
-                                    { type: 10, content: "Cambios guardados en la base de datos." }
-                                ]
-                            },
-                            components: []
+                            display: await renderPreview(blockState, message.member, message.guild),
+                            components: btns(false)
                         });
-                        collector.stop();
+                        // Confirmación efímera
+                        try {
+                            // @ts-ignore
+                            await i.followUp({ flags: 64, content: `✅ Cambios de "${blockName}" guardados.` });
+                        } catch {}
+                        // No detener el collector para permitir mover/eliminar después de guardar
                         return;
                     }
                     case "cancel_block": {

@@ -627,19 +627,32 @@ async function handleSaveBlock(
 }
 
 async function handleCancelBlock(interaction: ButtonInteraction, editorMessage: Message): Promise<void> {
-    await interaction.update({
-        content: "❌ **Editor cancelado**\n\nLa creación del bloque ha sido cancelada.",
-        components: [],
-        embeds: []
+    try {
+        await interaction.deferUpdate();
+    } catch {}
+    await updateEditor(editorMessage, {
+        display: {
+            type: 17,
+            components: [
+                { type: 10, content: "❌ **Editor cancelado**" },
+                { type: 10, content: "La creación del bloque ha sido cancelada." }
+            ]
+        } as any,
+        components: []
     });
 }
 
 async function handleEditorTimeout(editorMessage: Message): Promise<void> {
     try {
-        await editorMessage.edit({
-            content: "⏰ **Editor expirado**\n\nEl editor ha expirado por inactividad. Usa el comando nuevamente para crear un bloque.",
-            components: [],
-            embeds: []
+        await updateEditor(editorMessage, {
+            display: {
+                type: 17,
+                components: [
+                    { type: 10, content: "⏰ **Editor expirado**" },
+                    { type: 10, content: "El editor ha expirado por inactividad. Usa el comando nuevamente para crear un bloque." }
+                ]
+            } as any,
+            components: []
         });
     } catch {
         // message likely deleted
