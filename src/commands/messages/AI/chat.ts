@@ -1,6 +1,6 @@
 import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
-import { TextChannel, DMChannel, NewsChannel, ThreadChannel, EmbedBuilder } from "discord.js";
+import { TextChannel, DMChannel, ThreadChannel, EmbedBuilder } from "discord.js";
 import { aiService } from "../../../core/services/AIService";
 
 /**
@@ -84,7 +84,7 @@ export const command: CommandMessage = {
         const guildId = message.guild?.id;
 
         // Verificar tipo de canal
-        const channel = message.channel as TextChannel | DMChannel | NewsChannel | ThreadChannel;
+        const channel = message.channel as TextChannel | DMChannel | ThreadChannel;
         if (!channel || !('send' in channel)) {
             await message.reply({
                 content: "❌ **Error:** Este comando no se puede usar en este tipo de canal."
@@ -115,7 +115,7 @@ export const command: CommandMessage = {
                 .setDescription(aiResponse)
                 .setFooter({
                     text: `Solicitado por ${message.author.username}`,
-                    iconURL: message.author.displayAvatarURL({ forceStatic: false })
+                    icon_url: message.author.displayAvatarURL({ forceStatic: false })
                 })
                 .setTimestamp();
 
@@ -131,7 +131,7 @@ export const command: CommandMessage = {
                         .setDescription(chunks[i])
                         .setFooter({
                             text: `Solicitado por ${message.author.username} | Parte ${i + 1}`,
-                            iconURL: message.author.displayAvatarURL({ forceStatic: false })
+                            icon_url: message.author.displayAvatarURL({ forceStatic: false })
                         })
                         .setTimestamp();
 
