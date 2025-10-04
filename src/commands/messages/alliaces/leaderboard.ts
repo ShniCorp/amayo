@@ -86,7 +86,7 @@ export async function buildLeaderboardPanel(message: Message, isAdmin: boolean =
         {
           type: 1,
           components: [
-            { type: 2, style: 2, emoji: '🔄', label: 'Reintentar', custom_id: 'ld_refresh' }
+            { type: 2, style: 2, emoji: { name: '🔄' }, label: 'Reintentar', custom_id: 'ld_refresh' }
           ]
         }
       ]
@@ -145,13 +145,13 @@ export async function buildLeaderboardPanel(message: Message, isAdmin: boolean =
 
   // Botón base que todos ven
   const buttons: any[] = [
-    { type: 2, style: 2, emoji: '1420539242643193896', label: 'Refrescar', custom_id: 'ld_refresh' }
+    { type: 2, style: 2, emoji: { name: '🔄' }, label: 'Refrescar', custom_id: 'ld_refresh' }
   ];
 
   // Si es admin, añadir botón de gestión
   if (isAdmin) {
     buttons.push(
-      { type: 2, style: 1, emoji: '⚙️', label: 'Gestionar Puntos', custom_id: 'ld_manage_points' }
+      { type: 2, style: 1, emoji: { name: '⚙️' }, label: 'Gestionar Puntos', custom_id: 'ld_manage_points' }
     );
   }
 
