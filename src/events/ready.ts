@@ -85,7 +85,6 @@ bot.on(Events.ClientReady, () => {
             activities: [activities[currentActivity]],
             status: 'online',
         });
-        logger.info(`Actividad cambiada a: ${activities[currentActivity].name || activities[currentActivity].state}`);
     }, 30000); // Cambiado a 30 segundos para reducir llamadas API
 
 })
