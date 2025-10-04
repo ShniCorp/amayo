@@ -4,16 +4,13 @@ import logger from '../../../core/lib/logger';
 
 export default {
     name: 'image',
+    aliases: ['imagen', 'img', 'aiimage'],
     description: 'Genera una imagen usando IA',
-    type: 'message',
-    aliases: ['imagen', 'img', 'draw', 'dibuja'],
-    category: 'AI',
-    usage: 'imagen <descripción>',
     cooldown: 10,
     async run(message: Message, args: string[]) {
         // Verificar que hay un prompt
         if (!args || args.length === 0) {
-            await message.reply('❌ **Error**: Debes proporcionar una descripción para generar la imagen.\n\n**Ejemplo**: `imagen un gato espacial flotando entre estrellas`');
+            await message.reply('❌ **Error**: Debes proporcionar una descripción para generar la imagen.\n\n**Ejemplo**: `!image un gato espacial flotando entre estrellas`');
             return;
         }
 

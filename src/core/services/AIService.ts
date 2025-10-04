@@ -1,5 +1,4 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
-// New: modern GenAI SDK for image generation
 import { GoogleGenAI, PersonGeneration } from "@google/genai";
 import logger from "../lib/logger";
 import { Collection } from "discord.js";
@@ -116,9 +115,9 @@ export class AIService {
     } as const;
 
     constructor() {
-        const apiKey = process.env.GOOGLE_AI_API_KEY;
+        const apiKey = process.env.GOOGLE_AI_API_KEY || process.env.GEMINI_API_KEY;
         if (!apiKey) {
-            throw new Error('GOOGLE_AI_API_KEY no está configurada');
+            throw new Error('Falta la clave de Google AI. Define GOOGLE_AI_API_KEY o GEMINI_API_KEY en las variables de entorno.');
         }
 
         this.genAI = new GoogleGenerativeAI(apiKey);
@@ -129,6 +128,13 @@ export class AIService {
         } catch (e) {
             logger.warn(`GoogleGenAI v2 no pudo inicializarse: ${getErrorMessage(e)}`);
             this.genAIv2 = null;
+        }
+
+        // Permitir override de modelo por variable de entorno
+        const envImageModel = process.env.GENAI_IMAGE_MODEL;
+        if (envImageModel && envImageModel.trim()) {
+            this.imageModelName = envImageModel.trim();
+            logger.info({ model: this.imageModelName }, 'Modelo de imágenes fijado por GENAI_IMAGE_MODEL');
         }
 
         this.startQueueProcessor();
@@ -145,10 +151,14 @@ export class AIService {
             return null;
         }
 
-        // Lista de candidatos de modelos de imagen ordenados por preferencia (actualizada según Google AI Studio)
+        // Lista de candidatos de modelos de imagen ordenados por preferencia (actualizada + retrocompatibilidad)
         const candidates = [
             'models/imagen-4.0-generate-001',
             'imagen-4.0-generate-001',
+            'models/imagen-3.0-fast',
+            'imagen-3.0-fast',
+            'models/imagen-3.0',
+            'imagen-3.0',
             'models/gemini-2.5-flash-image',
             'gemini-2.5-flash-image',
         ];
@@ -198,8 +208,7 @@ export class AIService {
         // Fallback: probar modelos uno por uno
         for (const candidate of candidates) {
             try {
-                // Probar con la nueva API de generateImages
-                const testRes: any = await (this.genAIv2 as any).models.generateImages({
+                await (this.genAIv2 as any).models.generateImages({
                     model: candidate,
                     prompt: 'test',
                     config: {
