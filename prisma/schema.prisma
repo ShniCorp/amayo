@@ -23,6 +23,7 @@ model Guild {
   name      String
   prefix    String   @default("!")
   staff     Json?
+  aiRolePrompt String?
 
   // Relaciones
   alliances         Alliance[]

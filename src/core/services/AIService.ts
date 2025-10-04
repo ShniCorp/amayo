@@ -1,6 +1,7 @@
 import { GoogleGenerativeAI, HarmCategory, HarmBlockThreshold } from "@google/generative-ai";
 import logger from "../lib/logger";
 import { Collection } from "discord.js";
+import { prisma } from "../database/prisma";
 
 // Tipos mejorados para mejor type safety
 interface ConversationContext {
@@ -25,6 +26,8 @@ interface AIRequest {
     timestamp: number;
     resolve: (value: string) => void;
     reject: (error: Error) => void;
+    aiRolePrompt?: string;
+    meta?: string;
 }
 
 // Utility function para manejar errores de forma type-safe
@@ -63,7 +66,9 @@ export class AIService {
     private processing = false;
     private userCooldowns = new Collection<string, number>();
     private rateLimitTracker = new Collection<string, { count: number; resetTime: number }>();
-    
+    // Cache de configuración por guild
+    private guildPromptCache = new Collection<string, { prompt: string | null; fetchedAt: number }>();
+
     // Configuración mejorada y escalable
     private readonly config = {
         maxInputTokens: 1048576,      // 1M tokens Gemini 2.5 Flash
@@ -78,7 +83,8 @@ export class AIService {
         rateLimitWindow: 60000,      // 1 minuto
         rateLimitMax: 20,           // 20 requests por minuto por usuario
         cleanupInterval: 5 * 60 * 1000, // Limpiar cada 5 minutos
-    };
+        guildConfigTTL: 5 * 60 * 1000, // 5 minutos de cache para prompts de guild
+    } as const;
 
     constructor() {
         const apiKey = process.env.GOOGLE_AI_API_KEY;
@@ -92,13 +98,42 @@ export class AIService {
     }
 
     /**
+     * Obtener prompt de rol de IA por guild con cache
+     */
+    public async getGuildAiPrompt(guildId: string): Promise<string | null> {
+        try {
+            const cached = this.guildPromptCache.get(guildId);
+            const now = Date.now();
+            if (cached && (now - cached.fetchedAt) < this.config.guildConfigTTL) {
+                return cached.prompt;
+            }
+            const guild = await prisma.guild.findUnique({ where: { id: guildId }, select: { aiRolePrompt: true } });
+            //@ts-ignore
+            const prompt = guild?.aiRolePrompt ?? null;
+            this.guildPromptCache.set(guildId, { prompt, fetchedAt: now });
+            return prompt;
+        } catch (e) {
+            logger.warn(`No se pudo cargar aiRolePrompt para guild ${guildId}: ${getErrorMessage(e)}`);
+            return null;
+        }
+    }
+
+    /**
+     * Invalidar cache de configuración de un guild (llamar tras guardar cambios)
+     */
+    public invalidateGuildConfig(guildId: string): void {
+        this.guildPromptCache.delete(guildId);
+    }
+
+    /**
      * Procesa una request de IA de forma asíncrona y controlada
      */
     async processAIRequest(
         userId: string, 
         prompt: string, 
         guildId?: string,
-        priority: 'low' | 'normal' | 'high' = 'normal'
+        priority: 'low' | 'normal' | 'high' = 'normal',
+        options?: { aiRolePrompt?: string; meta?: string }
     ): Promise<string> {
         // Validaciones exhaustivas
         if (!prompt?.trim()) {
@@ -132,7 +167,9 @@ export class AIService {
                 priority,
                 timestamp: Date.now(),
                 resolve,
-                reject
+                reject,
+                aiRolePrompt: options?.aiRolePrompt,
+                meta: options?.meta,
             };
 
             // Insertar según prioridad
@@ -192,11 +229,7 @@ export class AIService {
     private async processRequest(request: AIRequest): Promise<void> {
         try {
             const { userId, prompt, guildId } = request;
-            
-            // Obtener o crear contexto de conversación
             const context = this.getOrCreateContext(userId, guildId);
-            
-            // Verificar si es request de imagen
             const isImageRequest = this.detectImageRequest(prompt);
             if (isImageRequest && context.imageRequests >= this.config.maxImageRequests) {
                 const error = new Error(`Has alcanzado el límite de ${this.config.maxImageRequests} solicitudes de imagen. La conversación se ha reiniciado.`);
@@ -211,9 +244,21 @@ export class AIService {
                 logger.info(`Conversación reseteada para usuario ${userId} por límite de tokens`);
             }
 
+            // Obtener prompt del sistema (desde opciones o DB)
+            let effectiveAiRolePrompt = request.aiRolePrompt;
+            if (effectiveAiRolePrompt === undefined && guildId) {
+                effectiveAiRolePrompt = (await this.getGuildAiPrompt(guildId)) ?? undefined;
+            }
+
             // Construir prompt del sistema optimizado
-            const systemPrompt = this.buildSystemPrompt(prompt, context, isImageRequest);
-            
+            const systemPrompt = this.buildSystemPrompt(
+                prompt,
+                context,
+                isImageRequest,
+                effectiveAiRolePrompt,
+                request.meta
+            );
+
             // Usar la API correcta de Google Generative AI
             const model = this.genAI.getGenerativeModel({
                 model: "gemini-2.5-flash-preview-09-2025",
@@ -268,13 +313,22 @@ export class AIService {
     /**
      * Construcción optimizada del prompt del sistema
      */
-    private buildSystemPrompt(userPrompt: string, context: ConversationContext, isImageRequest: boolean): string {
+    private buildSystemPrompt(
+        userPrompt: string,
+        context: ConversationContext,
+        isImageRequest: boolean,
+        aiRolePrompt?: string,
+        meta?: string
+    ): string {
         const recentMessages = context.messages
             .slice(-4) // Solo los últimos 4 mensajes
             .map(msg => `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}`)
             .join('\n');
 
-        return `Eres una hermana mayor kawaii y cariñosa que habla por Discord. Responde de manera natural, útil y concisa.
+        const roleBlock = aiRolePrompt && aiRolePrompt.trim() ? `\n## Rol del sistema (servidor):\n${aiRolePrompt.trim().slice(0, 1200)}\n` : '';
+        const metaBlock = meta && meta.trim() ? `\n## Contexto del mensaje:\n${meta.trim().slice(0, 800)}\n` : '';
+
+        return `Eres una hermana mayor kawaii y cariñosa que habla por Discord. Responde de manera natural, útil y concisa.${roleBlock}${metaBlock}
 
 ## Reglas Discord:
 - USA **markdown de Discord**: **negrita**, *cursiva*, \`código\`, \`\`\`bloques\`\`\`

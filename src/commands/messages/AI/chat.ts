@@ -1,6 +1,6 @@
 import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
-import { TextChannel, DMChannel, ThreadChannel, EmbedBuilder } from "discord.js";
+import { TextChannel, DMChannel, ThreadChannel, EmbedBuilder, ChannelType } from "discord.js";
 import { aiService } from "../../../core/services/AIService";
 
 /**
@@ -54,6 +54,65 @@ function smartChunkText(text: string, maxLength: number): string[] {
     return chunks;
 }
 
+function buildMessageMeta(message: any): string {
+    try {
+        const parts: string[] = [];
+        const inGuild = !!message.guild;
+
+        // Canal / hilo
+        if (message.channel) {
+            if (message.channel.type === ChannelType.GuildText) {
+                parts.push(`Canal: #${message.channel.name}`);
+            } else if (message.channel.isThread?.()) {
+                const parent = message.channel.parent as TextChannel | null;
+                const threadName = message.channel.name;
+                const parentName = parent?.name ? ` en #${parent.name}` : '';
+                parts.push(`Hilo: ${threadName}${parentName}`);
+            } else if (message.channel.type === ChannelType.DM) {
+                parts.push('DM');
+            }
+        }
+
+        // Menciones
+        const userMentions = message.mentions?.users ? Array.from(message.mentions.users.values()) : [];
+        const roleMentions = message.mentions?.roles ? Array.from(message.mentions.roles.values()) : [];
+        const channelMentions = message.mentions?.channels ? Array.from(message.mentions.channels.values()) : [];
+
+        if (userMentions.length) {
+            parts.push(`Menciones usuario: ${userMentions.slice(0, 5).map((u: any) => u.username ?? u.tag ?? u.id).join(', ')}`);
+        }
+        if (roleMentions.length) {
+            parts.push(`Menciones rol: ${roleMentions.slice(0, 5).map((r: any) => r.name ?? r.id).join(', ')}`);
+        }
+        if (channelMentions.length) {
+            parts.push(`Menciones canal: ${channelMentions.slice(0, 3).map((c: any) => c.name ?? c.id).join(', ')}`);
+        }
+
+        // ¿Mención al bot?
+        const botId = message.client?.user?.id;
+        if (botId && message.mentions?.users?.has?.(botId)) {
+            parts.push('El mensaje menciona al bot');
+        }
+
+        // Respuesta/Referencia
+        if (message.reference?.messageId) {
+            parts.push('Es una respuesta a otro mensaje');
+        }
+
+        // Adjuntos
+        const attachments = message.attachments ? Array.from(message.attachments.values()) : [];
+        if (attachments.length) {
+            const info = attachments.slice(0, 2).map((a: any) => a.name || a.contentType || 'adjunto').join(', ');
+            parts.push(`Adjuntos: ${info}`);
+        }
+
+        const metaRaw = parts.join(' | ');
+        return metaRaw.length > 800 ? metaRaw.slice(0, 800) : metaRaw;
+    } catch {
+        return '';
+    }
+}
+
 export const command: CommandMessage = {
     name: 'ai',
     type: "message",
@@ -92,6 +151,9 @@ export const command: CommandMessage = {
             return;
         }
 
+        // Construir metadatos del mensaje para mejor contexto
+        const meta = buildMessageMeta(message);
+
         // Indicador de escritura mejorado
         const typingInterval = setInterval(() => {
             channel.sendTyping().catch(() => {});
@@ -105,7 +167,8 @@ export const command: CommandMessage = {
                 userId,
                 prompt,
                 guildId,
-                priority
+                priority,
+                { meta }
             );
 
             // Crear embed de respuesta mejorado

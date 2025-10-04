@@ -2,6 +2,7 @@ import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
 import { ComponentType } from "discord-api-types/v10";
 import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
+import { aiService } from "../../../core/services/AIService";
 
 function toStringArray(input: unknown): string[] {
     if (!Array.isArray(input)) return [];
@@ -32,6 +33,8 @@ export const command: CommandMessage = {
         const staffDisplay = staffRoles.length
             ? staffRoles.map((id) => `<@&${id}>`).join(', ')
             : 'Sin staff configurado';
+        const aiRolePrompt = server?.aiRolePrompt ?? null;
+        const aiPreview = aiRolePrompt ? (aiRolePrompt.length > 80 ? aiRolePrompt.slice(0, 77) + '…' : aiRolePrompt) : 'No configurado';
 
         // Panel de configuración usando DisplayComponents
         const settingsPanel = {
@@ -61,6 +64,18 @@ export const command: CommandMessage = {
                         style: 2, // Secondary
                         emoji: { name: "🛡️" },
                         custom_id: "open_staff_modal",
+                        label: "Configurar"
+                    }
+                },
+                { type: 14, divider: false },
+                {
+                    type: 9,
+                    components: [ { type: 10, content: `**AI Role Prompt:** ${aiPreview}` } ],
+                    accessory: {
+                        type: 2,
+                        style: 2,
+                        emoji: { name: "🧠" },
+                        custom_id: "open_ai_role_modal",
                         label: "Configurar"
                     }
                 },
@@ -164,6 +179,7 @@ export const command: CommandMessage = {
                 try {
                     const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
                     const selected = modalInteraction.components.getSelectedRoles('staff_roles');
+                    //@ts-ignore
                     const roleIds: string[] = selected ? Array.from(selected.keys()).slice(0, 3) : [];
 
                     await client.prisma.guild.upsert({
@@ -191,12 +207,65 @@ export const command: CommandMessage = {
                 }
             }
 
+            if (interaction.customId === "open_ai_role_modal") {
+                const currentServer = await client.prisma.guild.findFirst({ where: { id: message.guild!.id } });
+                const currentAiPrompt = currentServer?.aiRolePrompt ?? '';
+                const aiModal = {
+                    title: "🧠 Configurar AI Role Prompt",
+                    custom_id: "ai_role_prompt_modal",
+                    components: [
+                        { type: 1, components: [ { type: 4, custom_id: "ai_role_prompt_input", label: "Prompt de rol (opcional)", style: 2, placeholder: "Ej: Eres un asistente amistoso del servidor, responde en español, evita spoilers...", required: false, max_length: 1500, value: currentAiPrompt.slice(0, 1500) } ] }
+                    ]
+                };
+
+                await interaction.showModal(aiModal);
+
+                try {
+                    const modalInteraction = await interaction.awaitModalSubmit({
+                        time: 300000,
+                        filter: (m: any) => m.customId === 'ai_role_prompt_modal' && m.user.id === message.author.id
+                    });
+
+                    const newPromptRaw = modalInteraction.fields.getTextInputValue('ai_role_prompt_input') ?? '';
+                    const newPrompt = newPromptRaw.trim();
+                    const toSave: string | null = newPrompt.length > 0 ? newPrompt : null;
+
+                    await client.prisma.guild.upsert({
+                        where: { id: message.guild!.id },
+                        create: { id: message.guild!.id, name: message.guild!.name, aiRolePrompt: toSave },
+                        update: { aiRolePrompt: toSave, name: message.guild!.name }
+                    });
+
+                    // Invalida el cache del servicio para reflejar cambios al instante
+                    aiService.invalidateGuildConfig(message.guild!.id);
+
+                    const preview = toSave ? (toSave.length > 200 ? toSave.slice(0, 197) + '…' : toSave) : 'Prompt eliminado (sin configuración)';
+
+                    const successPanel = {
+                        type: 17,
+                        accent_color: 3066993,
+                        components: [
+                            { type: 10, content: "### ✅ **AI Role Prompt Actualizado**" },
+                            { type: 14, spacing: 2, divider: true },
+                            { type: 10, content: `**Nuevo valor:**\n${preview}` }
+                        ]
+                    };
+                    const backRow = { type: 1, components: [ { type: 2, style: 2, label: '↩️ Volver a Configuración', custom_id: 'back_to_settings' } ] };
+
+                    await modalInteraction.update({ components: [successPanel, backRow] });
+                } catch (e) {
+                    // timeout o cancelado
+                }
+            }
+
             // Manejar botones adicionales
             if (interaction.customId === "back_to_settings") {
                 const updatedServer = await client.prisma.guild.findFirst({ where: { id: message.guild!.id } });
                 const newCurrentPrefix = updatedServer?.prefix || "!";
                 const staffRoles2: string[] = toStringArray(updatedServer?.staff);
                 const staffDisplay2 = staffRoles2.length ? staffRoles2.map((id) => `<@&${id}>`).join(', ') : 'Sin staff configurado';
+                const aiRolePrompt2 = updatedServer?.aiRolePrompt ?? null;
+                const aiPreview2 = aiRolePrompt2 ? (aiRolePrompt2.length > 80 ? aiRolePrompt2.slice(0, 77) + '…' : aiRolePrompt2) : 'No configurado';
 
                 const updatedSettingsPanel = {
                     type: 17,
@@ -208,6 +277,8 @@ export const command: CommandMessage = {
                         { type: 9, components: [ { type: 10, content: `**Prefix:** \`${newCurrentPrefix}\`` } ], accessory: { type: 2, style: 2, emoji: { name: "⚙️" }, custom_id: "open_prefix_modal", label: "Cambiar" } },
                         { type: 14, divider: false },
                         { type: 9, components: [ { type: 10, content: `**Staff (roles):** ${staffDisplay2}` } ], accessory: { type: 2, style: 2, emoji: { name: "🛡️" }, custom_id: "open_staff_modal", label: "Configurar" } },
+                        { type: 14, divider: false },
+                        { type: 9, components: [ { type: 10, content: `**AI Role Prompt:** ${aiPreview2}` } ], accessory: { type: 2, style: 2, emoji: { name: "🧠" }, custom_id: "open_ai_role_modal", label: "Configurar" } },
                         { type: 14, divider: false }
                     ]
                 };
@@ -220,6 +291,8 @@ export const command: CommandMessage = {
                 const updatedServer = await client.prisma.guild.findFirst({ where: { id: message.guild!.id } });
                 const staffRoles3: string[] = toStringArray(updatedServer?.staff);
                 const staffDisplay3 = staffRoles3.length ? staffRoles3.map((id) => `<@&${id}>`).join(', ') : 'Sin staff configurado';
+                const aiRolePrompt3 = updatedServer?.aiRolePrompt ?? null;
+                const aiPreview3 = aiRolePrompt3 ? (aiRolePrompt3.length > 80 ? aiRolePrompt3.slice(0, 77) + '…' : aiRolePrompt3) : 'No configurado';
 
                 const originalPanel = {
                     type: 17,
@@ -231,6 +304,8 @@ export const command: CommandMessage = {
                         { type: 9, components: [ { type: 10, content: `**Prefix:** \`${currentPrefix}\`` } ], accessory: { type: 2, style: 2, emoji: { name: "⚙️" }, custom_id: "open_prefix_modal", label: "Cambiar" } },
                         { type: 14, divider: false },
                         { type: 9, components: [ { type: 10, content: `**Staff (roles):** ${staffDisplay3}` } ], accessory: { type: 2, style: 2, emoji: { name: "🛡️" }, custom_id: "open_staff_modal", label: "Configurar" } },
+                        { type: 14, divider: false },
+                        { type: 9, components: [ { type: 10, content: `**AI Role Prompt:** ${aiPreview3}` } ], accessory: { type: 2, style: 2, emoji: { name: "🧠" }, custom_id: "open_ai_role_modal", label: "Configurar" } },
                         { type: 14, divider: false }
                     ]
                 };
