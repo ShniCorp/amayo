@@ -29,12 +29,73 @@ export default {
     }
 
     try {
-      // Obtener valores del modal - usando la estructura de example.ts.txt
-      const totalInput = interaction.components.getTextInputValue('points_input').trim();
-      const selectedUsers = interaction.components.getSelectedUsers('user_select');
+      // Obtener valores del modal con manejo seguro de errores
+      let totalInput: string;
+      let selectedUsers: any;
+      let userId: string;
+      let userName: string;
+
+      try {
+        totalInput = interaction.components.getTextInputValue('points_input').trim();
+      } catch (error) {
+        logger.error('Error obteniendo points_input:', error);
+        return interaction.reply({
+          content: '❌ Error al obtener el valor de puntos del modal.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      // Manejo seguro del UserSelect con fallback
+      try {
+        selectedUsers = interaction.components.getSelectedUsers('user_select');
+
+        if (!selectedUsers || selectedUsers.size === 0) {
+          // Fallback: intentar obtener los IDs directamente de los datos raw
+          const rawData = (interaction as any).data?.components;
+          if (rawData) {
+            const userSelectComponent = this.findUserSelectComponent(rawData, 'user_select');
+            if (userSelectComponent?.values?.length > 0) {
+              userId = userSelectComponent.values[0];
+              logger.info(`🔄 Fallback: UserId extraído de datos raw: ${userId}`);
+            }
+          }
+
+          if (!userId) {
+            return interaction.reply({
+              content: '❌ Debes seleccionar un usuario del leaderboard.',
+              flags: MessageFlags.Ephemeral
+            });
+          }
+        } else {
+          const selectedUser = Array.from(selectedUsers.values())[0];
+          userId = selectedUser?.id;
+          userName = selectedUser?.tag ?? selectedUser?.username ?? userId;
+        }
+      } catch (error) {
+        logger.error('Error procesando UserSelect, intentando fallback:', error);
+
+        // Fallback más agresivo: obtener directamente de los datos raw
+        try {
+          const rawData = (interaction as any).data?.components;
+          const userSelectComponent = this.findUserSelectComponent(rawData, 'user_select');
+
+          if (userSelectComponent?.values?.length > 0) {
+            userId = userSelectComponent.values[0];
+            logger.info(`🔄 Fallback agresivo: UserId extraído: ${userId}`);
+          } else {
+            throw new Error('No se pudo extraer userId de los datos raw');
+          }
+        } catch (fallbackError) {
+          logger.error('Falló el fallback:', fallbackError);
+          return interaction.reply({
+            content: '❌ Error procesando la selección de usuario. Inténtalo de nuevo.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      }
 
       logger.info(`🔍 Input recibido: ${totalInput}`);
-      logger.info(`🔍 Usuarios seleccionados: ${selectedUsers?.size || 0}`);
+      logger.info(`🔍 UserId extraído: ${userId}`);
 
       if (!totalInput) {
         return interaction.reply({
@@ -43,17 +104,6 @@ export default {
         });
       }
 
-      if (!selectedUsers || selectedUsers.size === 0) {
-        return interaction.reply({
-          content: '❌ Debes seleccionar un usuario del leaderboard.',
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      // Obtener el primer (y único) usuario seleccionado
-      const selectedUser = Array.from(selectedUsers.values())[0];
-      const userId = selectedUser?.id;
-
       if (!userId) {
         return interaction.reply({
           content: '❌ Error al identificar el usuario seleccionado.',
@@ -61,7 +111,16 @@ export default {
         });
       }
 
-      logger.info(`🔍 UserId extraído: ${userId}`);
+      // Si no tenemos userName, intentar obtenerlo del servidor
+      if (!userName) {
+        try {
+          const targetMember = await interaction.guild.members.fetch(userId);
+          userName = targetMember.displayName || targetMember.user.username;
+        } catch (error) {
+          logger.warn(`No se pudo obtener info del usuario ${userId}:`, error);
+          userName = `Usuario ${userId}`;
+        }
+      }
 
       // Obtener o crear el registro de stats del usuario
       let stats = await prisma.partnershipStats.findUnique({
@@ -174,9 +233,6 @@ export default {
 
       logger.info(`✅ Puntos actualizados exitosamente en la base de datos`);
 
-      // Obtener nombre del usuario usando la información del UserSelect
-      const userName = selectedUser?.tag ?? selectedUser?.username ?? userId;
-
       // Calcular las diferencias
       const totalDiff = newTotalPoints - stats.totalPoints;
       const weeklyDiff = newWeeklyPoints - stats.weeklyPoints;
@@ -217,7 +273,7 @@ export default {
       });
 
     } catch (error) {
-        //@ts-ignore
+      //@ts-ignore
       logger.error('❌ Error en ldPointsModal:', error);
 
       if (!interaction.replied && !interaction.deferred) {
@@ -227,5 +283,31 @@ export default {
         });
       }
     }
+  },
+
+  // Función auxiliar para buscar componentes UserSelect en datos raw
+  findUserSelectComponent(components: any[], customId: string): any {
+    if (!components) return null;
+
+    for (const comp of components) {
+      if (comp.components) {
+        const found = this.findUserSelectComponent(comp.components, customId);
+        if (found) return found;
+      }
+
+      if (comp.component) {
+        if (comp.component.custom_id === customId) {
+          return comp.component;
+        }
+        const found = this.findUserSelectComponent([comp.component], customId);
+        if (found) return found;
+      }
+
+      if (comp.custom_id === customId) {
+        return comp;
+      }
+    }
+
+    return null;
   }
 };
