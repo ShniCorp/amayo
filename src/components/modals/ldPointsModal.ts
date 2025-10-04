@@ -36,15 +36,13 @@ export default {
         });
       }
 
-      // Obtener valores del modal
+      // Obtener valor del modal
+      // @ts-ignore
       const totalInput = interaction.fields.getTextInputValue('total_points').trim();
-      const weeklyInput = interaction.fields.getTextInputValue('weekly_points').trim();
-      const monthlyInput = interaction.fields.getTextInputValue('monthly_points').trim();
 
-      // Si no se ingresó nada, retornar
-      if (!totalInput && !weeklyInput && !monthlyInput) {
+      if (!totalInput) {
         return interaction.reply({
-          content: '❌ Debes ingresar al menos un valor para modificar.',
+          content: '❌ Debes ingresar un valor para modificar.',
           flags: MessageFlags.Ephemeral
         });
       }
@@ -74,16 +72,19 @@ export default {
 
       // Función para parsear el input y calcular el nuevo valor
       const calculateNewValue = (input: string, currentValue: number): number => {
-        if (!input) return currentValue;
-        
         const firstChar = input[0];
-        const numValue = parseInt(input.substring(1)) || 0;
 
         if (firstChar === '+') {
+          // Añadir puntos
+          const numValue = parseInt(input.substring(1)) || 0;
           return Math.max(0, currentValue + numValue);
         } else if (firstChar === '-') {
+          // Quitar puntos (los últimos N puntos añadidos)
+          const numValue = parseInt(input.substring(1)) || 0;
           return Math.max(0, currentValue - numValue);
         } else if (firstChar === '=') {
+          // Establecer valor absoluto
+          const numValue = parseInt(input.substring(1)) || 0;
           return Math.max(0, numValue);
         } else {
           // Si no tiene símbolo, tratar como valor absoluto
@@ -92,13 +93,11 @@ export default {
         }
       };
 
-      // Calcular nuevos valores
+      // Calcular nuevo valor de puntos totales
       const newTotalPoints = calculateNewValue(totalInput, stats.totalPoints);
-      const newWeeklyPoints = calculateNewValue(weeklyInput, stats.weeklyPoints);
-      const newMonthlyPoints = calculateNewValue(monthlyInput, stats.monthlyPoints);
 
-      // Actualizar en base de datos
-      const updatedStats = await prisma.partnershipStats.update({
+      // Actualizar en base de datos (solo puntos totales)
+      await prisma.partnershipStats.update({
         where: {
           userId_guildId: {
             userId,
@@ -106,9 +105,7 @@ export default {
           }
         },
         data: {
-          totalPoints: newTotalPoints,
-          weeklyPoints: newWeeklyPoints,
-          monthlyPoints: newMonthlyPoints
+          totalPoints: newTotalPoints
         }
       });
 
@@ -126,26 +123,25 @@ export default {
         }
       }
 
+      // Calcular la diferencia
+      const difference = newTotalPoints - stats.totalPoints;
+      const diffText = difference > 0 ? `+${difference}` : `${difference}`;
+
       // Crear embed de confirmación
       const embed = new EmbedBuilder()
-        .setColor(0x00ff00)
+        .setColor(difference >= 0 ? 0x00ff00 : 0xff9900)
         .setTitle('✅ Puntos Actualizados')
         .setDescription(`Se han actualizado los puntos de **${userName}**`)
         .addFields(
           { 
             name: '📊 Puntos Totales', 
-            value: `${stats.totalPoints} → **${newTotalPoints}**`, 
-            inline: true 
+            value: `${stats.totalPoints} → **${newTotalPoints}** (${diffText})`,
+            inline: false
           },
-          { 
-            name: '📅 Puntos Semanales', 
-            value: `${stats.weeklyPoints} → **${newWeeklyPoints}**`, 
-            inline: true 
-          },
-          { 
-            name: '🗓️ Puntos Mensuales', 
-            value: `${stats.monthlyPoints} → **${newMonthlyPoints}**`, 
-            inline: true 
+          {
+            name: '📝 Operación',
+            value: `\`${totalInput}\``,
+            inline: false
           }
         )
         .setFooter({ text: `Modificado por ${interaction.user.username}` })

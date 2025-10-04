@@ -40,35 +40,19 @@ export default {
         .setCustomId(`ld_points_modal:${selectedUserId}`)
         .setTitle(`Gestionar puntos de ${userName}`);
 
-      // Input para puntos totales
+      // Input para puntos totales (simplificado)
       const totalInput = new TextInputBuilder()
         .setCustomId('total_points')
-        .setLabel('Puntos Totales')
-        .setPlaceholder('+50 (añadir) / -25 (quitar) / =100 (establecer)')
+        .setLabel('Modificar Puntos Totales')
+        .setPlaceholder('+50 (añadir) / -2 (quitar últimos 2) / =100 (establecer)')
         .setStyle(TextInputStyle.Short)
-        .setRequired(false);
+        .setRequired(true);
 
-      // Input para puntos semanales
-      const weeklyInput = new TextInputBuilder()
-        .setCustomId('weekly_points')
-        .setLabel('Puntos Semanales')
-        .setPlaceholder('+10 (añadir) / -5 (quitar) / =50 (establecer)')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false);
-
-      // Input para puntos mensuales
-      const monthlyInput = new TextInputBuilder()
-        .setCustomId('monthly_points')
-        .setLabel('Puntos Mensuales')
-        .setPlaceholder('+20 (añadir) / -10 (quitar) / =75 (establecer)')
-        .setStyle(TextInputStyle.Short)
-        .setRequired(false);
-
-      // Añadir los inputs al modal
+      // Añadir el input al modal
+      // @ts-ignore
       modal.addComponents(
-        new ActionRowBuilder<TextInputBuilder>().addComponents(totalInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(weeklyInput),
-        new ActionRowBuilder<TextInputBuilder>().addComponents(monthlyInput)
+        // @ts-ignore
+        new ActionRowBuilder().addComponents(totalInput)
       );
 
       await interaction.showModal(modal);
