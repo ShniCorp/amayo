@@ -1,7 +1,7 @@
 import type {
     ButtonInteraction,
     ModalSubmitInteraction,
-    AnySelectMenuInteraction,
+    SelectMenuInteraction,
     ContextMenuCommandInteraction
 } from "discord.js";
 import type Amayo from "../client";
@@ -19,7 +19,7 @@ export interface Modal {
 
 export interface SelectMenu {
     customId: string;
-    run: (interaction: AnySelectMenuInteraction, client: Amayo) => Promise<unknown>;
+    run: (interaction: SelectMenuInteraction, client: Amayo) => Promise<unknown>;
 }
 
 export interface ContextMenu {
