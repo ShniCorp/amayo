@@ -799,8 +799,22 @@ Responde de forma directa y útil:`;
             const databases = getDatabases();
             if (!databases) return;
 
-            const conversationId = context.conversationId || `${context.userId}-${context.guildId || 'dm'}-${Date.now()}`;
-            context.conversationId = conversationId;
+            // Generar un ID válido para Appwrite (máximo 36 caracteres, solo a-z, A-Z, 0-9, ., -, _)
+            let conversationId = context.conversationId;
+            if (!conversationId) {
+                // Crear un ID más corto y válido
+                const userIdShort = context.userId.slice(-8); // Últimos 8 caracteres del userId
+                const guildIdShort = context.guildId ? context.guildId.slice(-8) : 'dm';
+                const timestamp = Date.now().toString(36); // Base36 para hacer más corto
+                conversationId = `ai_${userIdShort}_${guildIdShort}_${timestamp}`;
+
+                // Asegurar que no exceda 36 caracteres
+                if (conversationId.length > 36) {
+                    conversationId = conversationId.slice(0, 36);
+                }
+
+                context.conversationId = conversationId;
+            }
 
             const appwriteData: AppwriteConversation = {
                 userId: context.userId,
@@ -818,12 +832,23 @@ Responde de forma directa y útil:`;
                 createdAt: Date.now()
             };
 
-            await databases.createDocument(
-                APPWRITE_DATABASE_ID,
-                APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
-                conversationId,
-                appwriteData
-            );
+            // Usar upsert para actualizar si ya existe
+            try {
+                await databases.updateDocument(
+                    APPWRITE_DATABASE_ID,
+                    APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
+                    conversationId,
+                    appwriteData
+                );
+            } catch (updateError) {
+                // Si no existe, crearlo
+                await databases.createDocument(
+                    APPWRITE_DATABASE_ID,
+                    APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
+                    conversationId,
+                    appwriteData
+                );
+            }
 
             logger.debug(`Conversación guardada en Appwrite: ${conversationId}`);
         } catch (error) {
@@ -843,15 +868,27 @@ Responde de forma directa y útil:`;
             const databases = getDatabases();
             if (!databases) return null;
 
+            // Construir queries válidas para Appwrite
+            const queries = [];
+
+            // Query por userId (siempre requerido)
+            queries.push(`userId="${userId}"`);
+
+            // Query por guildId si existe
+            if (guildId) {
+                queries.push(`guildId="${guildId}"`);
+            }
+
+            // Query por channelId si existe
+            if (channelId) {
+                queries.push(`channelId="${channelId}"`);
+            }
+
             // Buscar conversaciones recientes del usuario
             const response = await databases.listDocuments(
                 APPWRITE_DATABASE_ID,
                 APPWRITE_COLLECTION_AI_CONVERSATIONS_ID,
-                [
-                    `userId=${userId}`,
-                    guildId ? `guildId=${guildId}` : '',
-                    channelId ? `channelId=${channelId}` : ''
-                ].filter(Boolean)
+                queries
             );
 
             if (response.documents.length === 0) {
@@ -859,18 +896,18 @@ Responde de forma directa y útil:`;
             }
 
             // Obtener la conversación más reciente
-            const latestDoc = response.documents.sort((a: any, b: any) => b.lastActivity - a.lastActivity)[0];
+            const latestDoc = response.documents.sort((a: any, b: any) => (b.lastActivity || 0) - (a.lastActivity || 0))[0];
             const data = latestDoc as any as AppwriteConversation;
 
             // Crear contexto desde los datos de Appwrite
             const context: ConversationContext = {
-                messages: data.messages.map(msg => ({
+                messages: (data.messages || []).map(msg => ({
                     ...msg,
                     tokens: this.estimateTokens(msg.content)
                 })),
-                totalTokens: data.messages.reduce((sum, msg) => sum + this.estimateTokens(msg.content), 0),
+                totalTokens: (data.messages || []).reduce((sum, msg) => sum + this.estimateTokens(msg.content), 0),
                 imageRequests: 0, // Resetear conteo de imágenes
-                lastActivity: data.lastActivity,
+                lastActivity: data.lastActivity || Date.now(),
                 userId: data.userId,
                 guildId: data.guildId,
                 channelId: data.channelId,
