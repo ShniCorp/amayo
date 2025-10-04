@@ -83,8 +83,8 @@ export default {
       await interaction.showModal(modal);
 
     } catch (e) {
-        //@ts-ignore
-      logger.error('Error en ldManagePoints:', e);
+      // @ts-ignore
+        logger.error('Error en ldManagePoints:', e as Error);
       await interaction.reply({
         content: '❌ Error al abrir el modal de gestión.',
         flags: MessageFlags.Ephemeral

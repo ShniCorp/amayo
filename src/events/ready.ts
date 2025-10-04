@@ -8,17 +8,13 @@ bot.on(Events.ClientReady, () => {
     // ============================================
     // 🛡️ HANDLER GLOBAL PARA ERRORES DE DISCORD.JS
     // ============================================
-    // Interceptar errores específicos de ModalSubmitInteraction con UserSelect
 
-    process.on('uncaughtException', (error) => {
+    process.on('uncaughtException', (error: Error) => {
         // Interceptar errores específicos de Discord.js GuildMemberManager
         if (error.message?.includes("Cannot read properties of undefined (reading 'id')") &&
             error.stack?.includes('GuildMemberManager._add')) {
 
             logger.warn('🔧 Discord.js bug interceptado: GuildMemberManager error con UserSelect en modal');
-            // @ts-ignore
-            logger.warn('Stack trace:', error.stack);
-
             // NO terminar el proceso, solo logear el error
             return;
         }
@@ -29,24 +25,23 @@ bot.on(Events.ClientReady, () => {
         process.exit(1);
     });
 
-    process.on('unhandledRejection', (reason, promise) => {
+    process.on('unhandledRejection', (reason: unknown) => {
         // Interceptar rechazos relacionados con el mismo bug
-        if (reason && typeof reason === 'object' &&
+        if (reason &&
+            typeof reason === 'object' &&
+            reason !== null &&
             'message' in reason &&
-            // @ts-ignore
-            reason.message?.includes("Cannot read properties of undefined (reading 'id')")) {
+            typeof (reason as any).message === 'string' &&
+            (reason as any).message.includes("Cannot read properties of undefined (reading 'id')")) {
 
             logger.warn('🔧 Discord.js promise rejection interceptada: GuildMemberManager error');
-            // @ts-ignore
-            logger.warn('Reason:', reason);
-
             // NO terminar el proceso
             return;
         }
 
         // Para otras promesas rechazadas, logear pero continuar
         // @ts-ignore
-        logger.error('🚨 UnhandledRejection:', reason);
+        logger.error('🚨 UnhandledRejection:', reason as Error);
     });
 
     // ============================================

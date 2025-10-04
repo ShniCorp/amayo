@@ -3,9 +3,26 @@ import {
   ModalSubmitInteraction, 
   MessageFlags,
   PermissionFlagsBits,
-  EmbedBuilder
+  EmbedBuilder,
+  User,
+  Collection,
+  Snowflake
 } from 'discord.js';
 import { prisma } from '../../core/database/prisma';
+
+interface UserSelectComponent {
+  custom_id: string;
+  type: number;
+  values: string[];
+}
+
+interface ComponentData {
+  components?: ComponentData[];
+  component?: ComponentData;
+  custom_id?: string;
+  type?: number;
+  values?: string[];
+}
 
 export default {
   customId: 'ld_points_modal',
@@ -30,15 +47,16 @@ export default {
 
     try {
       // Obtener valores del modal con manejo seguro de errores
-      let totalInput: string;
-      let selectedUsers: any;
-      let userId: string;
-      let userName: string;
+      let totalInput: string = '';
+      let selectedUsers: ReturnType<typeof interaction.components.getSelectedUsers> = null;
+      let userId: string | undefined = undefined;
+      let userName: string | undefined = undefined;
 
       try {
         totalInput = interaction.components.getTextInputValue('points_input').trim();
       } catch (error) {
-        logger.error('Error obteniendo points_input:', error);
+        // @ts-ignore
+          logger.error('Error obteniendo points_input:', String(error));
         return interaction.reply({
           content: '❌ Error al obtener el valor de puntos del modal.',
           flags: MessageFlags.Ephemeral
@@ -51,10 +69,10 @@ export default {
 
         if (!selectedUsers || selectedUsers.size === 0) {
           // Fallback: intentar obtener los IDs directamente de los datos raw
-          const rawData = (interaction as any).data?.components;
+          const rawData = (interaction as any).data?.components as ComponentData[] | undefined;
           if (rawData) {
-            const userSelectComponent = this.findUserSelectComponent(rawData, 'user_select');
-            if (userSelectComponent?.values?.length > 0) {
+            const userSelectComponent = findUserSelectComponent(rawData, 'user_select');
+            if (userSelectComponent?.values?.length && userSelectComponent.values.length > 0) {
               userId = userSelectComponent.values[0];
               logger.info(`🔄 Fallback: UserId extraído de datos raw: ${userId}`);
             }
@@ -67,26 +85,30 @@ export default {
             });
           }
         } else {
-          const selectedUser = Array.from(selectedUsers.values())[0];
-          userId = selectedUser?.id;
-          userName = selectedUser?.tag ?? selectedUser?.username ?? userId;
+          const selectedUser = Array.from(selectedUsers.values())[0] as User;
+          if (selectedUser) {
+            userId = selectedUser.id;
+            userName = selectedUser.tag ?? selectedUser.username ?? userId;
+          }
         }
       } catch (error) {
-        logger.error('Error procesando UserSelect, intentando fallback:', error);
+        // @ts-ignore
+          logger.error('Error procesando UserSelect, intentando fallback:', String(error));
 
         // Fallback más agresivo: obtener directamente de los datos raw
         try {
-          const rawData = (interaction as any).data?.components;
-          const userSelectComponent = this.findUserSelectComponent(rawData, 'user_select');
+          const rawData = (interaction as any).data?.components as ComponentData[] | undefined;
+          const userSelectComponent = findUserSelectComponent(rawData, 'user_select');
 
-          if (userSelectComponent?.values?.length > 0) {
+          if (userSelectComponent?.values?.length && userSelectComponent.values.length > 0) {
             userId = userSelectComponent.values[0];
             logger.info(`🔄 Fallback agresivo: UserId extraído: ${userId}`);
           } else {
             throw new Error('No se pudo extraer userId de los datos raw');
           }
         } catch (fallbackError) {
-          logger.error('Falló el fallback:', fallbackError);
+          // @ts-ignore
+            logger.error('Falló el fallback:', String(fallbackError));
           return interaction.reply({
             content: '❌ Error procesando la selección de usuario. Inténtalo de nuevo.',
             flags: MessageFlags.Ephemeral
@@ -117,7 +139,8 @@ export default {
           const targetMember = await interaction.guild.members.fetch(userId);
           userName = targetMember.displayName || targetMember.user.username;
         } catch (error) {
-          logger.warn(`No se pudo obtener info del usuario ${userId}:`, error);
+          // @ts-ignore
+            logger.warn(`No se pudo obtener info del usuario ${userId}:`, String(error));
           userName = `Usuario ${userId}`;
         }
       }
@@ -273,8 +296,9 @@ export default {
       });
 
     } catch (error) {
-      //@ts-ignore
-      logger.error('❌ Error en ldPointsModal:', error);
+      // @ts-ignore
+        // @ts-ignore
+        logger.error('❌ Error en ldPointsModal:', String(error));
 
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
@@ -283,31 +307,31 @@ export default {
         });
       }
     }
-  },
-
-  // Función auxiliar para buscar componentes UserSelect en datos raw
-  findUserSelectComponent(components: any[], customId: string): any {
-    if (!components) return null;
-
-    for (const comp of components) {
-      if (comp.components) {
-        const found = this.findUserSelectComponent(comp.components, customId);
-        if (found) return found;
-      }
-
-      if (comp.component) {
-        if (comp.component.custom_id === customId) {
-          return comp.component;
-        }
-        const found = this.findUserSelectComponent([comp.component], customId);
-        if (found) return found;
-      }
-
-      if (comp.custom_id === customId) {
-        return comp;
-      }
-    }
-
-    return null;
   }
 };
+
+// Función auxiliar para buscar componentes UserSelect en datos raw
+function findUserSelectComponent(components: ComponentData[] | undefined, customId: string): UserSelectComponent | null {
+  if (!components) return null;
+
+  for (const comp of components) {
+    if (comp.components) {
+      const found = findUserSelectComponent(comp.components, customId);
+      if (found) return found;
+    }
+
+    if (comp.component) {
+      if (comp.component.custom_id === customId) {
+        return comp.component as UserSelectComponent;
+      }
+      const found = findUserSelectComponent([comp.component], customId);
+      if (found) return found;
+    }
+
+    if (comp.custom_id === customId) {
+      return comp as UserSelectComponent;
+    }
+  }
+
+  return null;
+}
