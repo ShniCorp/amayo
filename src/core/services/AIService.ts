@@ -98,7 +98,7 @@ export class AIService {
     }
 
     /**
-     * Obtener prompt de rol de IA por guild con cache
+     * Obtener prompt de rol de IA por guild con caché
      */
     public async getGuildAiPrompt(guildId: string): Promise<string | null> {
         try {
@@ -107,6 +107,7 @@ export class AIService {
             if (cached && (now - cached.fetchedAt) < this.config.guildConfigTTL) {
                 return cached.prompt;
             }
+            // @ts-ignore
             const guild = await prisma.guild.findUnique({ where: { id: guildId }, select: { aiRolePrompt: true } });
             //@ts-ignore
             const prompt = guild?.aiRolePrompt ?? null;
@@ -321,7 +322,7 @@ export class AIService {
         meta?: string
     ): string {
         const recentMessages = context.messages
-            .slice(-4) // Solo los últimos 4 mensajes
+            .slice(-4)
             .map(msg => `${msg.role === 'user' ? 'Usuario' : 'Asistente'}: ${msg.content}`)
             .join('\n');
 
@@ -334,6 +335,8 @@ export class AIService {
 - USA **markdown de Discord**: **negrita**, *cursiva*, \`código\`, \`\`\`bloques\`\`\`
 - NUNCA uses LaTeX ($$)
 - Máximo 2-3 emojis por respuesta
+- Prefiere emojis Unicode estándar (🙂, 🎯, etc.) cuando no haya más contexto
+- Si se te proporciona una lista de "Emojis personalizados disponibles", puedes usarlos escribiendo :nombre: exactamente como aparece; NO inventes nombres
 - Respuestas concisas y claras
 
 ${isImageRequest ? `

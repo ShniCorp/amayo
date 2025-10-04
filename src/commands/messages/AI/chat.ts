@@ -1,6 +1,6 @@
 import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
-import { TextChannel, DMChannel, ThreadChannel, ChannelType } from "discord.js";
+import { TextChannel, DMChannel, ThreadChannel, ChannelType, GuildEmoji } from "discord.js";
 import { aiService } from "../../../core/services/AIService";
 
 /**
@@ -54,7 +54,57 @@ function smartChunkText(text: string, maxLength: number): string[] {
     return chunks;
 }
 
-function buildMessageMeta(message: any): string {
+function replaceShortcodesWithEmojisOutsideCode(text: string, emojiMap: Record<string, string>): string {
+    if (!text) return text;
+    // Split by triple backticks to avoid code blocks
+    const parts = text.split(/```/);
+    for (let i = 0; i < parts.length; i++) {
+        // Only replace in non-code blocks (even indices)
+        if (i % 2 === 0) {
+            // Also avoid inline code wrapped in single backticks by a simple pass
+            const inlineParts = parts[i].split(/`/);
+            for (let j = 0; j < inlineParts.length; j++) {
+                if (j % 2 === 0) {
+                    inlineParts[j] = inlineParts[j].replace(/:([a-zA-Z0-9_]{2,32}):/g, (match, p1: string) => {
+                        const key = p1;
+                        const found = emojiMap[key];
+                        return found ? found : match;
+                    });
+                }
+            }
+            parts[i] = inlineParts.join('`');
+        }
+    }
+    return parts.join('```');
+}
+
+async function getGuildCustomEmojis(message: any): Promise<{ names: string[]; map: Record<string, string> }> {
+    const result = { names: [] as string[], map: {} as Record<string, string> };
+    try {
+        const guild = message.guild;
+        if (!guild) return result;
+        // Ensure emojis are fetched
+        const emojis = await guild.emojis.fetch();
+        const list = Array.from(emojis.values()) as GuildEmoji[];
+        for (const e of list) {
+            const name = e.name ?? undefined;
+            const id = e.id;
+            if (!name || !id) continue;
+            const tag = e.animated ? `<a:${name}:${id}>` : `<:${name}:${id}>`;
+            if (!(name in result.map)) {
+                result.map[name] = tag;
+                result.names.push(name);
+            }
+        }
+        // Limit names to 25 for meta context brevity
+        result.names = result.names.slice(0, 25);
+    } catch {
+        // ignore
+    }
+    return result;
+}
+
+function buildMessageMeta(message: any, emojiNames?: string[]): string {
     try {
         const parts: string[] = [];
         const inGuild = !!message.guild;
@@ -106,6 +156,10 @@ function buildMessageMeta(message: any): string {
             parts.push(`Adjuntos: ${info}`);
         }
 
+        if (emojiNames && emojiNames.length) {
+            parts.push(`Emojis personalizados disponibles (usa :nombre:): ${emojiNames.join(', ')}`);
+        }
+
         const metaRaw = parts.join(' | ');
         return metaRaw.length > 800 ? metaRaw.slice(0, 800) : metaRaw;
     } catch {
@@ -141,8 +195,11 @@ export const command: CommandMessage = {
             return;
         }
 
-        // Construir metadatos del mensaje para mejor contexto
-        const meta = buildMessageMeta(message);
+        // Emojis personalizados del servidor
+        const { names: emojiNames, map: emojiMap } = await getGuildCustomEmojis(message);
+
+        // Construir metadatos del mensaje para mejor contexto (incluye emojis)
+        const meta = buildMessageMeta(message, emojiNames);
 
         // Indicador de escritura mejorado
         const typingInterval = setInterval(() => {
@@ -153,13 +210,18 @@ export const command: CommandMessage = {
             // Usar el servicio mejorado con manejo de prioridad
             const priority = message.member?.permissions.has('Administrator') ? 'high' : 'normal';
 
-            const aiResponse = await aiService.processAIRequest(
+            let aiResponse = await aiService.processAIRequest(
                 userId,
                 prompt,
                 guildId,
                 priority,
                 { meta }
             );
+
+            // Reemplazar :nombre: por el tag real del emoji, evitando bloques de código
+            if (emojiNames.length > 0) {
+                aiResponse = replaceShortcodesWithEmojisOutsideCode(aiResponse, emojiMap);
+            }
 
             // Discord limita el contenido a ~2000 caracteres
             const MAX_CONTENT = 2000;
