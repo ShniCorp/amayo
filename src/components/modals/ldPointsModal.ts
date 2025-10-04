@@ -29,21 +29,12 @@ export default {
     }
 
     try {
-      // Extraer el userId del customId (formato: ld_points_modal:userId)
-      const userId = interaction.customId.split(':')[1];
-      logger.info(`🔍 UserId extraído: ${userId}`);
+      // Obtener valores del nuevo formato de modal
+      const totalInput = interaction.components.getTextInputValue('points_input').trim();
+      const selectedUsers = interaction.components.getSelectedUsers('user_select');
 
-      if (!userId) {
-        return interaction.reply({
-          content: '❌ Error al identificar el usuario.',
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      // Obtener valor del modal
-      // @ts-ignore
-      const totalInput = interaction.fields.getTextInputValue('total_points').trim();
       logger.info(`🔍 Input recibido: ${totalInput}`);
+      logger.info(`🔍 Usuarios seleccionados: ${selectedUsers?.size || 0}`);
 
       if (!totalInput) {
         return interaction.reply({
@@ -51,6 +42,26 @@ export default {
           flags: MessageFlags.Ephemeral
         });
       }
+
+      if (!selectedUsers || selectedUsers.size === 0) {
+        return interaction.reply({
+          content: '❌ Debes seleccionar un usuario del leaderboard.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      // Obtener el primer (y único) usuario seleccionado
+      const selectedUser = Array.from(selectedUsers.values())[0];
+      const userId = selectedUser?.id;
+
+      if (!userId) {
+        return interaction.reply({
+          content: '❌ Error al identificar el usuario seleccionado.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      logger.info(`🔍 UserId extraído: ${userId}`);
 
       // Obtener o crear el registro de stats del usuario
       let stats = await prisma.partnershipStats.findUnique({
@@ -164,18 +175,7 @@ export default {
       logger.info(`✅ Puntos actualizados exitosamente en la base de datos`);
 
       // Obtener nombre del usuario
-      let userName = 'Usuario';
-      try {
-        const targetMember = await interaction.guild.members.fetch(userId);
-        userName = targetMember.displayName || targetMember.user.username;
-      } catch {
-        try {
-          const user = await interaction.client.users.fetch(userId);
-          userName = user.username;
-        } catch {
-          userName = userId;
-        }
-      }
+      const userName = selectedUser?.tag ?? selectedUser?.username ?? userId;
 
       // Calcular las diferencias
       const totalDiff = newTotalPoints - stats.totalPoints;
@@ -206,15 +206,10 @@ export default {
             name: '📅 Puntos Semanales',
             value: `${stats.weeklyPoints} → **${newWeeklyPoints}** (${weeklyDiffText})`,
             inline: true
-          },
-          {
-            name: '📝 Operación',
-            value: `\`${totalInput}\``,
-            inline: false
           }
         )
-        .setFooter({ text: `Modificado por ${interaction.user.username}` })
-        .setTimestamp();
+        .setTimestamp()
+        .setFooter({ text: `Modificado por ${interaction.user.username}` });
 
       await interaction.reply({
         embeds: [embed],
