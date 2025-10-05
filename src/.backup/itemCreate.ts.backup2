@@ -54,55 +54,9 @@ export const command: CommandMessage = {
       props: {},
     };
 
-    // Función para crear display
-    const createDisplay = () => ({
-      display: {
-        type: 17,
-        accent_color: 0x00D9FF,
-        components: [
-          {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**🛠️ Editor de Item: \`${key}\`**`
-            }]
-          },
-          { type: 14, divider: true },
-          {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**Nombre:** ${state.name || '*Sin definir*'}\n` +
-                       `**Descripción:** ${state.description || '*Sin definir*'}\n` +
-                       `**Categoría:** ${state.category || '*Sin definir*'}\n` +
-                       `**Icon URL:** ${state.icon || '*Sin definir*'}\n` +
-                       `**Stackable:** ${state.stackable ? 'Sí' : 'No'}\n` +
-                       `**Máx. Inventario:** ${state.maxPerInventory || 'Ilimitado'}`
-            }]
-          },
-          { type: 14, divider: true },
-          {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**Tags:** ${state.tags.length > 0 ? state.tags.join(', ') : '*Ninguno*'}`
-            }]
-          },
-          { type: 14, divider: true },
-          {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**Props (JSON):**\n\`\`\`json\n${JSON.stringify(state.props, null, 2)}\n\`\`\``
-            }]
-          }
-        ]
-      }
-    });
-
     const channel = message.channel as TextBasedChannel & { send: Function };
     const editorMsg = await channel.send({
-      ...createDisplay(),
+      content: `🛠️ Editor de Item: \`${key}\`\nUsa los botones para configurar los campos y luego guarda.`,
       components: [
         { type: 1, components: [
           { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'it_base' },
@@ -121,20 +75,20 @@ export const command: CommandMessage = {
         if (!i.isButton()) return;
         if (i.customId === 'it_cancel') {
           await i.deferUpdate();
-          await editorMsg.edit({ content: '❌ Editor cancelado.', components: [], display: undefined });
+          await editorMsg.edit({ content: '❌ Editor cancelado.', components: [] });
           collector.stop('cancel');
           return;
         }
         if (i.customId === 'it_base') {
-          await showBaseModal(i as ButtonInteraction, state, editorMsg, createDisplay);
+          await showBaseModal(i as ButtonInteraction, state);
           return;
         }
         if (i.customId === 'it_tags') {
-          await showTagsModal(i as ButtonInteraction, state, editorMsg, createDisplay);
+          await showTagsModal(i as ButtonInteraction, state);
           return;
         }
         if (i.customId === 'it_props') {
-          await showPropsModal(i as ButtonInteraction, state, editorMsg, createDisplay);
+          await showPropsModal(i as ButtonInteraction, state);
           return;
         }
         if (i.customId === 'it_save') {
@@ -159,7 +113,7 @@ export const command: CommandMessage = {
             },
           });
           await i.reply({ content: '✅ Item guardado!', flags: MessageFlags.Ephemeral });
-          await editorMsg.edit({ content: `✅ Item \`${state.key}\` creado.`, components: [], display: undefined });
+          await editorMsg.edit({ content: `✅ Item \`${state.key}\` creado.`, components: [] });
           collector.stop('saved');
           return;
         }
@@ -171,13 +125,13 @@ export const command: CommandMessage = {
 
     collector.on('end', async (_c, r) => {
       if (r === 'time') {
-        try { await editorMsg.edit({ content: '⏰ Editor expirado.', components: [], display: undefined }); } catch {}
+        try { await editorMsg.edit({ content: '⏰ Editor expirado.', components: [] }); } catch {}
       }
     });
   },
 };
 
-async function showBaseModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, createDisplay: Function) {
+async function showBaseModal(i: ButtonInteraction, state: ItemEditorState) {
   const modal = {
     title: 'Configuración base del Item',
     customId: 'it_base_modal',
@@ -211,12 +165,11 @@ async function showBaseModal(i: ButtonInteraction, state: ItemEditorState, edito
       state.maxPerInventory = mv ? Math.max(0, parseInt(mv, 10) || 0) : null;
     }
 
-    await sub.deferUpdate();
-    await editorMsg.edit(createDisplay());
+    await sub.reply({ content: '✅ Base actualizada.', flags: MessageFlags.Ephemeral });
   } catch {}
 }
 
-async function showTagsModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, createDisplay: Function) {
+async function showTagsModal(i: ButtonInteraction, state: ItemEditorState) {
   const modal = {
     title: 'Tags del Item (separados por coma)',
     customId: 'it_tags_modal',
@@ -229,12 +182,11 @@ async function showTagsModal(i: ButtonInteraction, state: ItemEditorState, edito
     const sub = await i.awaitModalSubmit({ time: 300_000 });
     const tags = sub.components.getTextInputValue('tags');
     state.tags = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
-    await sub.deferUpdate();
-    await editorMsg.edit(createDisplay());
+    await sub.reply({ content: '✅ Tags actualizados.', flags: MessageFlags.Ephemeral });
   } catch {}
 }
 
-async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, createDisplay: Function) {
+async function showPropsModal(i: ButtonInteraction, state: ItemEditorState) {
   const template = state.props && Object.keys(state.props).length ? JSON.stringify(state.props) : JSON.stringify({
     tool: undefined,
     breakable: undefined,
@@ -263,7 +215,7 @@ async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, edit
       try {
         const parsed = JSON.parse(raw);
         state.props = parsed;
-        await sub.deferUpdate(); await editorMsg.edit(createDisplay());
+        await sub.reply({ content: '✅ Props guardados.', flags: MessageFlags.Ephemeral });
       } catch (e) {
         await sub.reply({ content: '❌ JSON inválido.', flags: MessageFlags.Ephemeral });
       }
