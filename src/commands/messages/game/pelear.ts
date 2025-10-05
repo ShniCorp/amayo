@@ -16,7 +16,7 @@ export const command: CommandMessage = {
   run: async (message, args, _client: Amayo) => {
     const userId = message.author.id;
     const guildId = message.guild!.id;
-    const areaKey = 'fight.arena';
+    const areaKey = args[0] === 'fight.arena' ? args[0] : 'fight.arena'; // Forzar key de área de arena
 
     const area = await resolveArea(guildId, areaKey);
     if (!area) { await message.reply('⚠️ Área de arena no configurada. Crea `gameArea` con key `fight.arena`.'); return; }

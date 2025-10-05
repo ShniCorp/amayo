@@ -16,7 +16,7 @@ export const command: CommandMessage = {
   run: async (message, args, _client: Amayo) => {
     const userId = message.author.id;
     const guildId = message.guild!.id;
-    const areaKey = 'lagoon.shore';
+    const areaKey = args[0] === 'lagoon.shore' ? args[0] : 'lagoon.shore'; // Forzar key de área de laguna
 
     const area = await resolveArea(guildId, areaKey);
     if (!area) { await message.reply('⚠️ Área de laguna no configurada. Crea `gameArea` con key `lagoon.shore`.'); return; }
