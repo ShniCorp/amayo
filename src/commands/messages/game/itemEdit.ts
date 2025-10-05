@@ -49,7 +49,6 @@ export const command: CommandMessage = {
 
     const editorMsg = await message.channel.send({
       content: `🛠️ Editor de Item (editar): \`${key}\``,
-      flags: MessageFlags.IsComponentsV2,
       components: [ { type: 1, components: [
         { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'it_base' },
         { type: 2, style: ButtonStyle.Secondary, label: 'Tags', custom_id: 'it_tags' },
@@ -141,4 +140,3 @@ async function showPropsModal(i: ButtonInteraction, state: ItemEditorState) {
     else { state.props = {}; await sub.reply({ content: 'ℹ️ Props limpiados.', flags: MessageFlags.Ephemeral }); }
   } catch {}
 }
-

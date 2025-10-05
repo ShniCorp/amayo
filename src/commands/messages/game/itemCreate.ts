@@ -56,7 +56,6 @@ export const command: CommandMessage = {
 
     const editorMsg = await message.channel.send({
       content: `🛠️ Editor de Item: \`${key}\`\nUsa los botones para configurar los campos y luego guarda.`,
-      flags: MessageFlags.IsComponentsV2,
       components: [
         { type: 1, components: [
           { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'it_base' },
