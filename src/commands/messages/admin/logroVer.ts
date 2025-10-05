@@ -2,7 +2,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { prisma } from '../../../core/database/prisma';
 import type { TextBasedChannel } from 'discord.js';
-import { ComponentType, ButtonStyle } from 'discord-api-types/v10';
+import { buildDisplay, dividerBlock, textBlock } from '../../../core/lib/componentsV2';
 
 export const command: CommandMessage = {
   name: 'logro-ver',
@@ -50,78 +50,40 @@ export const command: CommandMessage = {
     const req = achievement.requirements as any;
     const rew = achievement.rewards as any;
 
-    const display = {
-      type: 17,
-      accent_color: 0xFFD700,
-      components: [
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `${achievement.icon || '🏆'} **${achievement.name}**`
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Descripción:** ${achievement.description}\n` +
-                       `**Key:** \`${achievement.key}\`\n` +
-                       `**Categoría:** ${achievement.category}\n` +
-                       `**Puntos:** ${achievement.points} pts\n` +
-                       `**Visibilidad:** ${achievement.hidden ? '🔒 Oculto' : '👁️ Visible'}\n` +
-                       `**Ámbito:** ${achievement.guildId ? '📍 Local del servidor' : '🌐 Global'}\n` +
-                       `**Desbloqueados:** ${unlockedCount} jugadores`
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**📋 Requisitos:**\n\`\`\`json\n${JSON.stringify(req, null, 2)}\n\`\`\``
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**🎁 Recompensas:**\n\`\`\`json\n${JSON.stringify(rew, null, 2)}\n\`\`\``
-            }
-          ]
-        }
-      ]
-    };
+    const blocks = [
+      textBlock(`${achievement.icon || '🏆'} **${achievement.name}**`),
+      dividerBlock(),
+      textBlock([
+        `**Descripción:** ${achievement.description}`,
+        `**Key:** \`${achievement.key}\``,
+        `**Categoría:** ${achievement.category}`,
+        `**Puntos:** ${achievement.points} pts`,
+        `**Visibilidad:** ${achievement.hidden ? '🔒 Oculto' : '👁️ Visible'}`,
+        `**Ámbito:** ${achievement.guildId ? '📍 Local del servidor' : '🌐 Global'}`,
+        `**Desbloqueados:** ${unlockedCount} jugadores`,
+      ].join('\n')),
+      dividerBlock(),
+      textBlock(`**📋 Requisitos:**\n\`\`\`json\n${JSON.stringify(req, null, 2)}\n\`\`\``),
+      dividerBlock(),
+      textBlock(`**🎁 Recompensas:**\n\`\`\`json\n${JSON.stringify(rew, null, 2)}\n\`\`\``),
+    ];
 
     if (achievement.unlocked.length > 0) {
-      display.components.push({ type: 14, divider: true });
-      display.components.push({
-        type: 9,
-        components: [
-          {
-            type: 10,
-            content: `**🏆 Últimos Desbloqueados:**\n` +
-                     achievement.unlocked.slice(0, 5).map(pa => 
-                       `• <@${pa.userId}> - ${pa.unlockedAt ? new Date(pa.unlockedAt).toLocaleDateString() : 'N/A'}`
-                     ).join('\n')
-          }
-        ]
-      });
+      const unlockedLines = achievement.unlocked.slice(0, 5)
+        .map(pa => `• <@${pa.userId}> - ${pa.unlockedAt ? new Date(pa.unlockedAt).toLocaleDateString() : 'N/A'}`)
+        .join('\n');
+      blocks.push(dividerBlock());
+      blocks.push(textBlock(`**🏆 Últimos Desbloqueados:**\n${unlockedLines}`));
     }
+
+    const display = buildDisplay(0xFFD700, blocks);
 
     const channel = message.channel as TextBasedChannel & { send: Function };
     await (channel.send as any)({
+      content: null,
       flags: 32768,
-      components: [display]
+      components: [display],
+      reply: { messageReference: message.id }
     });
   }
 };

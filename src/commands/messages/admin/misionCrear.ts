@@ -3,6 +3,7 @@ import type Amayo from '../../../core/client';
 import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import { prisma } from '../../../core/database/prisma';
 import { ComponentType, TextInputStyle, ButtonStyle } from 'discord-api-types/v10';
+import { buildDisplay, dividerBlock, textBlock } from '../../../core/lib/componentsV2';
 import type { ButtonInteraction, MessageComponentInteraction, TextBasedChannel } from 'discord.js';
 
 interface QuestState {
@@ -53,24 +54,12 @@ export const command: CommandMessage = {
       rewards: { coins: 500 }
     };
 
-    const displayMessage = createDisplay(state);
-    
     const channel = message.channel as TextBasedChannel & { send: Function };
-    const editorMsg = await channel.send({
-      ...displayMessage,
+    const editorMsg = await (channel.send as any)({
+      content: null,
       flags: 32768,
-      components: [
-        {
-          type: ComponentType.ActionRow,
-          components: [
-            { type: ComponentType.Button, style: ButtonStyle.Primary, label: 'Base', custom_id: 'quest_base' },
-            { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Requisitos', custom_id: 'quest_req' },
-            { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Recompensas', custom_id: 'quest_reward' },
-            { type: ComponentType.Button, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'quest_save' },
-            { type: ComponentType.Button, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'quest_cancel' }
-          ]
-        }
-      ]
+      reply: { messageReference: message.id },
+      components: buildEditorComponents(state)
     });
 
     const collector = editorMsg.createMessageComponentCollector({
@@ -86,19 +75,13 @@ export const command: CommandMessage = {
           case 'quest_cancel':
             await i.deferUpdate();
             await editorMsg.edit({
-              display: {
-                type: 17,
-                accent_color: 0xFF0000,
-                components: [{
-                  type: 9,
-                  components: [{
-                    type: 10,
-                    content: '**❌ Creación de misión cancelada.**'
-                  }]
-                }]
-              },
+              content: null,
               flags: 32768,
-              components: []
+              components: [
+                buildDisplay(0xFF0000, [
+                  textBlock('**❌ Creación de misión cancelada.**')
+                ])
+              ]
             });
             collector.stop('cancel');
             return;
@@ -139,19 +122,13 @@ export const command: CommandMessage = {
 
             await i.reply({ content: '✅ Misión creada exitosamente.', flags: 64 });
             await editorMsg.edit({
-              display: {
-                type: 17,
-                accent_color: 0x00FF00,
-                components: [{
-                  type: 9,
-                  components: [{
-                    type: 10,
-                    content: `**✅ Misión \`${state.key}\` creada exitosamente.**`
-                  }]
-                }]
-              },
+              content: null,
               flags: 32768,
-              components: []
+              components: [
+                buildDisplay(0x00FF00, [
+                  textBlock(`**✅ Misión \`${state.key}\` creada exitosamente.**`)
+                ])
+              ]
             });
             collector.stop('saved');
             return;
@@ -168,19 +145,13 @@ export const command: CommandMessage = {
       if (r === 'time') {
         try {
           await editorMsg.edit({
-            display: {
-              type: 17,
-              accent_color: 0xFFA500,
-              components: [{
-                type: 9,
-                components: [{
-                  type: 10,
-                  content: '**⏰ Editor expirado.**'
-                }]
-              }]
-            },
+            content: null,
             flags: 32768,
-            components: []
+            components: [
+              buildDisplay(0xFFA500, [
+                textBlock('**⏰ Editor expirado.**')
+              ])
+            ]
           });
         } catch {}
       }
@@ -188,7 +159,7 @@ export const command: CommandMessage = {
   }
 };
 
-function createDisplay(state: QuestState) {
+function buildEditorDisplay(state: QuestState) {
   const typeEmojis: Record<string, string> = {
     daily: '📅',
     weekly: '📆',
@@ -196,53 +167,40 @@ function createDisplay(state: QuestState) {
     event: '🎉'
   };
 
-  return {
-    display: {
-      type: 17, // Container
-      accent_color: 0x5865F2,
+  const baseInfo = [
+    `**Nombre:** ${state.name || '*Sin definir*'}`,
+    `**Descripción:** ${state.description || '*Sin definir*'}`,
+    `**Categoría:** ${state.category || 'mining'}`,
+    `**Tipo:** ${typeEmojis[state.type || 'daily']} ${state.type || 'daily'}`,
+    `**Icono:** ${state.icon || '📋'}`,
+    `**Repetible:** ${state.repeatable ? 'Sí' : 'No'}`
+  ].join('\n');
+
+  return buildDisplay(0x5865F2, [
+    textBlock(`# 📜 Creando Misión: \`${state.key}\``),
+    dividerBlock(),
+    textBlock(baseInfo),
+    dividerBlock(),
+    textBlock(`**Requisitos:**\n\`\`\`json\n${JSON.stringify(state.requirements, null, 2)}\n\`\`\``),
+    dividerBlock(),
+    textBlock(`**Recompensas:**\n\`\`\`json\n${JSON.stringify(state.rewards, null, 2)}\n\`\`\``)
+  ]);
+}
+
+function buildEditorComponents(state: QuestState) {
+  return [
+    buildEditorDisplay(state),
+    {
+      type: ComponentType.ActionRow,
       components: [
-        {
-          type: 9, // Section
-          components: [
-            {
-              type: 10, // Text Display
-              content: `**📜 Creando Misión: \`${state.key}\`**`
-            }
-          ]
-        },
-        { type: 14, divider: true }, // Separator
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Nombre:** ${state.name || '*Sin definir*'}\n**Descripción:** ${state.description || '*Sin definir*'}\n**Categoría:** ${state.category || 'mining'}\n**Tipo:** ${typeEmojis[state.type || 'daily']} ${state.type || 'daily'}\n**Icono:** ${state.icon || '📋'}\n**Repetible:** ${state.repeatable ? 'Sí' : 'No'}`
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Requisitos:**\n\`\`\`json\n${JSON.stringify(state.requirements, null, 2)}\n\`\`\``
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Recompensas:**\n\`\`\`json\n${JSON.stringify(state.rewards, null, 2)}\n\`\`\``
-            }
-          ]
-        }
+        { type: ComponentType.Button, style: ButtonStyle.Primary, label: 'Base', custom_id: 'quest_base' },
+        { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Requisitos', custom_id: 'quest_req' },
+        { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Recompensas', custom_id: 'quest_reward' },
+        { type: ComponentType.Button, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'quest_save' },
+        { type: ComponentType.Button, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'quest_cancel' }
       ]
     }
-  };
+  ];
 }
 
 async function showBaseModal(i: ButtonInteraction, state: QuestState, editorMsg: any) {
@@ -323,7 +281,11 @@ async function showBaseModal(i: ButtonInteraction, state: QuestState, editorMsg:
   state.icon = submit.components.getTextInputValue('icon') || '📋';
 
   await submit.deferUpdate();
-  await editorMsg.edit(createDisplay(state));
+  await editorMsg.edit({
+    content: null,
+    flags: 32768,
+    components: buildEditorComponents(state)
+  });
 }
 
 async function showRequirementsModal(i: ButtonInteraction, state: QuestState, editorMsg: any) {
@@ -358,7 +320,11 @@ async function showRequirementsModal(i: ButtonInteraction, state: QuestState, ed
   try {
     state.requirements = JSON.parse(submit.components.getTextInputValue('requirements'));
     await submit.deferUpdate();
-    await editorMsg.edit(createDisplay(state));
+    await editorMsg.edit({
+      content: null,
+      flags: 32768,
+      components: buildEditorComponents(state)
+    });
   } catch (e) {
     await submit.reply({ content: '❌ JSON inválido en requisitos.', flags: 64 });
   }
@@ -396,7 +362,11 @@ async function showRewardsModal(i: ButtonInteraction, state: QuestState, editorM
   try {
     state.rewards = JSON.parse(submit.components.getTextInputValue('rewards'));
     await submit.deferUpdate();
-    await editorMsg.edit(createDisplay(state));
+    await editorMsg.edit({
+      content: null,
+      flags: 32768,
+      components: buildEditorComponents(state)
+    });
   } catch (e) {
     await submit.reply({ content: '❌ JSON inválido en recompensas.', flags: 64 });
   }
