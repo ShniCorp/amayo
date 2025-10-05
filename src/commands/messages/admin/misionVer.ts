@@ -1,6 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { prisma } from '../../../core/database/prisma';
+import type { TextBasedChannel } from 'discord.js';
 
 export const command: CommandMessage = {
   name: 'mision-ver',
@@ -150,6 +151,6 @@ export const command: CommandMessage = {
       });
     }
 
-    await message.reply({ display } as any);
+    const channel = message.channel as TextBasedChannel & { send: Function }; await (channel.send as any)({ display, reply: { messageReference: message.id } });
   }
 };

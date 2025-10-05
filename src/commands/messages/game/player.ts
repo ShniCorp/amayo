@@ -4,6 +4,7 @@ import { prisma } from '../../../core/database/prisma';
 import { getOrCreateWallet } from '../../../game/economy/service';
 import { getEquipment, getEffectiveStats } from '../../../game/combat/equipmentService';
 import { getPlayerStatsFormatted } from '../../../game/stats/service';
+import type { TextBasedChannel } from 'discord.js';
 
 export const command: CommandMessage = {
   name: 'player',
@@ -166,6 +167,10 @@ export const command: CommandMessage = {
       });
     }
 
-    await message.reply({ display } as any);
+    const channel = message.channel as TextBasedChannel & { send: Function };
+    await (channel.send as any)({
+      display,
+      reply: { messageReference: message.id }
+    });
   }
 };
