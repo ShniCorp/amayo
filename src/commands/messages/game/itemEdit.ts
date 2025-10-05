@@ -104,7 +104,7 @@ async function showBaseModal(i: ButtonInteraction, state: ItemEditorState) {
       { type: ComponentType.Label, label: 'Descripción', component: { type: ComponentType.TextInput, customId: 'desc', style: TextInputStyle.Paragraph, required: false, value: state.description ?? '' } },
       { type: ComponentType.Label, label: 'Categoría', component: { type: ComponentType.TextInput, customId: 'cat', style: TextInputStyle.Short, required: false, value: state.category ?? '' } },
       { type: ComponentType.Label, label: 'Icon URL', component: { type: ComponentType.TextInput, customId: 'icon', style: TextInputStyle.Short, required: false, value: state.icon ?? '' } },
-      { type: ComponentType.Label, label: 'Stackable,true/false; MaxPerInv (número o vacío)', component: { type: ComponentType.TextInput, customId: 'stack_max', style: TextInputStyle.Short, required: false, placeholder: 'true,10', value: state.stackable !== undefined ? `${state.stackable},${state.maxPerInventory ?? ''}` : '' } },
+      { type: ComponentType.Label, label: 'Stackable y Máx inventario', component: { type: ComponentType.TextInput, customId: 'stack_max', style: TextInputStyle.Short, required: false, placeholder: 'true,10', value: state.stackable !== undefined ? `${state.stackable},${state.maxPerInventory ?? ''}` : '' } },
     ], } as const;
   await i.showModal(modal);
   try {
