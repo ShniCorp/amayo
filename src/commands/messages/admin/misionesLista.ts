@@ -102,11 +102,14 @@ export const command: CommandMessage = {
 
     const channel = message.channel as TextBasedChannel & { send: Function };
     const msg = await (channel.send as any)({
-      display,
-      components: buttons.length > 0 ? [{
-        type: ComponentType.ActionRow,
-        components: buttons
-      }] : []
+      flags: 32768,
+      components: [
+        display,
+        ...(buttons.length > 0 ? [{
+          type: ComponentType.ActionRow,
+          components: buttons
+        }] : [])
+      ]
     });
 
     const collector = msg.createMessageComponentCollector({

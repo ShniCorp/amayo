@@ -84,7 +84,20 @@ export const command: CommandMessage = {
         switch (i.customId) {
           case 'quest_cancel':
             await i.deferUpdate();
-            await editorMsg.edit({ content: '❌ Creación de misión cancelada.', components: [], display: undefined });
+            await editorMsg.edit({
+              flags: 32768,
+              components: [{
+                type: 17,
+                accent_color: 0xFF0000,
+                components: [{
+                  type: 9,
+                  components: [{
+                    type: 10,
+                    content: '**❌ Creación de misión cancelada.**'
+                  }]
+                }]
+              }]
+            });
             collector.stop('cancel');
             return;
 
@@ -142,7 +155,20 @@ export const command: CommandMessage = {
     collector.on('end', async (_c, r) => {
       if (r === 'time') {
         try {
-          await editorMsg.edit({ content: '⏰ Editor expirado.', components: [], display: undefined });
+          await editorMsg.edit({
+            flags: 32768,
+            components: [{
+              type: 17,
+              accent_color: 0xFFA500,
+              components: [{
+                type: 9,
+                components: [{
+                  type: 10,
+                  content: '**⏰ Editor expirado.**'
+                }]
+              }]
+            }]
+          });
         } catch {}
       }
     });

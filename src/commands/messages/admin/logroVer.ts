@@ -118,6 +118,10 @@ export const command: CommandMessage = {
       });
     }
 
-    const channel = message.channel as TextBasedChannel & { send: Function }; await (channel.send as any)({ display, reply: { messageReference: message.id } });
+    const channel = message.channel as TextBasedChannel & { send: Function };
+    await (channel.send as any)({
+      flags: 32768,
+      components: [display]
+    });
   }
 };

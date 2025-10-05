@@ -86,7 +86,20 @@ export const command: CommandMessage = {
         switch (i.customId) {
           case 'ach_cancel':
             await i.deferUpdate();
-            await editorMsg.edit({ content: '❌ Creación de logro cancelada.', components: [], display: undefined });
+            await editorMsg.edit({
+              flags: 32768,
+              components: [{
+                type: 17,
+                accent_color: 0xFF0000,
+                components: [{
+                  type: 9,
+                  components: [{
+                    type: 10,
+                    content: '**❌ Creación de logro cancelada.**'
+                  }]
+                }]
+              }]
+            });
             collector.stop('cancel');
             return;
 
@@ -123,11 +136,20 @@ export const command: CommandMessage = {
               }
             });
 
-            await i.reply({ content: '✅ Logro creado exitosamente.', flags: 64 });
+            await i.reply({ content: '✅ Logro creado exitosamente!', flags: 64 });
             await editorMsg.edit({
-              content: `✅ Logro \`${state.key}\` creado.`,
-              components: [],
-              display: undefined
+              flags: 32768,
+              components: [{
+                type: 17,
+                accent_color: 0x00FF00,
+                components: [{
+                  type: 9,
+                  components: [{
+                    type: 10,
+                    content: `**✅ Logro \`${state.key}\` creado exitosamente.**`
+                  }]
+                }]
+              }]
             });
             collector.stop('saved');
             return;
@@ -143,7 +165,20 @@ export const command: CommandMessage = {
     collector.on('end', async (_c, r) => {
       if (r === 'time') {
         try {
-          await editorMsg.edit({ content: '⏰ Editor expirado.', components: [], display: undefined });
+          await editorMsg.edit({
+            flags: 32768,
+            components: [{
+              type: 17,
+              accent_color: 0xFFA500,
+              components: [{
+                type: 9,
+                components: [{
+                  type: 10,
+                  content: '**⏰ Editor expirado.**'
+                }]
+              }]
+            }]
+          });
         } catch {}
       }
     });

@@ -121,7 +121,20 @@ export const command: CommandMessage = {
         if (!i.isButton()) return;
         if (i.customId === 'it_cancel') {
           await i.deferUpdate();
-          await editorMsg.edit({ content: '❌ Editor cancelado.', components: [], display: undefined });
+          await editorMsg.edit({
+              flags: 32768,
+              components: [{
+                type: 17,
+                accent_color: 0xFF0000,
+                components: [{
+                  type: 9,
+                  components: [{
+                    type: 10,
+                    content: '**❌ Editor cancelado.**'
+                  }]
+                }]
+              }]
+            });
           collector.stop('cancel');
           return;
         }
@@ -171,7 +184,20 @@ export const command: CommandMessage = {
 
     collector.on('end', async (_c, r) => {
       if (r === 'time') {
-        try { await editorMsg.edit({ content: '⏰ Editor expirado.', components: [], display: undefined }); } catch {}
+        try { await editorMsg.edit({
+            flags: 32768,
+            components: [{
+              type: 17,
+              accent_color: 0xFFA500,
+              components: [{
+                type: 9,
+                components: [{
+                  type: 10,
+                  content: '**⏰ Editor expirado.**'
+                }]
+              }]
+            }]
+          }); } catch {}
       }
     });
   },
