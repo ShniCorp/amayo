@@ -4,6 +4,22 @@ import type { ItemProps, InventoryState } from '../economy/types';
 import type { LevelRequirements, RunMinigameOptions, RunResult, RewardsTable, MobsTable } from './types';
 import type { Prisma } from '@prisma/client';
 
+// Auto-select best tool from inventory by type and constraints
+async function findBestToolKey(userId: string, guildId: string, toolType: string, opts?: { minTier?: number; allowedKeys?: string[] }) {
+  const entries = await prisma.inventoryEntry.findMany({ where: { userId, guildId, quantity: { gt: 0 } }, include: { item: true } });
+  let best: { key: string; tier: number } | null = null;
+  for (const e of entries) {
+    const props = parseItemProps(e.item.props);
+    const t = props.tool;
+    if (!t || t.type !== toolType) continue;
+    const tier = Math.max(0, t.tier ?? 0);
+    if (opts?.minTier != null && tier < opts.minTier) continue;
+    if (opts?.allowedKeys && opts.allowedKeys.length && !opts.allowedKeys.includes(e.item.key)) continue;
+    if (!best || tier > best.tier) best = { key: e.item.key, tier };
+  }
+  return best?.key ?? null;
+}
+
 function parseJSON<T>(v: unknown): T | null {
   if (!v || (typeof v !== 'object' && typeof v !== 'string')) return null;
   return v as T;
@@ -44,23 +60,30 @@ async function validateRequirements(userId: string, guildId: string, req?: Level
   const toolReq = req.tool;
   if (!toolReq) return { toolKeyUsed: undefined as string | undefined };
 
+  let toolKeyUsed = toolKey;
+
+  // Auto-select tool when required and not provided
+  if (!toolKeyUsed && toolReq.required && toolReq.toolType) {
+    toolKeyUsed = await findBestToolKey(userId, guildId, toolReq.toolType, { minTier: toolReq.minTier, allowedKeys: toolReq.allowedKeys });
+  }
+
   // herramienta requerida
-  if (toolReq.required && !toolKey) throw new Error('Se requiere una herramienta');
-  if (!toolKey) return { toolKeyUsed: undefined };
+  if (toolReq.required && !toolKeyUsed) throw new Error('Se requiere una herramienta adecuada');
+  if (!toolKeyUsed) return { toolKeyUsed: undefined };
 
   // verificar herramienta
-  const toolItem = await findItemByKey(guildId, toolKey);
+  const toolItem = await findItemByKey(guildId, toolKeyUsed);
   if (!toolItem) throw new Error('Herramienta no encontrada');
-  const { entry } = await getInventoryEntry(userId, guildId, toolKey);
+  const { entry } = await getInventoryEntry(userId, guildId, toolKeyUsed);
   if (!entry || (entry.quantity ?? 0) <= 0) throw new Error('No tienes la herramienta');
 
   const props = parseItemProps(toolItem.props);
   const tool = props.tool;
   if (toolReq.toolType && tool?.type !== toolReq.toolType) throw new Error('Tipo de herramienta incorrecto');
   if (toolReq.minTier != null && (tool?.tier ?? 0) < toolReq.minTier) throw new Error('Tier de herramienta insuficiente');
-  if (toolReq.allowedKeys && !toolReq.allowedKeys.includes(toolKey)) throw new Error('Esta herramienta no es válida para esta área');
+  if (toolReq.allowedKeys && !toolReq.allowedKeys.includes(toolKeyUsed)) throw new Error('Esta herramienta no es válida para esta área');
 
-  return { toolKeyUsed: toolKey };
+  return { toolKeyUsed };
 }
 
 async function applyRewards(userId: string, guildId: string, rewards?: RewardsTable): Promise<RunResult['rewards']> {
@@ -205,4 +228,19 @@ export async function runMinigame(userId: string, guildId: string, areaKey: stri
   }
 
   return { success: true, rewards: delivered, mobs: mobsSpawned, tool: toolInfo };
+}
+
+// Convenience wrappers with auto-level (from PlayerProgress) and auto-tool selection inside validateRequirements
+export async function runMining(userId: string, guildId: string, level?: number, toolKey?: string) {
+  const area = await prisma.gameArea.findFirst({ where: { key: 'mine.cavern', OR: [{ guildId }, { guildId: null }] }, orderBy: [{ guildId: 'desc' }] });
+  if (!area) throw new Error('Área de mina no configurada');
+  const lvl = level ?? (await prisma.playerProgress.findUnique({ where: { userId_guildId_areaId: { userId, guildId, areaId: area.id } } }))?.highestLevel ?? 1;
+  return runMinigame(userId, guildId, 'mine.cavern', Math.max(1, lvl), { toolKey });
+}
+
+export async function runFishing(userId: string, guildId: string, level?: number, toolKey?: string) {
+  const area = await prisma.gameArea.findFirst({ where: { key: 'lagoon.shore', OR: [{ guildId }, { guildId: null }] }, orderBy: [{ guildId: 'desc' }] });
+  if (!area) throw new Error('Área de laguna no configurada');
+  const lvl = level ?? (await prisma.playerProgress.findUnique({ where: { userId_guildId_areaId: { userId, guildId, areaId: area.id } } }))?.highestLevel ?? 1;
+  return runMinigame(userId, guildId, 'lagoon.shore', Math.max(1, lvl), { toolKey });
 }

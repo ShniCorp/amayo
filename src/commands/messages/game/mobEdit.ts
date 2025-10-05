@@ -41,7 +41,6 @@ export const command: CommandMessage = {
 
     const editorMsg = await message.channel.send({
       content: `👾 Editor de Mob (editar): \`${key}\``,
-      flags: MessageFlags.IsComponentsV2,
       components: [ { type: 1, components: [
         { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'mb_base' },
         { type: 2, style: ButtonStyle.Secondary, label: 'Stats (JSON)', custom_id: 'mb_stats' },
@@ -98,4 +97,3 @@ async function showJsonModal(i: ButtonInteraction, state: MobEditorState, field:
     else { state[field] = field==='stats' ? { attack: 5 } : {}; await sub.reply({ content: 'ℹ️ Limpio.', flags: MessageFlags.Ephemeral }); }
   } catch {}
 }
-

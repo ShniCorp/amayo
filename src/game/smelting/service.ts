@@ -13,8 +13,8 @@ export async function createSmeltJob(userId: string, guildId: string, inputs: Sm
   const outItem = await findItemByKey(guildId, outputItemKey);
   if (!outItem) throw new Error('Output item no encontrado');
 
+  let newJobId: string | null = null;
   // Validar y descontar inputs
-  // Nota: para simplificar, chequeo y descuento debería ser transaccional; usamos una transacción
   await prisma.$transaction(async (tx) => {
     // Chequeo
     for (const i of inputs) {
@@ -30,7 +30,7 @@ export async function createSmeltJob(userId: string, guildId: string, inputs: Sm
       await tx.inventoryEntry.update({ where: { userId_guildId_itemId: { userId, guildId, itemId: it.id } }, data: { quantity: { decrement: i.qty } } });
     }
     // Crear job
-    await tx.smeltJob.create({
+    const created = await tx.smeltJob.create({
       data: {
         userId,
         guildId,
@@ -40,10 +40,12 @@ export async function createSmeltJob(userId: string, guildId: string, inputs: Sm
         readyAt,
         status: 'pending',
       },
+      select: { id: true },
     });
+    newJobId = created.id;
   });
 
-  return { readyAt } as const;
+  return { readyAt, jobId: newJobId! } as const;
 }
 
 export async function claimSmeltJob(userId: string, guildId: string, jobId: string) {
@@ -52,13 +54,10 @@ export async function claimSmeltJob(userId: string, guildId: string, jobId: stri
   if (job.status !== 'pending' && job.status !== 'ready') throw new Error('Estado inválido');
   if (job.readyAt > new Date()) throw new Error('Aún no está listo');
 
-  // Otorgar outputs y marcar claimed
   await prisma.$transaction(async (tx) => {
     await tx.smeltJob.update({ where: { id: job.id }, data: { status: 'claimed' } });
     const outItem = await tx.economyItem.findUnique({ where: { id: job.outputItemId } });
     if (outItem) {
-      // usamos servicio economy por fuera de la transacción (para evitar nested client); hacemos simple aquí
-      // añadir con tx: replicamos addItem
       const inv = await tx.inventoryEntry.findUnique({ where: { userId_guildId_itemId: { userId, guildId, itemId: outItem.id } } });
       if (inv) {
         await tx.inventoryEntry.update({ where: { userId_guildId_itemId: { userId, guildId, itemId: outItem.id } }, data: { quantity: { increment: job.outputQty } } });
@@ -71,3 +70,12 @@ export async function claimSmeltJob(userId: string, guildId: string, jobId: stri
   return { ok: true } as const;
 }
 
+export async function claimNextReadyJob(userId: string, guildId: string) {
+  const job = await prisma.smeltJob.findFirst({
+    where: { userId, guildId, status: { in: ['pending', 'ready'] }, readyAt: { lte: new Date() } },
+    orderBy: { readyAt: 'asc' },
+  });
+  if (!job) throw new Error('No hay jobs listos');
+  await claimSmeltJob(userId, guildId, job.id);
+  return { ok: true, jobId: job.id } as const;
+}
