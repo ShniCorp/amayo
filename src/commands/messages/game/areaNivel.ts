@@ -46,19 +46,23 @@ export const command: CommandMessage = {
       availableTo: existing?.availableTo ? new Date(existing.availableTo).toISOString() : '',
     };
 
-    const editorMsg = await message.channel.send({
+    const editorMsg = await (message.channel as any).send({
       content: `📊 Editor Nivel Área: \`${areaKey}\` nivel ${levelNum} ${existing ? '(editar)' : '(nuevo)'}`,
-      components: [ { type: 1, components: [
-        { type: 2, style: ButtonStyle.Primary, label: 'Requisitos', custom_id: 'gl_req' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Recompensas', custom_id: 'gl_rewards' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Mobs', custom_id: 'gl_mobs' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Ventana', custom_id: 'gl_window' },
-        { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'gl_save' },
-        { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'gl_cancel' },
-      ] } ],
+      components: [
+        { type: 1, components: [
+          { type: 2, style: ButtonStyle.Primary, label: 'Requisitos', custom_id: 'gl_req' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Recompensas', custom_id: 'gl_rewards' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Mobs', custom_id: 'gl_mobs' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Ventana', custom_id: 'gl_window' },
+        ] },
+        { type: 1, components: [
+          { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'gl_save' },
+          { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'gl_cancel' },
+        ] },
+      ],
     });
 
-    const collector = editorMsg.createMessageComponentCollector({ time: 30*60_000, filter: (i)=> i.user.id === message.author.id });
+    const collector = editorMsg.createMessageComponentCollector({ time: 30*60_000, filter: (i: MessageComponentInteraction)=> i.user.id === message.author.id });
     collector.on('collect', async (i: MessageComponentInteraction) => {
       try {
         if (!i.isButton()) return;
@@ -93,7 +97,7 @@ export const command: CommandMessage = {
         if (!i.deferred && !i.replied) await i.reply({ content: '❌ Error procesando la acción.', flags: MessageFlags.Ephemeral });
       }
     });
-    collector.on('end', async (_c,r)=> { if (r==='time') { try { await editorMsg.edit({ content:'⏰ Editor expirado.', components: [] }); } catch {} } });
+    collector.on('end', async (_c: any,r: string)=> { if (r==='time') { try { await editorMsg.edit({ content:'⏰ Editor expirado.', components: [] }); } catch {} } });
   }
 };
 
@@ -126,4 +130,3 @@ async function showWindowModal(i: ButtonInteraction, state: LevelState) {
     await sub.reply({ content: '✅ Ventana actualizada.', flags: MessageFlags.Ephemeral });
   } catch {}
 }
-

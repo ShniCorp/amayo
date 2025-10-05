@@ -49,20 +49,24 @@ export const command: CommandMessage = {
       metadata: offer.metadata ?? {},
     };
 
-    const editorMsg = await message.channel.send({
+    const editorMsg = await (message.channel as any).send({
       content: `🛒 Editor de Oferta (editar): ${offerId}`,
-      components: [ { type: 1, components: [
-        { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'of_base' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Precio (JSON)', custom_id: 'of_price' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Ventana', custom_id: 'of_window' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Límites', custom_id: 'of_limits' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Meta (JSON)', custom_id: 'of_meta' },
-        { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'of_save' },
-        { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'of_cancel' },
-      ] } ],
+      components: [
+        { type: 1, components: [
+          { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'of_base' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Precio (JSON)', custom_id: 'of_price' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Ventana', custom_id: 'of_window' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Límites', custom_id: 'of_limits' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Meta (JSON)', custom_id: 'of_meta' },
+        ] },
+        { type: 1, components: [
+          { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'of_save' },
+          { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'of_cancel' },
+        ] },
+      ],
     });
 
-    const collector = editorMsg.createMessageComponentCollector({ time: 30*60_000, filter: (i)=> i.user.id === message.author.id });
+    const collector = editorMsg.createMessageComponentCollector({ time: 30*60_000, filter: (i: MessageComponentInteraction)=> i.user.id === message.author.id });
     collector.on('collect', async (i: MessageComponentInteraction) => {
       try {
         if (!i.isButton()) return;
@@ -103,7 +107,7 @@ export const command: CommandMessage = {
         if (!i.deferred && !i.replied) await i.reply({ content: '❌ Error procesando la acción.', flags: MessageFlags.Ephemeral });
       }
     });
-    collector.on('end', async (_c,r)=> { if (r==='time') { try { await editorMsg.edit({ content:'⏰ Editor expirado.', components: [] }); } catch {} } });
+    collector.on('end', async (_c: any,r: string)=> { if (r==='time') { try { await editorMsg.edit({ content:'⏰ Editor expirado.', components: [] }); } catch {} } });
   }
 };
 
@@ -142,4 +146,3 @@ async function showLimitsModal(i: ButtonInteraction, state: OfferState) {
   await i.showModal(modal);
   try { const sub = await i.awaitModalSubmit({ time: 300_000 }); const lim = sub.components.getTextInputValue('limit').trim(); const st = sub.components.getTextInputValue('stock').trim(); state.perUserLimit = lim ? Math.max(0, parseInt(lim,10)||0) : null; state.stock = st ? Math.max(0, parseInt(st,10)||0) : null; await sub.reply({ content: '✅ Límites actualizados.', flags: MessageFlags.Ephemeral }); } catch {}
 }
-
