@@ -145,6 +145,24 @@ const updateEditor = async (msg: any, data: any) => {
     await msg.edit(payload);
 };
 
+const stripLegacyDescriptionComponent = (blockState: any, match?: string | null) => {
+    if (!Array.isArray(blockState?.components) || blockState.components.length === 0) return;
+
+    const normalize = (value: string | undefined | null) => value?.replace(/\s+/g, " ").trim() ?? "";
+    const target = normalize(match ?? blockState.description ?? undefined);
+    if (!target) return;
+
+    const index = blockState.components.findIndex((component: any) => {
+        if (!component || component.type !== 10) return false;
+        if (component.thumbnail || component.linkButton) return false;
+        return normalize(component.content) === target;
+    });
+
+    if (index >= 0) {
+        blockState.components.splice(index, 1);
+    }
+};
+
 export const command: CommandMessage = {
     name: "editar-embed",
     type: "message",
@@ -188,11 +206,13 @@ export const command: CommandMessage = {
         };
 
         if (!blockState.description || typeof blockState.description !== 'string' || blockState.description.trim().length === 0) {
-            const firstText = Array.isArray(blockState.components)
-                ? blockState.components.find((c: any) => c?.type === 10 && typeof c.content === 'string')
-                : null;
-            if (firstText) {
-                blockState.description = firstText.content;
+            if (Array.isArray(blockState.components)) {
+                const firstTextIndex = blockState.components.findIndex((c: any) => c?.type === 10 && typeof c.content === 'string' && !c.thumbnail && !c.linkButton);
+                if (firstTextIndex >= 0) {
+                    const firstText = blockState.components[firstTextIndex];
+                    blockState.description = firstText.content;
+                    blockState.components.splice(firstTextIndex, 1);
+                }
             }
         }
 
@@ -230,6 +250,7 @@ export const command: CommandMessage = {
                     case "save_block": {
                         try { await i.deferUpdate(); } catch {}
                         try {
+                            stripLegacyDescriptionComponent(blockState);
                             await client.prisma.blockV2Config.update({
                                 where: { guildId_name: { guildId: message.guildId!, name: blockName } },
                                 //@ts-ignore
@@ -850,8 +871,11 @@ export const command: CommandMessage = {
                     logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Título actualizado mediante modal.');
                     await sendResponse('✅ Título actualizado.');
                 } else if (id === 'edit_description_modal') {
+                    const previousDescription = blockState.description ?? null;
                     const newDescription = interaction.components.getTextInputValue('description_input').trim();
                     blockState.description = newDescription.length > 0 ? newDescription : undefined;
+                    stripLegacyDescriptionComponent(blockState, previousDescription);
+                    stripLegacyDescriptionComponent(blockState);
                     logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Descripción actualizada mediante modal.');
                     await sendResponse('✅ Descripción actualizada.');
                 } else if (id === 'edit_color_modal') {

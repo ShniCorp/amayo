@@ -44,6 +44,24 @@ async function updateEditor(message: Message, data: EditorData): Promise<void> {
     await message.edit(payload);
 }
 
+function stripLegacyDescriptionComponent(blockState: BlockState, match?: string | null): void {
+    if (!Array.isArray(blockState.components) || blockState.components.length === 0) return;
+
+    const normalize = (value: string | undefined | null) => value?.replace(/\s+/g, " ").trim() ?? "";
+    const target = normalize(match ?? blockState.description ?? undefined);
+    if (!target) return;
+
+    const index = blockState.components.findIndex((component: any) => {
+        if (!component || component.type !== 10) return false;
+        if (component.thumbnail || component.linkButton) return false;
+        return normalize(component.content) === target;
+    });
+
+    if (index >= 0) {
+        blockState.components.splice(index, 1);
+    }
+}
+
 export const command: CommandMessage = {
     name: "crear-embed",
     type: "message",
@@ -802,6 +820,7 @@ async function handleSaveBlock(
     guildId: string
 ): Promise<void> {
     try {
+        stripLegacyDescriptionComponent(blockState);
         await client.prisma.blockV2Config.create({
             data: {
                 guildId,
