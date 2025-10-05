@@ -30,24 +30,17 @@ export const command: CommandMessage = {
     const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, client.prisma);
     if (!allowed) {
       await (channel.send as any)({
+        content: null,
         flags: 32768,
         components: [{
           type: 17,
           accent_color: 0xFF0000,
           components: [{
-            type: 9,
-            components: [{
-              type: 10,
-              content: '❌ **Error de Permisos**\n└ No tienes permisos de ManageGuild ni rol de staff.'
-            }]
+            type: 10,
+            content: '❌ **Error de Permisos**\n└ No tienes permisos de ManageGuild ni rol de staff.'
           }]
         }],
-        message_reference: {
-          message_id: message.id,
-          channel_id: message.channel.id,
-          guild_id: message.guild!.id,
-          fail_if_not_exists: false
-        }
+        reply: { messageReference: message.id }
       });
       return;
     }
@@ -55,24 +48,17 @@ export const command: CommandMessage = {
     const key = args[0]?.trim();
     if (!key) {
       await (channel.send as any)({
+        content: null,
         flags: 32768,
         components: [{
           type: 17,
           accent_color: 0xFFA500,
           components: [{
-            type: 9,
-            components: [{
-              type: 10,
-              content: '⚠️ **Uso Incorrecto**\n└ Uso: `!item-crear <key-única>`'
-            }]
+            type: 10,
+            content: '⚠️ **Uso Incorrecto**\n└ Uso: `!item-crear <key-única>`'
           }]
         }],
-        message_reference: {
-          message_id: message.id,
-          channel_id: message.channel.id,
-          guild_id: message.guild!.id,
-          fail_if_not_exists: false
-        }
+        reply: { messageReference: message.id }
       });
       return;
     }
@@ -82,24 +68,17 @@ export const command: CommandMessage = {
     const exists = await client.prisma.economyItem.findFirst({ where: { key, guildId } });
     if (exists) {
       await (channel.send as any)({
+        content: null,
         flags: 32768,
         components: [{
           type: 17,
           accent_color: 0xFF0000,
           components: [{
-            type: 9,
-            components: [{
-              type: 10,
-              content: '❌ **Item Ya Existe**\n└ Ya existe un item con esa key en este servidor.'
-            }]
+            type: 10,
+            content: '❌ **Item Ya Existe**\n└ Ya existe un item con esa key en este servidor.'
           }]
         }],
-        message_reference: {
-          message_id: message.id,
-          channel_id: message.channel.id,
-          guild_id: message.guild!.id,
-          fail_if_not_exists: false
-        }
+        reply: { messageReference: message.id }
       });
       return;
     }
@@ -112,64 +91,65 @@ export const command: CommandMessage = {
       props: {},
     };
 
-    // Función para crear display
-    const createDisplay = () => ({
-      display: {
+    const buildEditorDisplay = () => {
+      const baseInfo = [
+        `**Nombre:** ${state.name || '*Sin definir*'}`,
+        `**Descripción:** ${state.description || '*Sin definir*'}`,
+        `**Categoría:** ${state.category || '*Sin definir*'}`,
+        `**Icon URL:** ${state.icon || '*Sin definir*'}`,
+        `**Stackable:** ${state.stackable ? 'Sí' : 'No'}`,
+        `**Máx. Inventario:** ${state.maxPerInventory ?? 'Ilimitado'}`,
+      ].join('\n');
+
+      const tagsInfo = `**Tags:** ${state.tags.length > 0 ? state.tags.join(', ') : '*Ninguno*'}`;
+      const propsJson = JSON.stringify(state.props ?? {}, null, 2);
+
+      return {
         type: 17,
         accent_color: 0x00D9FF,
         components: [
           {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**🛠️ Editor de Item: \`${key}\`**`
-            }]
+            type: 10,
+            content: `# 🛠️ Editor de Item: \`${key}\``
           },
           { type: 14, divider: true },
           {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**Nombre:** ${state.name || '*Sin definir*'}\n` +
-                       `**Descripción:** ${state.description || '*Sin definir*'}\n` +
-                       `**Categoría:** ${state.category || '*Sin definir*'}\n` +
-                       `**Icon URL:** ${state.icon || '*Sin definir*'}\n` +
-                       `**Stackable:** ${state.stackable ? 'Sí' : 'No'}\n` +
-                       `**Máx. Inventario:** ${state.maxPerInventory || 'Ilimitado'}`
-            }]
+            type: 10,
+            content: baseInfo
           },
           { type: 14, divider: true },
           {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**Tags:** ${state.tags.length > 0 ? state.tags.join(', ') : '*Ninguno*'}`
-            }]
+            type: 10,
+            content: tagsInfo
           },
           { type: 14, divider: true },
           {
-            type: 9,
-            components: [{
-              type: 10,
-              content: `**Props (JSON):**\n\`\`\`json\n${JSON.stringify(state.props, null, 2)}\n\`\`\``
-            }]
+            type: 10,
+            content: `**Props (JSON):**\n\`\`\`json\n${propsJson}\n\`\`\``
           }
         ]
-      }
-    });
+      };
+    };
 
-    const editorMsg = await (channel.send as any)({
-      flags: 32768,
-      components: [
-        createDisplay().display,
-        { type: 1, components: [
+    const buildEditorComponents = () => [
+      buildEditorDisplay(),
+      {
+        type: 1,
+        components: [
           { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'it_base' },
           { type: 2, style: ButtonStyle.Secondary, label: 'Tags', custom_id: 'it_tags' },
           { type: 2, style: ButtonStyle.Secondary, label: 'Props (JSON)', custom_id: 'it_props' },
           { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'it_save' },
           { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'it_cancel' },
-        ]},
-      ],
+        ]
+      }
+    ];
+
+    const editorMsg = await (channel.send as any)({
+      content: null,
+      flags: 32768,
+      components: buildEditorComponents(),
+      reply: { messageReference: message.id }
     });
 
     const collector = editorMsg.createMessageComponentCollector({ time: 30 * 60_000, filter: (i) => i.user.id === message.author.id });
@@ -180,16 +160,14 @@ export const command: CommandMessage = {
         if (i.customId === 'it_cancel') {
           await i.deferUpdate();
           await editorMsg.edit({
+              content: null,
               flags: 32768,
               components: [{
                 type: 17,
                 accent_color: 0xFF0000,
                 components: [{
-                  type: 9,
-                  components: [{
-                    type: 10,
-                    content: '**❌ Editor cancelado.**'
-                  }]
+                  type: 10,
+                  content: '**❌ Editor cancelado.**'
                 }]
               }]
             });
@@ -197,15 +175,15 @@ export const command: CommandMessage = {
           return;
         }
         if (i.customId === 'it_base') {
-          await showBaseModal(i as ButtonInteraction, state, editorMsg, createDisplay);
+          await showBaseModal(i as ButtonInteraction, state, editorMsg, buildEditorComponents);
           return;
         }
         if (i.customId === 'it_tags') {
-          await showTagsModal(i as ButtonInteraction, state, editorMsg, createDisplay);
+          await showTagsModal(i as ButtonInteraction, state, editorMsg, buildEditorComponents);
           return;
         }
         if (i.customId === 'it_props') {
-          await showPropsModal(i as ButtonInteraction, state, editorMsg, createDisplay);
+          await showPropsModal(i as ButtonInteraction, state, editorMsg, buildEditorComponents);
           return;
         }
         if (i.customId === 'it_save') {
@@ -231,16 +209,14 @@ export const command: CommandMessage = {
           });
           await i.reply({ content: '✅ Item guardado!', flags: MessageFlags.Ephemeral });
           await editorMsg.edit({ 
+            content: null,
             flags: 32768,
             components: [{
               type: 17,
               accent_color: 0x00FF00,
               components: [{
-                type: 9,
-                components: [{
-                  type: 10,
-                  content: `✅ **Item Creado**\n└ Item \`${state.key}\` creado exitosamente.`
-                }]
+                type: 10,
+                content: `✅ **Item Creado**\n└ Item \`${state.key}\` creado exitosamente.`
               }]
             }]
           });
@@ -256,16 +232,14 @@ export const command: CommandMessage = {
     collector.on('end', async (_c, r) => {
       if (r === 'time') {
         try { await editorMsg.edit({
+            content: null,
             flags: 32768,
             components: [{
               type: 17,
               accent_color: 0xFFA500,
               components: [{
-                type: 9,
-                components: [{
-                  type: 10,
-                  content: '**⏰ Editor expirado.**'
-                }]
+                type: 10,
+                content: '**⏰ Editor expirado.**'
               }]
             }]
           }); } catch {}
@@ -274,7 +248,7 @@ export const command: CommandMessage = {
   },
 };
 
-async function showBaseModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, createDisplay: Function) {
+async function showBaseModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, buildComponents: () => any[]) {
   const modal = {
     title: 'Configuración base del Item',
     customId: 'it_base_modal',
@@ -310,13 +284,14 @@ async function showBaseModal(i: ButtonInteraction, state: ItemEditorState, edito
 
     await sub.deferUpdate();
     await editorMsg.edit({
+      content: null,
       flags: 32768,
-      components: [createDisplay().display]
+      components: buildComponents()
     });
   } catch {}
 }
 
-async function showTagsModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, createDisplay: Function) {
+async function showTagsModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, buildComponents: () => any[]) {
   const modal = {
     title: 'Tags del Item (separados por coma)',
     customId: 'it_tags_modal',
@@ -331,13 +306,14 @@ async function showTagsModal(i: ButtonInteraction, state: ItemEditorState, edito
     state.tags = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
     await sub.deferUpdate();
     await editorMsg.edit({
+      content: null,
       flags: 32768,
-      components: [createDisplay().display]
+      components: buildComponents()
     });
   } catch {}
 }
 
-async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, createDisplay: Function) {
+async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: any, buildComponents: () => any[]) {
   const template = state.props && Object.keys(state.props).length ? JSON.stringify(state.props) : JSON.stringify({
     tool: undefined,
     breakable: undefined,
@@ -368,8 +344,9 @@ async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, edit
         state.props = parsed;
         await sub.deferUpdate(); 
         await editorMsg.edit({
+          content: null,
           flags: 32768,
-          components: [createDisplay().display]
+          components: buildComponents()
         });
       } catch (e) {
         await sub.reply({ content: '❌ JSON inválido.', flags: MessageFlags.Ephemeral });
@@ -377,6 +354,13 @@ async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, edit
     } else {
       state.props = {};
       await sub.reply({ content: 'ℹ️ Props limpiados.', flags: MessageFlags.Ephemeral });
+      try {
+        await editorMsg.edit({
+          content: null,
+          flags: 32768,
+          components: buildComponents()
+        });
+      } catch {}
     }
   } catch {}
 }
