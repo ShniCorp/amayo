@@ -1,9 +1,9 @@
-import type { CommandMessage } from '../../../core/types/commands';
+import type {CommandMessage} from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
-import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
-import { prisma } from '../../../core/database/prisma';
-import { ComponentType, TextInputStyle, ButtonStyle } from 'discord-api-types/v10';
-import type { ButtonInteraction, MessageComponentInteraction, TextBasedChannel } from 'discord.js';
+import {hasManageGuildOrStaff} from '../../../core/lib/permissions';
+import {prisma} from '../../../core/database/prisma';
+import {ButtonStyle, ComponentType, MessageFlags, TextInputStyle} from 'discord-api-types/v10';
+import type {ButtonInteraction, MessageComponentInteraction, TextBasedChannel} from 'discord.js';
 
 interface AchievementState {
   key: string;
@@ -59,6 +59,7 @@ export const command: CommandMessage = {
     const channel = message.channel as TextBasedChannel & { send: Function };
     const editorMsg = await channel.send({
       ...displayMessage,
+      flags: MessageFlags.IsComponentsV2,
       components: [
         {
           type: ComponentType.ActionRow,
