@@ -618,6 +618,15 @@ async function handleAddSeparator(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
+    const wasAcknowledged = interaction.deferred || interaction.replied;
+    if (!wasAcknowledged) {
+        try {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        } catch (error) {
+            logger.warn({ err: error }, "No se pudo diferir respuesta al añadir separador");
+        }
+    }
+
     blockState.components.push({
         type: 14,
         divider: true,
@@ -629,10 +638,15 @@ async function handleAddSeparator(
         components: DisplayComponentUtils.createEditorButtons(false)
     });
 
-    await interaction.reply({
-        content: "✅ Separador añadido correctamente.",
-        flags: MessageFlags.Ephemeral
-    });
+    const payload = { content: "✅ Separador añadido correctamente.", flags: MessageFlags.Ephemeral } as const;
+
+    if (interaction.deferred) {
+        await interaction.editReply({ content: payload.content }).catch(() => {});
+    } else if (interaction.replied) {
+        await interaction.followUp(payload).catch(() => {});
+    } else {
+        await interaction.reply(payload).catch(() => {});
+    }
 }
 
 async function handleAddImage(
