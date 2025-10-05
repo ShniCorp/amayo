@@ -54,57 +54,33 @@ export const command: CommandMessage = {
       type: 17,
       accent_color: 0x5865F2,
       components: [
-        // Header
         {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `👤 **${targetUser.username}**\n${targetUser.bot ? '🤖 Bot' : '👨 Usuario'}`
-            }
-          ]
+          type: 10,
+          content: `👤 **${targetUser.username}**\n${targetUser.bot ? '🤖 Bot' : '👨 Usuario'}`
         },
         { type: 14, divider: true },
-        // Stats Básicos
         {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**📊 ESTADÍSTICAS**\n` +
-                       `❤️ HP: **${stats.hp}/${stats.maxHp}**\n` +
-                       `⚔️ ATK: **${stats.damage}**\n` +
-                       `🛡️ DEF: **${stats.defense}**\n` +
-                       `💰 Monedas: **${wallet.coins.toLocaleString()}**`
-            }
-          ]
+          type: 10,
+          content: `**📊 ESTADÍSTICAS**\n` +
+                   `❤️ HP: **${stats.hp}/${stats.maxHp}**\n` +
+                   `⚔️ ATK: **${stats.damage}**\n` +
+                   `🛡️ DEF: **${stats.defense}**\n` +
+                   `💰 Monedas: **${wallet.coins.toLocaleString()}**`
         },
         { type: 14, divider: true },
-        // Equipo
         {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**⚔️ EQUIPO**\n` +
-                       (weapon ? `🗡️ Arma: **${weapon.name || weapon.key}**\n` : '🗡️ Arma: *Ninguna*\n') +
-                       (armor ? `🛡️ Armadura: **${armor.name || armor.key}**\n` : '🛡️ Armadura: *Ninguna*\n') +
-                       (cape ? `🧥 Capa: **${cape.name || cape.key}**` : '🧥 Capa: *Ninguna*')
-            }
-          ]
+          type: 10,
+          content: `**⚔️ EQUIPO**\n` +
+                   (weapon ? `🗡️ Arma: **${weapon.name || weapon.key}**\n` : '🗡️ Arma: *Ninguna*\n') +
+                   (armor ? `🛡️ Armadura: **${armor.name || armor.key}**\n` : '🛡️ Armadura: *Ninguna*\n') +
+                   (cape ? `🧥 Capa: **${cape.name || cape.key}**` : '🧥 Capa: *Ninguna*')
         },
         { type: 14, divider: true },
-        // Inventario
         {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**🎒 INVENTARIO**\n` +
-                       `📦 Items únicos: **${inventoryCount}**\n` +
-                       `🔢 Total items: **${inventorySum._sum.quantity ?? 0}**`
-            }
-          ]
+          type: 10,
+          content: `**🎒 INVENTARIO**\n` +
+                   `📦 Items únicos: **${inventoryCount}**\n` +
+                   `🔢 Total items: **${inventorySum._sum.quantity ?? 0}**`
         }
       ]
     };
@@ -119,13 +95,8 @@ export const command: CommandMessage = {
       if (activitiesText) {
         display.components.push({ type: 14, divider: true });
         display.components.push({
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**🎮 ACTIVIDADES**\n${activitiesText}`
-            }
-          ]
+          type: 10,
+          content: `**🎮 ACTIVIDADES**\n${activitiesText}`
         });
       }
     }
@@ -134,14 +105,9 @@ export const command: CommandMessage = {
     if (progress.length > 0) {
       display.components.push({ type: 14, divider: true });
       display.components.push({
-        type: 9,
-        components: [
-          {
-            type: 10,
-            content: `**🗺️ PROGRESO EN ÁREAS**\n` +
-                     progress.map(p => `• ${p.area.name || p.area.key}: Nivel **${p.highestLevel}**`).join('\n')
-          }
-        ]
+        type: 10,
+        content: `**🗺️ PROGRESO EN ÁREAS**\n` +
+                 progress.map(p => `• ${p.area.name || p.area.key}: Nivel **${p.highestLevel}**`).join('\n')
       });
     }
 
@@ -157,13 +123,8 @@ export const command: CommandMessage = {
 
       display.components.push({ type: 14, divider: true });
       display.components.push({
-        type: 9,
-        components: [
-          {
-            type: 10,
-            content: `**⏰ COOLDOWNS ACTIVOS**\n${cooldownsText}`
-          }
-        ]
+        type: 10,
+        content: `**⏰ COOLDOWNS ACTIVOS**\n${cooldownsText}`
       });
     }
 
