@@ -58,6 +58,7 @@ export const command: CommandMessage = {
     const channel = message.channel as TextBasedChannel & { send: Function };
     const editorMsg = await channel.send({
       ...displayMessage,
+      flags: 32768,
       components: [
         {
           type: ComponentType.ActionRow,
@@ -85,8 +86,7 @@ export const command: CommandMessage = {
           case 'quest_cancel':
             await i.deferUpdate();
             await editorMsg.edit({
-              flags: 32768,
-              components: [{
+              display: {
                 type: 17,
                 accent_color: 0xFF0000,
                 components: [{
@@ -96,7 +96,9 @@ export const command: CommandMessage = {
                     content: '**❌ Creación de misión cancelada.**'
                   }]
                 }]
-              }]
+              },
+              flags: 32768,
+              components: []
             });
             collector.stop('cancel');
             return;
@@ -137,9 +139,19 @@ export const command: CommandMessage = {
 
             await i.reply({ content: '✅ Misión creada exitosamente.', flags: 64 });
             await editorMsg.edit({
-              content: `✅ Misión \`${state.key}\` creada.`,
-              components: [],
-              display: undefined
+              display: {
+                type: 17,
+                accent_color: 0x00FF00,
+                components: [{
+                  type: 9,
+                  components: [{
+                    type: 10,
+                    content: `**✅ Misión \`${state.key}\` creada exitosamente.**`
+                  }]
+                }]
+              },
+              flags: 32768,
+              components: []
             });
             collector.stop('saved');
             return;
@@ -156,8 +168,7 @@ export const command: CommandMessage = {
       if (r === 'time') {
         try {
           await editorMsg.edit({
-            flags: 32768,
-            components: [{
+            display: {
               type: 17,
               accent_color: 0xFFA500,
               components: [{
@@ -167,7 +178,9 @@ export const command: CommandMessage = {
                   content: '**⏰ Editor expirado.**'
                 }]
               }]
-            }]
+            },
+            flags: 32768,
+            components: []
           });
         } catch {}
       }

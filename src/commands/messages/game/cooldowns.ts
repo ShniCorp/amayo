@@ -1,7 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { prisma } from '../../../core/database/prisma';
-import { EmbedBuilder } from 'discord.js';
+import type { TextBasedChannel } from 'discord.js';
 
 export const command: CommandMessage = {
   name: 'cooldowns',
@@ -29,12 +29,6 @@ export const command: CommandMessage = {
         await message.reply('✅ No tienes cooldowns activos. ¡Puedes realizar cualquier acción!');
         return;
       }
-
-      const embed = new EmbedBuilder()
-        .setColor(0xFF6B6B)
-        .setTitle('⏰ Cooldowns Activos')
-        .setDescription(`${message.author.username}, estos son tus cooldowns:`)
-        .setThumbnail(message.author.displayAvatarURL({ size: 128 }));
 
       // Emojis por tipo de acción
       const actionEmojis: Record<string, string> = {
@@ -91,16 +85,38 @@ export const command: CommandMessage = {
         cooldownText += `${emoji} **${actionName}**: ${timeStr}\n`;
       }
 
-      embed.addFields({ 
-        name: `📋 Cooldowns (${cooldowns.length})`, 
-        value: cooldownText, 
-        inline: false 
+      // Crear DisplayComponent
+      const display = {
+        type: 17,
+        accent_color: 0xFF6B6B,
+        components: [
+          {
+            type: 10,
+            content: `# ⏰ Cooldowns Activos\n${message.author.username}, estos son tus cooldowns:`
+          },
+          { type: 14, divider: true },
+          {
+            type: 9,
+            components: [{
+              type: 10,
+              content: `**📋 Cooldowns (${cooldowns.length})**\n${cooldownText}`
+            }]
+          },
+          { type: 14, spacing: 1 },
+          {
+            type: 10,
+            content: `*Los cooldowns se actualizan en tiempo real*`
+          }
+        ]
+      };
+
+      // Enviar con flags
+      const channel = message.channel as TextBasedChannel & { send: Function };
+      await (channel.send as any)({
+        display,
+        flags: 32768, // MessageFlags.IS_COMPONENTS_V2
+        reply: { messageReference: message.id }
       });
-
-      embed.setFooter({ text: 'Los cooldowns se actualizan en tiempo real' });
-      embed.setTimestamp();
-
-      await message.reply({ embeds: [embed] });
     } catch (error) {
       console.error('Error en comando cooldowns:', error);
       await message.reply('❌ Error al obtener los cooldowns.');

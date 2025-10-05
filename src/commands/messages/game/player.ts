@@ -170,6 +170,7 @@ export const command: CommandMessage = {
     const channel = message.channel as TextBasedChannel & { send: Function };
     await (channel.send as any)({
       display,
+      flags: 32768, // MessageFlags.IS_COMPONENTS_V2
       reply: { messageReference: message.id }
     });
   }

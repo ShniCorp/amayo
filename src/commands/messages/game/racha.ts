@@ -1,7 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { getStreakInfo, updateStreak } from '../../../game/streaks/service';
-import { EmbedBuilder } from 'discord.js';
+import type { TextBasedChannel } from 'discord.js';
 
 export const command: CommandMessage = {
   name: 'racha',
@@ -18,50 +18,49 @@ export const command: CommandMessage = {
       // Actualizar racha
       const { streak, newDay, rewards, daysIncreased } = await updateStreak(userId, guildId);
 
-      const embed = new EmbedBuilder()
-        .setColor(daysIncreased ? 0x00FF00 : 0xFFA500)
-        .setTitle('🔥 Racha Diaria')
-        .setDescription(`${message.author.username}, aquí está tu racha:`)
-        .setThumbnail(message.author.displayAvatarURL({ size: 128 }));
-
-      // Racha actual
-      embed.addFields(
-        { 
-          name: '🔥 Racha Actual', 
-          value: `**${streak.currentStreak}** días consecutivos`, 
-          inline: true 
+      // Construir componentes
+      const components: any[] = [
+        {
+          type: 10,
+          content: `# 🔥 Racha Diaria de ${message.author.username}`
         },
-        { 
-          name: '⭐ Mejor Racha', 
-          value: `**${streak.longestStreak}** días`, 
-          inline: true 
+        { type: 14, divider: true },
+        {
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**📊 ESTADÍSTICAS**\n` +
+                     `🔥 Racha Actual: **${streak.currentStreak}** días\n` +
+                     `⭐ Mejor Racha: **${streak.longestStreak}** días\n` +
+                     `📅 Días Activos: **${streak.totalDaysActive}** días`
+          }]
         },
-        { 
-          name: '📅 Días Activos', 
-          value: `**${streak.totalDaysActive}** días totales`, 
-          inline: true 
-        }
-      );
+        { type: 14, spacing: 1 }
+      ];
 
       // Mensaje de estado
       if (newDay) {
         if (daysIncreased) {
-          embed.addFields({ 
-            name: '✅ ¡Racha Incrementada!', 
-            value: `Has mantenido tu racha por **${streak.currentStreak}** días seguidos.`, 
-            inline: false 
+          components.push({
+            type: 9,
+            components: [{
+              type: 10,
+              content: `**✅ ¡RACHA INCREMENTADA!**\nHas mantenido tu racha por **${streak.currentStreak}** días seguidos.`
+            }]
           });
         } else {
-          embed.addFields({ 
-            name: '⚠️ Racha Reiniciada', 
-            value: 'Pasó más de un día sin actividad. Tu racha se ha reiniciado.', 
-            inline: false 
+          components.push({
+            type: 9,
+            components: [{
+              type: 10,
+              content: `**⚠️ RACHA REINICIADA**\nPasó más de un día sin actividad. Tu racha se ha reiniciado.`
+            }]
           });
         }
 
         // Mostrar recompensas
         if (rewards) {
-          let rewardsText = '';
+          let rewardsText = '**🎁 RECOMPENSA DEL DÍA**\n';
           if (rewards.coins) rewardsText += `💰 **${rewards.coins.toLocaleString()}** monedas\n`;
           if (rewards.items) {
             rewards.items.forEach(item => {
@@ -69,19 +68,22 @@ export const command: CommandMessage = {
             });
           }
           
-          if (rewardsText) {
-            embed.addFields({ 
-              name: '🎁 Recompensa del Día', 
-              value: rewardsText, 
-              inline: false 
-            });
-          }
+          components.push({ type: 14, spacing: 1 });
+          components.push({
+            type: 9,
+            components: [{
+              type: 10,
+              content: rewardsText
+            }]
+          });
         }
       } else {
-        embed.addFields({ 
-          name: 'ℹ️ Ya Reclamaste Hoy', 
-          value: 'Ya has reclamado tu recompensa diaria. Vuelve mañana para continuar tu racha.', 
-          inline: false 
+        components.push({
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**ℹ️ YA RECLAMASTE HOY**\nYa has reclamado tu recompensa diaria. Vuelve mañana para continuar tu racha.`
+          }]
         });
       }
 
@@ -91,17 +93,28 @@ export const command: CommandMessage = {
       
       if (nextMilestone) {
         const remaining = nextMilestone - streak.currentStreak;
-        embed.addFields({ 
-          name: '🎯 Próximo Hito', 
-          value: `Faltan **${remaining}** días para alcanzar el día **${nextMilestone}**`, 
-          inline: false 
+        components.push({ type: 14, spacing: 1 });
+        components.push({
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**🎯 PRÓXIMO HITO**\nFaltan **${remaining}** días para alcanzar el día **${nextMilestone}**`
+          }]
         });
       }
 
-      embed.setFooter({ text: 'Juega todos los días para mantener tu racha activa' });
-      embed.setTimestamp();
+      const display = {
+        type: 17,
+        accent_color: daysIncreased ? 0x00FF00 : 0xFFA500,
+        components
+      };
 
-      await message.reply({ embeds: [embed] });
+      const channel = message.channel as TextBasedChannel & { send: Function };
+      await (channel.send as any)({
+        display,
+        flags: 32768,
+        reply: { messageReference: message.id }
+      });
     } catch (error) {
       console.error('Error en comando racha:', error);
       await message.reply('❌ Error al obtener tu racha diaria.');

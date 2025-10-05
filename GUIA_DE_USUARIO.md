@@ -10,13 +10,21 @@ Esta guía te enseñará cómo crear items, enemigos, áreas de juego y ofertas 
 
 1. [Requisitos Previos](#requisitos-previos)
 2. [Conceptos Básicos](#conceptos-básicos)
-3. [Creando tu Primer Item](#creando-items)
-4. [Creando Enemigos](#creando-enemigos)
-5. [Configurando Áreas de Juego](#configurando-áreas)
-6. [Configurando Niveles](#configurando-niveles)
-7. [Creando Ofertas de Tienda](#creando-ofertas)
-8. [Ejemplos Prácticos](#ejemplos-prácticos)
-9. [Preguntas Frecuentes](#preguntas-frecuentes)
+3. [Creando Items](#creando-items)
+4. [Gestionando Items](#gestionando-items)
+5. [Creando Enemigos](#creando-enemigos)
+6. [Gestionando Enemigos](#gestionando-enemigos)
+7. [Configurando Áreas de Juego](#configurando-áreas)
+8. [Gestionando Áreas](#gestionando-áreas)
+9. [Configurando Niveles](#configurando-niveles)
+10. [Creando Ofertas de Tienda](#creando-ofertas)
+11. [Creando Logros](#creando-logros)
+12. [Gestionando Logros](#gestionando-logros)
+13. [Creando Misiones](#creando-misiones)
+14. [Gestionando Misiones](#gestionando-misiones)
+15. [Comandos de Jugador](#comandos-jugador)
+16. [Ejemplos Prácticos](#ejemplos-prácticos)
+17. [Preguntas Frecuentes](#preguntas-frecuentes)
 
 ---
 
@@ -174,6 +182,60 @@ Haz clic en **"Guardar"** y ¡listo! Tu item ha sido creado.
 
 ---
 
+## 🔍 Gestionando Items {#gestionando-items}
+
+### Ver Lista de Items
+Para ver todos los items creados en tu servidor:
+```
+!items-lista [página]
+```
+
+**Ejemplo:**
+```
+!items-lista 1
+```
+
+Esto mostrará una lista interactiva con botones para:
+- Ver detalles completos de cada item
+- Navegar entre páginas
+- Ver información de categorías y props
+
+### Ver Detalles de un Item
+Para ver información detallada de un item específico:
+```
+!item-ver <key>
+```
+
+**Ejemplo:**
+```
+!item-ver iron_sword
+```
+
+Esto mostrará:
+- Nombre y descripción
+- Categoría y tags
+- Propiedades (damage, defense, tool, etc.)
+- Configuración de stackable
+- Si es breakable y su durabilidad
+
+### Editar un Item
+Para editar un item existente:
+```
+!item-editar <key>
+```
+
+Funciona igual que el comando de crear, pero con los valores actuales pre-cargados.
+
+### Eliminar un Item
+Para eliminar un item permanentemente:
+```
+!item-eliminar <key>
+```
+
+**⚠️ Advertencia:** Esta acción es permanente y no se puede deshacer.
+
+---
+
 ## 👹 Creando Enemigos (Mobs) {#creando-enemigos}
 
 ### Paso 1: Iniciar el Editor
@@ -236,6 +298,39 @@ Haz clic en **"Guardar"**.
 
 ---
 
+## 🔍 Gestionando Enemigos {#gestionando-enemigos}
+
+### Ver Lista de Mobs
+Para ver todos los enemigos creados en tu servidor:
+```
+!mobs-lista [página]
+```
+
+**Ejemplo:**
+```
+!mobs-lista 1
+```
+
+Esto mostrará una lista interactiva con:
+- Nombre y categoría de cada mob
+- Stats básicos (HP, ATK, DEF, XP)
+- Botones para ver más detalles
+
+### Eliminar un Mob
+Para eliminar un enemigo permanentemente:
+```
+!mob-eliminar <key>
+```
+
+**Ejemplo:**
+```
+!mob-eliminar goblin
+```
+
+**⚠️ Advertencia:** Esta acción es permanente. Si el mob está siendo usado en áreas, puede causar errores.
+
+---
+
 ## 🗺️ Configurando Áreas de Juego {#configurando-áreas}
 
 Las áreas son lugares donde los jugadores pueden realizar actividades como minar, pescar o pelear.
@@ -274,6 +369,43 @@ Haz clic en **"Config (JSON)"**:
 
 ### Paso 4: Guardar
 Haz clic en **"Guardar"**.
+
+---
+
+## 🔍 Gestionando Áreas {#gestionando-áreas}
+
+### Ver Lista de Áreas
+Para ver todas las áreas configuradas en tu servidor:
+```
+!areas-lista [página]
+```
+
+**Ejemplo:**
+```
+!areas-lista 1
+```
+
+Esto mostrará:
+- Nombre y tipo de cada área (MINE, LAGOON, FIGHT, FARM)
+- Cooldown configurado
+- Si es global o del servidor
+- Botones para ver detalles de niveles
+
+### Eliminar un Área
+Para eliminar un área permanentemente:
+```
+!area-eliminar <key>
+```
+
+**Ejemplo:**
+```
+!area-eliminar mine.iron_cavern
+```
+
+**⚠️ Advertencia:** 
+- Esta acción eliminará el área Y todos sus niveles
+- Se perderá todo el progreso de los jugadores en esa área
+- Esta acción no se puede deshacer
 
 ---
 
@@ -607,6 +739,245 @@ legendary, weapon, sword, dragon
 
 ---
 
+## 🏆 Creando Logros {#creando-logros}
+
+Los logros son recompensas que los jugadores pueden obtener al completar ciertos objetivos.
+
+### Paso 1: Crear el Logro
+```
+!logro-crear <key-única>
+```
+
+**Ejemplo:**
+```
+!logro-crear master_miner
+```
+
+### Paso 2: Configurar Base
+Haz clic en **"Base"**:
+- **Nombre:** `Maestro Minero`
+- **Descripción:** `Mina 1000 veces en áreas de minería`
+- **Categoría:** `mining` (mining, combat, economy, fishing, etc.)
+- **Icono:** `⛏️` (emoji o URL)
+- **Puntos:** `100` (puntos que otorga el logro)
+- **Oculto:** `false` (si es `true`, no se muestra hasta desbloquearlo)
+
+### Paso 3: Configurar Requisitos
+Haz clic en **"Requisitos (JSON)"**:
+
+#### Requisitos de Conteo de Acción:
+```json
+{
+  "type": "mine_count",
+  "value": 1000
+}
+```
+
+Tipos disponibles:
+- `mine_count`: Veces que ha minado
+- `fish_count`: Veces que ha pescado  
+- `fight_count`: Veces que ha peleado
+- `craft_count`: Veces que ha crafteado
+- `coins_earned`: Monedas ganadas en total
+- `items_collected`: Items colectados
+
+#### Requisitos de Item:
+```json
+{
+  "type": "item_owned",
+  "itemKey": "diamond_pickaxe",
+  "quantity": 1
+}
+```
+
+### Paso 4: Configurar Recompensas
+Haz clic en **"Recompensas (JSON)"**:
+
+```json
+{
+  "coins": 5000,
+  "items": [
+    { "itemKey": "legendary_pickaxe", "qty": 1 }
+  ]
+}
+```
+
+### Paso 5: Guardar
+Haz clic en **"Guardar"**.
+
+---
+
+## 🔍 Gestionando Logros {#gestionando-logros}
+
+### Ver Lista de Logros
+```
+!logros-lista [página]
+```
+
+Muestra todos los logros del servidor con:
+- Nombre y descripción
+- Puntos que otorga
+- Si está oculto
+- Botones para ver detalles
+
+### Ver Detalles de un Logro
+```
+!logro-ver <key>
+```
+
+**Ejemplo:**
+```
+!logro-ver master_miner
+```
+
+### Eliminar un Logro
+```
+!logro-eliminar <key>
+```
+
+**⚠️ Advertencia:** Esto eliminará el logro y el progreso de todos los jugadores.
+
+---
+
+## 🎯 Creando Misiones {#creando-misiones}
+
+Las misiones son tareas que los jugadores pueden completar para obtener recompensas.
+
+### Paso 1: Crear la Misión
+```
+!mision-crear <key-única>
+```
+
+**Ejemplo:**
+```
+!mision-crear daily_mining_quest
+```
+
+### Paso 2: Configurar Base
+Haz clic en **"Base"**:
+- **Nombre:** `Misión Diaria: Minería`
+- **Descripción:** `Mina 10 veces en cualquier área`
+- **Categoría:** `mining`
+- **Tipo:** `daily` (daily, weekly, one_time, repeatable)
+- **Icono:** `⛏️`
+- **Repetible:** `true`
+
+### Paso 3: Configurar Requisitos
+Haz clic en **"Requisitos (JSON)"**:
+
+#### Contar Acción:
+```json
+{
+  "type": "mine_count",
+  "count": 10
+}
+```
+
+#### Recolectar Items:
+```json
+{
+  "type": "collect_items",
+  "items": [
+    { "itemKey": "iron_ore", "quantity": 20 }
+  ]
+}
+```
+
+#### Derrotar Enemigos:
+```json
+{
+  "type": "defeat_mobs",
+  "mobKey": "goblin",
+  "count": 5
+}
+```
+
+### Paso 4: Configurar Recompensas
+Haz clic en **"Recompensas (JSON)"**:
+
+```json
+{
+  "coins": 1000,
+  "xp": 500,
+  "items": [
+    { "itemKey": "mystery_chest", "qty": 1 }
+  ]
+}
+```
+
+### Paso 5: Guardar
+Haz clic en **"Guardar"**.
+
+---
+
+## 🔍 Gestionando Misiones {#gestionando-misiones}
+
+### Ver Lista de Misiones
+```
+!misiones-lista [página]
+```
+
+### Ver Detalles de una Misión
+```
+!mision-ver <key>
+```
+
+### Eliminar una Misión
+```
+!mision-eliminar <key>
+```
+
+---
+
+## 👤 Comandos de Jugador {#comandos-jugador}
+
+### Ver Perfil
+```
+!player [@usuario]
+```
+
+### Ver Estadísticas
+```
+!stats [@usuario]
+```
+
+### Ver Cooldowns
+```
+!cooldowns
+```
+
+### Ver Saldo
+```
+!monedas
+```
+
+### Ver Racha Diaria
+```
+!racha
+```
+
+### Ver Inventario
+```
+!inventario [página]
+```
+
+### Ver Logros
+```
+!logros [@usuario]
+```
+
+### Ver Misiones
+```
+!misiones
+```
+
+### Reclamar Misión
+```
+!mision-reclamar <key>
+```
+
+---
+
 ## ❓ Preguntas Frecuentes {#preguntas-frecuentes}
 
 ### ¿Puedo editar un item después de crearlo?
@@ -616,7 +987,18 @@ Sí, usa el comando:
 ```
 
 ### ¿Cómo elimino un item?
-Actualmente debes contactar a un administrador del bot o hacerlo directamente desde la base de datos.
+Usa el comando:
+```
+!item-eliminar <key>
+```
+**Advertencia:** Esta acción es permanente y no se puede deshacer.
+
+### ¿Cómo veo todos los items creados?
+Usa el comando:
+```
+!items-lista
+```
+Esto mostrará una lista interactiva paginada con todos los items del servidor.
 
 ### ¿Qué formato tienen las fechas ISO?
 El formato ISO es: `YYYY-MM-DDTHH:MM:SSZ`
@@ -699,12 +1081,56 @@ Tier recomendado:
 
 ---
 
+## 🆕 Preguntas Frecuentes sobre Logros y Misiones
+
+### ¿Cómo funcionan los logros?
+Los logros son objetivos permanentes que los jugadores desbloquean al cumplir requisitos específicos. Otorgan puntos y recompensas únicas.
+
+### ¿Cuál es la diferencia entre logros y misiones?
+- **Logros:** Permanentes, se desbloquean una vez, dan puntos y prestigio
+- **Misiones:** Pueden ser repetibles, tienen tipos (diarias, semanales), dan recompensas cada vez
+
+### ¿Los logros pueden ser ocultos?
+Sí, puedes marcar un logro como `hidden: true`. Los jugadores no verán su existencia hasta desbloquearlo.
+
+### ¿Puedo crear misiones que se repitan cada día?
+Sí, configura el tipo como `daily` y `repeatable: true`. Los jugadores podrán completarla cada día.
+
+### ¿Cómo veo el progreso de los jugadores en misiones?
+Usa `!mision-ver <key>` para ver estadísticas generales, o pídele al jugador que use `!misiones` para ver su progreso personal.
+
+### ¿Los logros y misiones pueden dar items como recompensa?
+Sí, ambos pueden recompensar con:
+- Monedas
+- XP (experiencia)
+- Items específicos
+- Roles de Discord (solo en logros especiales)
+
+### ¿Qué pasa si elimino un logro que los jugadores ya desbloquearon?
+Se eliminará el registro de desbloqueo de todos los jugadores. Es mejor desactivar o editar en lugar de eliminar.
+
+### ¿Puedo tener misiones con múltiples requisitos?
+Sí, usa el tipo `all` en los requisitos y lista todos los que deben cumplirse:
+```json
+{
+  "type": "all",
+  "requirements": [
+    { "type": "mine_count", "count": 10 },
+    { "type": "collect_items", "items": [...] }
+  ]
+}
+```
+
+---
+
 ## 📞 Soporte
 
 Si tienes problemas o preguntas:
 1. Verifica que tengas los permisos necesarios
 2. Revisa que tus JSONs estén bien formateados
-3. Contacta al soporte del bot en el servidor oficial
+3. Usa los comandos de lista (`!items-lista`, `!mobs-lista`, etc.) para verificar que todo se creó correctamente
+4. Revisa los logs del bot en caso de errores
+5. Contacta al soporte del bot en el servidor oficial
 
 ---
 

@@ -1,7 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { getPlayerStatsFormatted } from '../../../game/stats/service';
-import { EmbedBuilder } from 'discord.js';
+import type { TextBasedChannel } from 'discord.js';
 
 export const command: CommandMessage = {
   name: 'stats',
@@ -19,19 +19,29 @@ export const command: CommandMessage = {
       // Obtener estadísticas formateadas
       const stats = await getPlayerStatsFormatted(userId, guildId);
 
-      // Crear embed
-      const embed = new EmbedBuilder()
-        .setColor(0x5865F2)
-        .setTitle(`📊 Estadísticas de ${targetUser.username}`)
-        .setThumbnail(targetUser.displayAvatarURL({ size: 128 }))
-        .setTimestamp();
+      // Construir componentes de DisplayComponent
+      const components: any[] = [
+        // Header
+        {
+          type: 10,
+          content: `# 📊 Estadísticas de ${targetUser.username}`
+        },
+        { type: 14, divider: true }
+      ];
 
       // Actividades
       if (stats.activities) {
         const activitiesText = Object.entries(stats.activities)
           .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
           .join('\n');
-        embed.addFields({ name: '🎮 Actividades', value: activitiesText || 'Sin datos', inline: true });
+        components.push({
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**🎮 ACTIVIDADES**\n${activitiesText || 'Sin datos'}`
+          }]
+        });
+        components.push({ type: 14, spacing: 1 });
       }
 
       // Combate
@@ -39,7 +49,14 @@ export const command: CommandMessage = {
         const combatText = Object.entries(stats.combat)
           .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
           .join('\n');
-        embed.addFields({ name: '⚔️ Combate', value: combatText || 'Sin datos', inline: true });
+        components.push({
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**⚔️ COMBATE**\n${combatText || 'Sin datos'}`
+          }]
+        });
+        components.push({ type: 14, spacing: 1 });
       }
 
       // Economía
@@ -47,7 +64,14 @@ export const command: CommandMessage = {
         const economyText = Object.entries(stats.economy)
           .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
           .join('\n');
-        embed.addFields({ name: '💰 Economía', value: economyText || 'Sin datos', inline: false });
+        components.push({
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**💰 ECONOMÍA**\n${economyText || 'Sin datos'}`
+          }]
+        });
+        components.push({ type: 14, spacing: 1 });
       }
 
       // Items
@@ -55,7 +79,14 @@ export const command: CommandMessage = {
         const itemsText = Object.entries(stats.items)
           .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
           .join('\n');
-        embed.addFields({ name: '📦 Items', value: itemsText || 'Sin datos', inline: true });
+        components.push({
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**📦 ITEMS**\n${itemsText || 'Sin datos'}`
+          }]
+        });
+        components.push({ type: 14, spacing: 1 });
       }
 
       // Récords
@@ -63,12 +94,29 @@ export const command: CommandMessage = {
         const recordsText = Object.entries(stats.records)
           .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
           .join('\n');
-        embed.addFields({ name: '🏆 Récords', value: recordsText || 'Sin datos', inline: true });
+        components.push({
+          type: 9,
+          components: [{
+            type: 10,
+            content: `**🏆 RÉCORDS**\n${recordsText || 'Sin datos'}`
+          }]
+        });
       }
 
-      embed.setFooter({ text: 'Usa !ranking-stats para ver el ranking global' });
+      // Crear DisplayComponent
+      const display = {
+        type: 17,
+        accent_color: 0x5865F2,
+        components
+      };
 
-      await message.reply({ embeds: [embed] });
+      // Enviar con flags
+      const channel = message.channel as TextBasedChannel & { send: Function };
+      await (channel.send as any)({
+        display,
+        flags: 32768, // MessageFlags.IS_COMPONENTS_V2
+        reply: { messageReference: message.id }
+      });
     } catch (error) {
       console.error('Error en comando stats:', error);
       await message.reply('❌ Error al obtener las estadísticas.');
