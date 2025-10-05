@@ -16,7 +16,7 @@ export const command: CommandMessage = {
   run: async (message, args, _client: Amayo) => {
     const userId = message.author.id;
     const guildId = message.guild!.id;
-    const areaKey = 'mine.cavern';
+    const areaKey = args[0] === 'mine.cavern' ? args[0] : 'mine.cavern'; // Forzar key de área de mina
 
     const area = await resolveArea(guildId, areaKey);
     if (!area) { await message.reply('⚠️ Área de mina no configurada. Pide a un admin crear `gameArea` con key `mine.cavern`.'); return; }
