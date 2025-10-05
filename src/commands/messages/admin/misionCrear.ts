@@ -237,12 +237,13 @@ async function showBaseModal(i: ButtonInteraction, state: QuestState, editorMsg:
       },
       {
         type: ComponentType.Label,
-        label: 'Categoría (mining/fishing/combat/economy/crafting)',
+        label: 'Categoría',
         component: {
           type: ComponentType.TextInput,
           customId: 'category',
           style: TextInputStyle.Short,
           required: false,
+          placeholder: "(mining/fishing/combat/economy/crafting)",
           value: state.category || 'mining'
         }
       },
