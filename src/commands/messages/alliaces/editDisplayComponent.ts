@@ -37,7 +37,7 @@ const btns = (disabled = false) => ([
 const isValidUrl = isValidUrlOrVariable;
 
 const validateContent = (content: string | undefined | null): string => {
-    if (!content || typeof content !== 'string') return "Sin contenido";
+    if (!content) return "Sin contenido";
     const cleaned = content.trim();
     if (!cleaned) return "Sin contenido";
     if (cleaned.length > 4000) return cleaned.slice(0, 3997) + "...";
@@ -80,6 +80,24 @@ const renderPreview = async (blockState: any, member: any, guild: any) => {
     // @ts-ignore
     const processedTitle = await replaceVars(blockState.title ?? "Sin título", member, guild);
     previewComponents.push({ type: 10, content: validateContent(processedTitle) });
+
+    const rawDescription = typeof blockState.description === 'string' ? blockState.description.trim() : '';
+    if (rawDescription.length > 0) {
+        // @ts-ignore
+        const processedDescription = await replaceVars(rawDescription, member, guild);
+        const validatedDescription = validateContent(processedDescription);
+        const firstTextComponent = Array.isArray(blockState.components)
+            ? blockState.components.find((c: any) => c?.type === 10 && typeof c.content === 'string')
+            : null;
+        const duplicatesWithFirstText = Boolean(
+            firstTextComponent && typeof firstTextComponent.content === 'string'
+            && firstTextComponent.content.trim() === rawDescription
+        );
+
+        if (!duplicatesWithFirstText) {
+            previewComponents.push({ type: 10, content: validatedDescription });
+        }
+    }
 
     for (const c of blockState.components) {
         if (c.type === 10) {
@@ -159,12 +177,23 @@ export const command: CommandMessage = {
             //@ts-ignore
             title: existingBlock.config?.title ?? `## Block: ${blockName}`,
             //@ts-ignore
+            description: typeof existingBlock.config?.description === 'string' ? existingBlock.config.description : undefined,
+            //@ts-ignore
             color: existingBlock.config?.color ?? 0x427AE3,
             //@ts-ignore
             coverImage: existingBlock.config?.coverImage ?? null,
             //@ts-ignore
             components: Array.isArray(existingBlock.config?.components) ? existingBlock.config.components : []
         };
+
+        if (!blockState.description || typeof blockState.description !== 'string' || blockState.description.trim().length === 0) {
+            const firstText = Array.isArray(blockState.components)
+                ? blockState.components.find((c: any) => c?.type === 10 && typeof c.content === 'string')
+                : null;
+            if (firstText) {
+                blockState.description = firstText.content;
+            }
+        }
 
         // @ts-ignore
         const editorMessage = await message.channel.send({
@@ -256,8 +285,11 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "edit_description": {
-                        const descComp = blockState.components.find((c: any) => c.type === 10);
-                        const currentDesc = descComp ? descComp.content : '';
+                        let currentDesc = typeof blockState.description === 'string' ? blockState.description : '';
+                        if (!currentDesc) {
+                            const legacyComp = blockState.components.find((c: any) => c.type === 10 && typeof c.content === 'string');
+                            if (legacyComp) currentDesc = legacyComp.content;
+                        }
                         const modal = {
                             title: '📄 Editar Descripción',
                             customId: 'edit_description_modal',
@@ -269,8 +301,8 @@ export const command: CommandMessage = {
                                     customId: 'description_input',
                                     style: TextInputStyle.Paragraph,
                                     required: true,
-                                    placeholder: 'Escribe la nueva descripción aquí...',
-                                    value: currentDesc || '',
+                                        placeholder: 'Escribe la nueva descripción aquí...',
+                                        value: currentDesc || '',
                                     maxLength: 2000
                                 }
                             }]
@@ -798,9 +830,8 @@ export const command: CommandMessage = {
                     blockState.title = interaction.fields.getTextInputValue('title_input');
                     await interaction.reply({ content: '✅ Título actualizado.', flags: 64 });
                 } else if (id === 'edit_description_modal') {
-                    const newDescription = interaction.fields.getTextInputValue('description_input');
-                    const firstText = blockState.components.find((c: any) => c.type === 10);
-                    if (firstText) firstText.content = newDescription; else blockState.components.push({ type: 10, content: newDescription, thumbnail: null });
+                    const newDescription = interaction.fields.getTextInputValue('description_input').trim();
+                    blockState.description = newDescription.length > 0 ? newDescription : undefined;
                     await interaction.reply({ content: '✅ Descripción actualizada.', flags: 64 });
                 } else if (id === 'edit_color_modal') {
                     const colorInput = interaction.fields.getTextInputValue('color_input');

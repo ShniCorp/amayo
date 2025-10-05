@@ -136,7 +136,7 @@ async function handleAIReply(message: any) {
             // Enviar respuesta (dividir si es muy larga)
             const MAX_CONTENT = 2000;
             if (finalResponse.length > MAX_CONTENT) {
-                const chunks = [];
+                const chunks: string[] = [];
                 let currentChunk = '';
                 const lines = finalResponse.split('\n');
 
@@ -158,13 +158,17 @@ async function handleAIReply(message: any) {
                     if (i === 0) {
                         await message.reply({ content: chunks[i] });
                     } else {
-                        await message.channel.send({ content: chunks[i] });
-                        await new Promise(resolve => setTimeout(resolve, 500));
+                        if ('send' in message.channel) {
+                            await message.channel.send({ content: chunks[i] });
+                            await new Promise(resolve => setTimeout(resolve, 500));
+                        }
                     }
                 }
 
                 if (chunks.length > 3) {
-                    await message.channel.send({ content: "⚠️ Respuesta truncada por longitud." });
+                    if ('send' in message.channel) {
+                        await message.channel.send({ content: "⚠️ Respuesta truncada por longitud." });
+                    }
                 }
             } else {
                 await message.reply({ content: finalResponse });

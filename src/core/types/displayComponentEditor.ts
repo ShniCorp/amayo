@@ -189,6 +189,29 @@ export class DisplayComponentUtils {
             content: this.validateContent(processedTitle)
         } as any);
 
+        // Optional description section (before additional components)
+        const rawDescription = typeof blockState.description === 'string' ? blockState.description.trim() : '';
+        if (rawDescription.length > 0) {
+            const processedDescription = await replaceVars(rawDescription, member, guild);
+            const validatedDescription = this.validateContent(processedDescription);
+
+            const firstTextComponent = Array.isArray(blockState.components)
+                ? blockState.components.find((c: any) => c?.type === 10 && typeof c.content === 'string')
+                : null;
+            const duplicatesWithFirstText = Boolean(
+                firstTextComponent?.type === 10
+                && typeof (firstTextComponent as EditorTextDisplay).content === 'string'
+                && (firstTextComponent as EditorTextDisplay).content.trim() === rawDescription
+            );
+
+            if (!duplicatesWithFirstText) {
+                previewComponents.push({
+                    type: 10,
+                    content: validatedDescription
+                } as any);
+            }
+        }
+
         // Process components in order
         for (const c of blockState.components) {
             if (c.type === 10) {

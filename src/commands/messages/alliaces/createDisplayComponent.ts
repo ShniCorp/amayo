@@ -3,6 +3,7 @@ import {
     Message,
     MessageComponentInteraction,
     MessageFlags,
+    ModalSubmitInteraction,
     TextChannel,
 } from "discord.js";
 import { ComponentType, TextInputStyle, ButtonStyle } from "discord-api-types/v10";
@@ -336,6 +337,24 @@ async function handleButtonInteraction(
     }
 }
 
+async function awaitModalWithDeferredReply(
+    interaction: ButtonInteraction,
+    options: Parameters<ButtonInteraction['awaitModalSubmit']>[0] = { time: 300000 }
+): Promise<ModalSubmitInteraction | null> {
+    try {
+        const modalInteraction = await interaction.awaitModalSubmit(options);
+        if (!modalInteraction.deferred && !modalInteraction.replied) {
+            await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral });
+        }
+        return modalInteraction;
+    } catch (error) {
+        if (!(error instanceof Error) || !error.message.includes('Collector received no interactions')) {
+            logger.error({ err: error }, "Error esperando envío de modal en editor");
+        }
+        return null;
+    }
+}
+
 async function handleEditTitle(
     interaction: ButtonInteraction,
     editorMessage: Message,
@@ -364,8 +383,11 @@ async function handleEditTitle(
 
     await interaction.showModal(modal);
 
+    let modalInteraction: ModalSubmitInteraction | null = null;
     try {
-        const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
+        modalInteraction = await awaitModalWithDeferredReply(interaction);
+        if (!modalInteraction) return;
+
         const newTitle = modalInteraction.components.getTextInputValue("title_input").trim();
 
         if (newTitle) {
@@ -376,12 +398,19 @@ async function handleEditTitle(
             });
         }
 
-        await modalInteraction.reply({
-            content: "✅ Título actualizado correctamente.",
-            flags: MessageFlags.Ephemeral
+        await modalInteraction.editReply({
+            content: "✅ Título actualizado correctamente."
         });
-    } catch {
-        // Modal timed out or error occurred
+    } catch (error) {
+        if (modalInteraction?.deferred && !modalInteraction.replied) {
+            await modalInteraction.editReply({
+                content: "❌ No se pudo actualizar el título. Inténtalo de nuevo."
+            }).catch(() => {});
+        }
+        if (error instanceof Error && error.message.includes('Collector received no interactions')) {
+            return;
+        }
+        logger.error({ err: error }, "Error procesando modal de título");
     }
 }
 
@@ -413,8 +442,11 @@ async function handleEditDescription(
 
     await interaction.showModal(modal);
 
+    let modalInteraction: ModalSubmitInteraction | null = null;
     try {
-        const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
+        modalInteraction = await awaitModalWithDeferredReply(interaction);
+        if (!modalInteraction) return;
+
         const newDescription = modalInteraction.components.getTextInputValue("description_input").trim();
 
         blockState.description = newDescription || undefined;
@@ -423,12 +455,19 @@ async function handleEditDescription(
             components: DisplayComponentUtils.createEditorButtons(false)
         });
 
-        await modalInteraction.reply({
-            content: "✅ Descripción actualizada correctamente.",
-            flags: MessageFlags.Ephemeral
+        await modalInteraction.editReply({
+            content: "✅ Descripción actualizada correctamente."
         });
-    } catch {
-        // ignore
+    } catch (error) {
+        if (modalInteraction?.deferred && !modalInteraction.replied) {
+            await modalInteraction.editReply({
+                content: "❌ No se pudo actualizar la descripción. Inténtalo de nuevo."
+            }).catch(() => {});
+        }
+        if (error instanceof Error && error.message.includes('Collector received no interactions')) {
+            return;
+        }
+        logger.error({ err: error }, "Error procesando modal de descripción");
     }
 }
 
@@ -460,8 +499,11 @@ async function handleEditColor(
 
     await interaction.showModal(modal);
 
+    let modalInteraction: ModalSubmitInteraction | null = null;
     try {
-        const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
+        modalInteraction = await awaitModalWithDeferredReply(interaction);
+        if (!modalInteraction) return;
+
         const colorValue = modalInteraction.components.getTextInputValue("color_input").trim();
 
         if (colorValue) {
@@ -475,14 +517,12 @@ async function handleEditColor(
                     components: DisplayComponentUtils.createEditorButtons(false)
                 });
 
-                await modalInteraction.reply({
-                    content: "✅ Color actualizado correctamente.",
-                    flags: MessageFlags.Ephemeral
+                await modalInteraction.editReply({
+                    content: "✅ Color actualizado correctamente."
                 });
             } else {
-                await modalInteraction.reply({
-                    content: "❌ Color inválido. Usa formato HEX como #FF5733",
-                    flags: MessageFlags.Ephemeral
+                await modalInteraction.editReply({
+                    content: "❌ Color inválido. Usa formato HEX como #FF5733"
                 });
             }
         } else {
@@ -492,13 +532,20 @@ async function handleEditColor(
                 components: DisplayComponentUtils.createEditorButtons(false)
             });
 
-            await modalInteraction.reply({
-                content: "✅ Color removido.",
-                flags: MessageFlags.Ephemeral
+            await modalInteraction.editReply({
+                content: "✅ Color removido."
             });
         }
-    } catch {
-        // ignore
+    } catch (error) {
+        if (modalInteraction?.deferred && !modalInteraction.replied) {
+            await modalInteraction.editReply({
+                content: "❌ No se pudo actualizar el color. Inténtalo de nuevo."
+            }).catch(() => {});
+        }
+        if (error instanceof Error && error.message.includes('Collector received no interactions')) {
+            return;
+        }
+        logger.error({ err: error }, "Error procesando modal de color");
     }
 }
 
@@ -529,8 +576,11 @@ async function handleAddContent(
 
     await interaction.showModal(modal);
 
+    let modalInteraction: ModalSubmitInteraction | null = null;
     try {
-        const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
+        modalInteraction = await awaitModalWithDeferredReply(interaction);
+        if (!modalInteraction) return;
+
         const content = modalInteraction.components.getTextInputValue("content_input").trim();
 
         if (content) {
@@ -545,13 +595,20 @@ async function handleAddContent(
                 components: DisplayComponentUtils.createEditorButtons(false)
             });
 
-            await modalInteraction.reply({
-                content: "✅ Contenido añadido correctamente.",
-                flags: MessageFlags.Ephemeral
+            await modalInteraction.editReply({
+                content: "✅ Contenido añadido correctamente."
             });
         }
-    } catch {
-        // ignore
+    } catch (error) {
+        if (modalInteraction?.deferred && !modalInteraction.replied) {
+            await modalInteraction.editReply({
+                content: "❌ No se pudo añadir el contenido. Inténtalo de nuevo."
+            }).catch(() => {});
+        }
+        if (error instanceof Error && error.message.includes('Collector received no interactions')) {
+            return;
+        }
+        logger.error({ err: error }, "Error procesando modal de contenido");
     }
 }
 
@@ -561,6 +618,15 @@ async function handleAddSeparator(
     originalMessage: Message,
     blockState: BlockState
 ): Promise<void> {
+    const wasAcknowledged = interaction.deferred || interaction.replied;
+    if (!wasAcknowledged) {
+        try {
+            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+        } catch (error) {
+            logger.warn({ err: error }, "No se pudo diferir respuesta al añadir separador");
+        }
+    }
+
     blockState.components.push({
         type: 14,
         divider: true,
@@ -572,10 +638,15 @@ async function handleAddSeparator(
         components: DisplayComponentUtils.createEditorButtons(false)
     });
 
-    await interaction.reply({
-        content: "✅ Separador añadido correctamente.",
-        flags: MessageFlags.Ephemeral
-    });
+    const payload = { content: "✅ Separador añadido correctamente.", flags: MessageFlags.Ephemeral } as const;
+
+    if (interaction.deferred) {
+        await interaction.editReply({ content: payload.content }).catch(() => {});
+    } else if (interaction.replied) {
+        await interaction.followUp(payload).catch(() => {});
+    } else {
+        await interaction.reply(payload).catch(() => {});
+    }
 }
 
 async function handleAddImage(
@@ -605,8 +676,11 @@ async function handleAddImage(
 
     await interaction.showModal(modal);
 
+    let modalInteraction: ModalSubmitInteraction | null = null;
     try {
-        const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
+        modalInteraction = await awaitModalWithDeferredReply(interaction);
+        if (!modalInteraction) return;
+
         const imageUrl = modalInteraction.components.getTextInputValue("image_input").trim();
 
         if (imageUrl && DisplayComponentUtils.isValidUrl(imageUrl)) {
@@ -620,18 +694,24 @@ async function handleAddImage(
                 components: DisplayComponentUtils.createEditorButtons(false)
             });
 
-            await modalInteraction.reply({
-                content: "✅ Imagen añadida correctamente.",
-                flags: MessageFlags.Ephemeral
+            await modalInteraction.editReply({
+                content: "✅ Imagen añadida correctamente."
             });
         } else {
-            await modalInteraction.reply({
-                content: "❌ URL de imagen inválida.",
-                flags: MessageFlags.Ephemeral
+            await modalInteraction.editReply({
+                content: "❌ URL de imagen inválida."
             });
         }
-    } catch {
-        // ignore
+    } catch (error) {
+        if (modalInteraction?.deferred && !modalInteraction.replied) {
+            await modalInteraction.editReply({
+                content: "❌ No se pudo añadir la imagen. Inténtalo de nuevo."
+            }).catch(() => {});
+        }
+        if (error instanceof Error && error.message.includes('Collector received no interactions')) {
+            return;
+        }
+        logger.error({ err: error }, "Error procesando modal de imagen");
     }
 }
 
@@ -663,8 +743,11 @@ async function handleCoverImage(
 
     await interaction.showModal(modal);
 
+    let modalInteraction: ModalSubmitInteraction | null = null;
     try {
-        const modalInteraction = await interaction.awaitModalSubmit({ time: 300000 });
+        modalInteraction = await awaitModalWithDeferredReply(interaction);
+        if (!modalInteraction) return;
+
         const coverUrl = modalInteraction.components.getTextInputValue("cover_input").trim();
 
         if (coverUrl && DisplayComponentUtils.isValidUrl(coverUrl)) {
@@ -678,12 +761,19 @@ async function handleCoverImage(
             components: DisplayComponentUtils.createEditorButtons(false)
         });
 
-        await modalInteraction.reply({
-            content: coverUrl ? "✅ Imagen de portada actualizada." : "✅ Imagen de portada removida.",
-            flags: MessageFlags.Ephemeral
+        await modalInteraction.editReply({
+            content: coverUrl ? "✅ Imagen de portada actualizada." : "✅ Imagen de portada removida."
         });
-    } catch {
-        // ignore
+    } catch (error) {
+        if (modalInteraction?.deferred && !modalInteraction.replied) {
+            await modalInteraction.editReply({
+                content: "❌ No se pudo actualizar la imagen de portada. Inténtalo de nuevo."
+            }).catch(() => {});
+        }
+        if (error instanceof Error && error.message.includes('Collector received no interactions')) {
+            return;
+        }
+        logger.error({ err: error }, "Error procesando modal de portada");
     }
 }
 

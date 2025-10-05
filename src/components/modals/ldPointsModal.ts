@@ -146,6 +146,15 @@ export default {
         }
       }
 
+      // ✅ ARREGLO: Asegurar que el User exista en la base de datos antes de crear PartnershipStats
+      await prisma.user.upsert({
+        where: { id: userId },
+        update: {}, // No actualizar nada si ya existe
+        create: { id: userId } // Crear si no existe
+      });
+
+      logger.info(`✅ User verificado/creado en BD: ${userId}`);
+
       // Obtener o crear el registro de stats del usuario
       let stats = await prisma.partnershipStats.findUnique({
         where: {

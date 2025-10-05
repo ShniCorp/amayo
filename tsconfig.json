@@ -6,6 +6,8 @@
     "esModuleInterop": true,
     "forceConsistentCasingInFileNames": true,
     "strict": true,
+    "noImplicitAny": false,
+    "strictBindCallApply": false,
     "skipLibCheck": true,
     "resolveJsonModule": true
   },

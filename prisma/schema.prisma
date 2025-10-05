@@ -10,211 +10,982 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("XATA_DB")
+  shadowDatabaseUrl = env("XATA_SHADOW_DB")
 }
 
-/*
+
+
+/**
  * -----------------------------------------------------------------------------
  * Modelo para el Servidor (Guild)
  * -----------------------------------------------------------------------------
-*/
+ */
 model Guild {
-  id        String   @id
-  name      String
-  prefix    String   @default("!")
-  staff     Json?
+  id           String  @id
+  name         String
+  prefix       String  @default("!")
+  staff        Json?
   aiRolePrompt String?
 
   // Relaciones
-  alliances         Alliance[]
-  partnerStats      PartnershipStats[]
+  alliances    Alliance[]
+  partnerStats PartnershipStats[]
 
   // ✅ CAMBIO: Ahora un Guild puede tener MÚLTIPLES configuraciones de embed.
-  embedConfigs      EmbedConfig[]
-  BlockV2Config     BlockV2Config[]
+  embedConfigs     EmbedConfig[]
+  BlockV2Config    BlockV2Config[]
   // ✅ NUEVAS RELACIONES
-  allianceChannels  AllianceChannel[]
-  pointsHistory     PointHistory[]
+  allianceChannels AllianceChannel[]
+  pointsHistory    PointHistory[]
+  EconomyItem      EconomyItem[]
+  InventoryEntry   InventoryEntry[]
+  ShopOffer        ShopOffer[]
+  ItemMutation     ItemMutation[]
+  EconomyWallet    EconomyWallet[]
+  ShopPurchase     ShopPurchase[]
+
+  // Nuevas relaciones para el motor de minijuegos
+  gameAreas          GameArea[]
+  minigameRuns       MinigameRun[]
+  playerProgress     PlayerProgress[]
+  Mob                Mob[]
+  PlayerState        PlayerState[]
+  PlayerEquipment    PlayerEquipment[]
+  ActionCooldown     ActionCooldown[]
+  SmeltJob           SmeltJob[]
+  ScheduledMobAttack ScheduledMobAttack[]
+
+  // Nuevas relaciones para sistemas de engagement
+  Achievement       Achievement[]
+  PlayerAchievement PlayerAchievement[]
+  Quest             Quest[]
+  QuestProgress     QuestProgress[]
+  PlayerStats       PlayerStats[]
+  PlayerStreak      PlayerStreak[]
+  AuditLog          AuditLog[]
 }
-/*
+
+/**
  * -----------------------------------------------------------------------------
  * Modelo para el Usuario
  * -----------------------------------------------------------------------------
  * Representa a un usuario de Discord de manera global.
-*/
+ */
 model User {
-  id                 String @id
+  id String @id
 
   // Relaciones
-  partnerStats       PartnershipStats[]
-  createdAlliances   Alliance[]
+  partnerStats     PartnershipStats[]
+  createdAlliances Alliance[]
   // ✅ NUEVA RELACIÓN
-  pointsHistory      PointHistory[]
+  pointsHistory    PointHistory[]
+  InventoryEntry   InventoryEntry[]
+  EconomyWallet    EconomyWallet[]
+  ShopPurchase     ShopPurchase[]
+
+  // Nuevas relaciones para el motor de minijuegos
+  minigameRuns       MinigameRun[]
+  playerProgress     PlayerProgress[]
+  PlayerState        PlayerState[]
+  PlayerEquipment    PlayerEquipment[]
+  ActionCooldown     ActionCooldown[]
+  SmeltJob           SmeltJob[]
+  ScheduledMobAttack ScheduledMobAttack[]
+
+  // Nuevas relaciones para sistemas de engagement
+  PlayerAchievement PlayerAchievement[]
+  QuestProgress     QuestProgress[]
+  PlayerStats       PlayerStats[]
+  PlayerStreak      PlayerStreak[]
+  AuditLog          AuditLog[]
 }
 
-/*
+/**
  * -----------------------------------------------------------------------------
  * Modelo para las Estadísticas de Alianza (Leaderboard)
  * -----------------------------------------------------------------------------
  * Almacena los puntos de un usuario EN UN SERVIDOR específico.
  * Se gana 1 punto por mensaje en los canales registrados.
-*/
+ */
 model PartnershipStats {
   // Puntos acumulados totales.
-  totalPoints     Int      @default(0)
+  totalPoints Int @default(0)
 
   // Puntos para la tabla de clasificación semanal.
-  weeklyPoints    Int      @default(0)
+  weeklyPoints Int @default(0)
 
   // Puntos para la tabla de clasificación mensual.
-  monthlyPoints   Int      @default(0)
+  monthlyPoints Int @default(0)
 
   // Fecha del último reinicio para controlar los contadores.
-  lastWeeklyReset DateTime @default(now())
+  lastWeeklyReset  DateTime @default(now())
   lastMonthlyReset DateTime @default(now())
 
   // --- Relaciones y Clave Primaria ---
-  user            User     @relation(fields: [userId], references: [id])
-  userId          String
-  guild           Guild    @relation(fields: [guildId], references: [id])
-  guildId         String
+  user    User   @relation(fields: [userId], references: [id])
+  userId  String
+  guild   Guild  @relation(fields: [guildId], references: [id])
+  guildId String
 
   // Un usuario solo puede tener un registro de estadísticas por servidor.
   @@id([userId, guildId])
 }
 
-/*
+/**
  * -----------------------------------------------------------------------------
  * Modelo para la Alianza (El mensaje publicado)
  * -----------------------------------------------------------------------------
  * Guarda la referencia al mensaje de alianza, pero no su contenido.
  * El contenido se construye dinámicamente usando EmbedConfig y PartnershipStats.
-*/
+ */
 model Alliance {
-  id          String   @id @default(cuid())
-  channelId   String
-  messageId   String   @unique
-  createdAt   DateTime @default(now())
+  id        String   @id @default(cuid())
+  channelId String
+  messageId String   @unique
+  createdAt DateTime @default(now())
 
   // --- Relaciones ---
-  guild       Guild    @relation(fields: [guildId], references: [id])
-  guildId     String
-  creator     User     @relation(fields: [creatorId], references: [id])
-  creatorId   String
+  guild     Guild  @relation(fields: [guildId], references: [id])
+  guildId   String
+  creator   User   @relation(fields: [creatorId], references: [id])
+  creatorId String
 }
 
-
-/*
+/**
  * -----------------------------------------------------------------------------
  * Modelo para Canales de Alianza
  * -----------------------------------------------------------------------------
  * Gestiona qué canales están configurados para otorgar puntos y qué bloque enviar
-*/
+ */
 model AllianceChannel {
-  id              String   @id @default(cuid())
-  channelId       String   @unique // ID del canal de Discord
+  id        String @id @default(cuid())
+  channelId String @unique // ID del canal de Discord
 
   // Configuración del canal
-  blockConfigName String   // Nombre del BlockV2Config a enviar
-  isActive        Boolean  @default(true)
+  blockConfigName String // Nombre del BlockV2Config a enviar
+  isActive        Boolean @default(true)
 
   // Timestamps
-  createdAt       DateTime @default(now())
-  updatedAt       DateTime @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   // --- Relaciones ---
-  guild           Guild    @relation(fields: [guildId], references: [id])
-  guildId         String
+  guild   Guild  @relation(fields: [guildId], references: [id])
+  guildId String
 
   // Historial de puntos otorgados en este canal
-  pointsHistory   PointHistory[]
+  pointsHistory PointHistory[]
 
   // Un canal solo puede estar en un servidor
   @@unique([guildId, channelId])
 }
 
-/*
+/**
  * -----------------------------------------------------------------------------
  * Modelo para Historial de Puntos
  * -----------------------------------------------------------------------------
  * Registra cada vez que un usuario gana puntos con fecha y hora
-*/
+ */
 model PointHistory {
-  id              String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // Información del punto otorgado
-  points          Int      @default(1)
-  timestamp       DateTime @default(now())
-  messageId       String   // ID del mensaje que generó el punto
+  points    Int      @default(1)
+  timestamp DateTime @default(now())
+  messageId String // ID del mensaje que generó el punto
 
   // --- Relaciones ---
-  user            User     @relation(fields: [userId], references: [id])
-  userId          String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
 
-  guild           Guild    @relation(fields: [guildId], references: [id])
-  guildId         String
+  guild   Guild  @relation(fields: [guildId], references: [id])
+  guildId String
 
   allianceChannel AllianceChannel @relation(fields: [channelId], references: [id])
   channelId       String
 }
 
-
-/*
+/**
  * -----------------------------------------------------------------------------
  * Modelo para la Configuración del Embed
  * -----------------------------------------------------------------------------
-*/
+ */
 model EmbedConfig {
-  id              String  @id @default(cuid())
+  id String @id @default(cuid())
 
   // ✅ NUEVO: Un nombre único para identificar este embed dentro del servidor.
   // Ejemplos: "alianza", "bienvenida", "reglas"
-  name            String
+  name String
 
   // Campos del Embed (título, descripción, color, etc.)
-  color           String?
-  title           String?
-  url             String?
-  authorName      String?
-  authorIconURL   String?
-  authorURL       String?
-  description     String?
-  thumbnailURL    String?
-  imageURL        String?
-  footerText      String?
-  footerIconURL   String?
-  fields          String? @default("[]")
+  color         String?
+  title         String?
+  url           String?
+  authorName    String?
+  authorIconURL String?
+  authorURL     String?
+  description   String?
+  thumbnailURL  String?
+  imageURL      String?
+  footerText    String?
+  footerIconURL String?
+  fields        String? @default("[]")
 
   // --- Relación ---
-  guild           Guild    @relation(fields: [guildId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
 
   // ✅ CAMBIO: Quitamos '@unique' para permitir que un guildId aparezca múltiples veces.
-  guildId         String
+  guildId String
 
   // ✅ NUEVO: Asegura que el 'name' sea único por cada servidor.
   // No puedes tener dos embeds llamados "alianza" en el mismo servidor.
   @@unique([guildId, name])
 }
 
-/*
+/**
  * -----------------------------------------------------------------------------
  * Modelo para la Configuración de Bloques V2
  * -----------------------------------------------------------------------------
-*/
+ */
 model BlockV2Config {
-  id        String   @id @default(cuid())
+  id String @id @default(cuid())
 
   // ✅ Nombre único dentro de cada servidor
-  name      String
+  name String
 
   // Configuración en JSON (embed + componentes, botones, etc.)
-  config    Json
-
+  config Json
 
   // Relación con el servidor
-  guild     Guild    @relation(fields: [guildId], references: [id])
-  guildId   String
+  guild   Guild  @relation(fields: [guildId], references: [id])
+  guildId String
 
   // 🔒 Asegura que un nombre no se repita dentro del mismo servidor
   @@unique([guildId, name])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Economía: Catálogo de Ítems
+ * -----------------------------------------------------------------------------
+ * - Definición global o por servidor (guildId opcional)
+ * - Uso masivo de JSON para banderas y configuraciones opcionales
+ * - Campos de fecha para disponibilidad/adquisición/uso
+ * - maxPerInventory permite limitar cuántos puede tener un usuario
+ */
+model EconomyItem {
+  id  String @id @default(cuid())
+  // Clave estable única por servidor (o global si guildId es null)
+  key String
+
+  name        String
+  description String?
+  category    String?
+  icon        String?
+
+  // Si es apilable (stackable). Si es false, puedes manejar instancias en state JSON del inventario
+  stackable       Boolean @default(true)
+  // Límite duro por inventario (p. ej. 1 o 2); null = ilimitado
+  maxPerInventory Int?
+
+  // Ámbito opcional por servidor. Si es null, el ítem es global
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
+
+  // Ventanas de disponibilidad (para adquirir) y de uso (para poder usarse)
+  availableFrom DateTime?
+  availableTo   DateTime?
+  usableFrom    DateTime?
+  usableTo      DateTime?
+
+  // Etiquetas libres (requiere PostgreSQL)
+  tags String[]
+
+  // Propiedades dinámicas: banderas como breakable/craftable, chestRewards, eventCurrency, passiveEffects, shop, etc.
+  props    Json?
+  // Cualquier metadato adicional (para extensiones futuras)
+  metadata Json?
+
+  // Relaciones
+  recipes     ItemRecipe[]
+  inventories InventoryEntry[]
+  shopOffers  ShopOffer[]
+
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  RecipeIngredient RecipeIngredient[]
+  SmeltJob         SmeltJob[]
+
+  @@unique([guildId, key])
+  @@index([guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Economía: Inventario por Usuario x Servidor x Ítem
+ * -----------------------------------------------------------------------------
+ * - "state" JSON permite almacenar durabilidad, instancias, efectos/mutaciones aplicadas, expiraciones, etc.
+ * - Clave única por (userId, guildId, itemId) para stacks; id sintético para relaciones hijas
+ */
+model InventoryEntry {
+  id String @id @default(cuid())
+
+  userId  String
+  guildId String
+  itemId  String
+
+  quantity Int   @default(0)
+  // JSON flexible: { instances:[{ durability: 50, effects:[...], expiresAt:null }], notes:"..." }
+  state    Json?
+
+  acquiredAt DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  // Relaciones
+  user  User        @relation(fields: [userId], references: [id])
+  guild Guild       @relation(fields: [guildId], references: [id])
+  item  EconomyItem @relation(fields: [itemId], references: [id])
+
+  mutations InventoryItemMutation[]
+
+  @@unique([userId, guildId, itemId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Economía: Recetas de Crafteo
+ * -----------------------------------------------------------------------------
+ */
+model ItemRecipe {
+  id              String @id @default(cuid())
+  // Ítem resultante de la receta y su cantidad
+  productItemId   String
+  productQuantity Int    @default(1)
+
+  product     EconomyItem        @relation(fields: [productItemId], references: [id])
+  ingredients RecipeIngredient[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // Una receta por ítem resultante (si necesitas variantes, añade un campo "variant" en metadata)
+  @@unique([productItemId])
+}
+
+model RecipeIngredient {
+  id       String @id @default(cuid())
+  recipeId String
+  itemId   String
+  quantity Int
+
+  recipe ItemRecipe  @relation(fields: [recipeId], references: [id])
+  item   EconomyItem @relation(fields: [itemId], references: [id])
+
+  @@unique([recipeId, itemId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Economía: Ofertas de Tienda por Servidor
+ * -----------------------------------------------------------------------------
+ * - price en JSON permite monedas nativas y/o ítems como pago mixto
+ * Ejemplo: { "coins": 500, "items": [{ "itemKey": "iron", "qty": 3 }] }
+ */
+model ShopOffer {
+  id String @id @default(cuid())
+
+  guildId String
+  itemId  String
+
+  enabled Boolean   @default(true)
+  price   Json // { coins?: number, items?: [{ itemKey?: string, itemId?: string, qty: number }], extra?: any }
+  startAt DateTime?
+  endAt   DateTime?
+
+  // Límite de compras por usuario (null = sin límite)
+  perUserLimit Int?
+  // Stock global de la oferta (null = ilimitado)
+  stock        Int?
+  metadata     Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  guild        Guild          @relation(fields: [guildId], references: [id])
+  item         EconomyItem    @relation(fields: [itemId], references: [id])
+  ShopPurchase ShopPurchase[]
+
+  // Evita duplicados del mismo ítem en ventana exacta (puedes ajustar según tu flujo)
+  @@unique([guildId, itemId, startAt, endAt])
+  @@index([guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Economía: Mutaciones/Efectos adicionales aplicables a ítems
+ * -----------------------------------------------------------------------------
+ * - Catálogo de mutaciones opcional (global o por servidor)
+ * - Pueden vincularse a entradas de inventario
+ */
+model ItemMutation {
+  id          String  @id @default(cuid())
+  key         String
+  name        String
+  description String?
+  effects     Json // Definición de efectos/bonos: libre
+  metadata    Json?
+
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
+
+  inventories InventoryItemMutation[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, key])
+}
+
+model InventoryItemMutation {
+  id          String   @id @default(cuid())
+  inventoryId String
+  mutationId  String
+  appliedAt   DateTime @default(now())
+  data        Json?
+
+  inventory InventoryEntry @relation(fields: [inventoryId], references: [id])
+  mutation  ItemMutation   @relation(fields: [mutationId], references: [id])
+
+  @@index([inventoryId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Economía: Billetera por Usuario x Servidor (moneda base)
+ * -----------------------------------------------------------------------------
+ */
+model EconomyWallet {
+  id String @id @default(cuid())
+
+  userId  String
+  guildId String
+
+  coins    Int   @default(0)
+  metadata Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+  @@index([guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Economía: Historial de compras de la tienda
+ * -----------------------------------------------------------------------------
+ */
+model ShopPurchase {
+  id      String @id @default(cuid())
+  offerId String
+  userId  String
+  guildId String
+  qty     Int    @default(1)
+
+  offer ShopOffer @relation(fields: [offerId], references: [id])
+  user  User      @relation(fields: [userId], references: [id])
+  guild Guild     @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([offerId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Áreas (Minas, Lagunas, Arenas de pelea, Campos de cultivo)
+ * -----------------------------------------------------------------------------
+ * - Extensible vía JSON: requirements/rewards/mobs por nivel
+ */
+model GameArea {
+  id   String @id @default(cuid())
+  // Clave única por servidor (o global si guildId es null)
+  key  String
+  name String
+  type String // "MINE" | "LAGOON" | "FIGHT" | "FARM" | otros
+
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
+
+  // Configuración general del área (cooldowns, multiplicadores, etc.)
+  config   Json?
+  metadata Json?
+
+  levels   GameAreaLevel[]
+  runs     MinigameRun[]
+  progress PlayerProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, key])
+  @@index([guildId])
+}
+
+model GameAreaLevel {
+  id     String @id @default(cuid())
+  areaId String
+  level  Int
+
+  // Requisitos para participar (tipo de herramienta, tier mínimo, etc.)
+  requirements Json?
+  // Tabla de recompensas (ítems/monedas) con pesos
+  rewards      Json?
+  // Tabla de mobs con pesos
+  mobs         Json?
+  metadata     Json?
+
+  availableFrom DateTime?
+  availableTo   DateTime?
+
+  area GameArea @relation(fields: [areaId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([areaId, level])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Mobs (usados en minas, lagunas/pesca, peleas)
+ * -----------------------------------------------------------------------------
+ */
+model Mob {
+  id       String  @id @default(cuid())
+  key      String
+  name     String
+  category String?
+
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
+
+  stats    Json? // { hp, attack, defense, luckModifiers, ... }
+  drops    Json? // Reward table específica del mob (opcional)
+  metadata Json?
+
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  ScheduledMobAttack ScheduledMobAttack[]
+
+  @@unique([guildId, key])
+  @@index([guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Registro de partidas/ejecuciones
+ * -----------------------------------------------------------------------------
+ */
+model MinigameRun {
+  id String @id @default(cuid())
+
+  userId     String
+  guildId    String
+  areaId     String
+  level      Int
+  toolItemId String?
+
+  success Boolean
+  result  Json // { rewards:..., mobs:..., tool:{ durabilityDelta, broken }, notes }
+
+  startedAt  DateTime @default(now())
+  finishedAt DateTime @default(now())
+
+  user  User     @relation(fields: [userId], references: [id])
+  guild Guild    @relation(fields: [guildId], references: [id])
+  area  GameArea @relation(fields: [areaId], references: [id])
+
+  @@index([userId, guildId])
+  @@index([areaId])
+  @@index([startedAt])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Progreso del jugador por área
+ * -----------------------------------------------------------------------------
+ */
+model PlayerProgress {
+  id           String @id @default(cuid())
+  userId       String
+  guildId      String
+  areaId       String
+  highestLevel Int    @default(1)
+  metadata     Json?
+
+  user  User     @relation(fields: [userId], references: [id])
+  guild Guild    @relation(fields: [guildId], references: [id])
+  area  GameArea @relation(fields: [areaId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId, areaId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Estado del Jugador (HP, stats base) por servidor
+ * -----------------------------------------------------------------------------
+ */
+model PlayerState {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  hp       Int   @default(100)
+  maxHp    Int   @default(100)
+  stats    Json? // { attack, defense, strength, luck, ... }
+  metadata Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Equipamiento del Jugador por servidor (arma, armadura, capa, etc.)
+ * -----------------------------------------------------------------------------
+ */
+model PlayerEquipment {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  weaponItemId String?
+  armorItemId  String?
+  capeItemId   String?
+  // accesorios u otros slots libres
+  accessories  Json?
+  metadata     Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Cooldowns por acción arbitraria (clave libre)
+ * -----------------------------------------------------------------------------
+ */
+model ActionCooldown {
+  id       String   @id @default(cuid())
+  userId   String
+  guildId  String
+  key      String
+  until    DateTime
+  metadata Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  @@unique([userId, guildId, key])
+  @@index([until])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Fundición (smelting) con cooldown/tiempo de preparación
+ * -----------------------------------------------------------------------------
+ */
+model SmeltJob {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  // entradas y parámetros de fundición
+  inputs       Json // { items: [{ itemKey, qty }], extra?: any }
+  outputItemId String
+  outputQty    Int    @default(1)
+
+  startedAt DateTime @default(now())
+  readyAt   DateTime
+  status    String   @default("pending") // pending|ready|claimed|cancelled
+  metadata  Json?
+
+  user       User        @relation(fields: [userId], references: [id])
+  guild      Guild       @relation(fields: [guildId], references: [id])
+  outputItem EconomyItem @relation(fields: [outputItemId], references: [id])
+
+  @@index([userId, guildId])
+  @@index([readyAt])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Ataques programados de mobs al jugador (para eventos sin comandos)
+ * -----------------------------------------------------------------------------
+ */
+model ScheduledMobAttack {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+  mobId   String
+
+  scheduleAt  DateTime
+  processedAt DateTime?
+  status      String    @default("scheduled") // scheduled|processing|done|failed
+  metadata    Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+  mob   Mob   @relation(fields: [mobId], references: [id])
+
+  @@index([scheduleAt])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Logros (Achievements)
+ * -----------------------------------------------------------------------------
+ */
+model Achievement {
+  id          String   @id @default(cuid())
+  key         String
+  name        String
+  description String
+  icon        String?
+  category    String   // "mining", "crafting", "combat", "economy", "exploration"
+
+  // Requisitos para desbloquear (JSON flexible)
+  requirements Json    // { type: "mine_count", value: 100 }
+
+  // Recompensas al desbloquear
+  rewards      Json?   // { coins: 500, items: [...], title: "..." }
+
+  guildId      String?
+  guild        Guild?  @relation(fields: [guildId], references: [id])
+
+  // Logros desbloqueados por usuarios
+  unlocked     PlayerAchievement[]
+
+  hidden       Boolean @default(false) // logros secretos
+  points       Int     @default(10)    // puntos que otorga el logro
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, key])
+  @@index([guildId])
+}
+
+model PlayerAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  guildId       String
+  achievementId String
+
+  user        User        @relation(fields: [userId], references: [id])
+  guild       Guild       @relation(fields: [guildId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  progress    Int      @default(0)    // progreso actual hacia el logro
+  unlockedAt  DateTime?               // null si aún no está desbloqueado
+  notified    Boolean  @default(false) // si ya se notificó al usuario
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId, achievementId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Misiones (Quests)
+ * -----------------------------------------------------------------------------
+ */
+model Quest {
+  id          String   @id @default(cuid())
+  key         String
+  name        String
+  description String
+  icon        String?
+
+  // Tipo de misión
+  type        String   // "daily", "weekly", "event", "permanent"
+  category    String   // "mining", "combat", "economy", "exploration"
+
+  // Requisitos
+  requirements Json    // { type: "mine", count: 10 }
+
+  // Recompensas
+  rewards      Json    // { coins: 500, items: [...], xp: 100 }
+
+  // Disponibilidad
+  startAt     DateTime?
+  endAt       DateTime?
+
+  guildId     String?
+  guild       Guild?   @relation(fields: [guildId], references: [id])
+
+  progress    QuestProgress[]
+
+  active      Boolean  @default(true)
+  repeatable  Boolean  @default(false) // si se puede repetir después de completar
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, key])
+  @@index([guildId])
+  @@index([type])
+}
+
+model QuestProgress {
+  id       String @id @default(cuid())
+  userId   String
+  guildId  String
+  questId  String
+
+  progress   Int     @default(0) // progreso actual
+  completed  Boolean @default(false)
+  claimed    Boolean @default(false) // si ya reclamó recompensa
+
+  user   User  @relation(fields: [userId], references: [id])
+  guild  Guild @relation(fields: [guildId], references: [id])
+  quest  Quest @relation(fields: [questId], references: [id])
+
+  completedAt DateTime?
+  claimedAt   DateTime?
+  expiresAt   DateTime? // para misiones diarias/semanales
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId, questId, expiresAt])
+  @@index([userId, guildId])
+  @@index([questId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Estadísticas del Jugador
+ * -----------------------------------------------------------------------------
+ */
+model PlayerStats {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  // Stats de minijuegos
+  minesCompleted      Int @default(0)
+  fishingCompleted    Int @default(0)
+  fightsCompleted     Int @default(0)
+  farmsCompleted      Int @default(0)
+
+  // Stats de combate
+  mobsDefeated        Int @default(0)
+  damageDealt         Int @default(0)
+  damageTaken         Int @default(0)
+  timesDefeated       Int @default(0)
+
+  // Stats de economía
+  totalCoinsEarned    Int @default(0)
+  totalCoinsSpent     Int @default(0)
+  itemsCrafted        Int @default(0)
+  itemsSmelted        Int @default(0)
+  itemsPurchased      Int @default(0)
+
+  // Stats de items
+  chestsOpened        Int @default(0)
+  itemsConsumed       Int @default(0)
+  itemsEquipped       Int @default(0)
+
+  // Récords personales
+  highestDamageDealt  Int @default(0)
+  longestWinStreak    Int @default(0)
+  currentWinStreak    Int @default(0)
+  mostCoinsAtOnce     Int @default(0)
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Rachas (Streaks)
+ * -----------------------------------------------------------------------------
+ */
+model PlayerStreak {
+  id       String @id @default(cuid())
+  userId   String
+  guildId  String
+
+  currentStreak      Int      @default(0)
+  longestStreak      Int      @default(0)
+  lastActiveDate     DateTime @default(now())
+  totalDaysActive    Int      @default(0)
+
+  // Recompensas reclamadas por día
+  rewardsClaimed     Json?    // { day3: true, day7: true, etc }
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Log de Auditoría
+ * -----------------------------------------------------------------------------
+ */
+model AuditLog {
+  id       String   @id @default(cuid())
+  userId   String
+  guildId  String
+  action   String   // "buy", "craft", "trade", "equip", "mine", "fight", etc.
+  target   String?  // ID del item/mob/área afectado
+  details  Json?    // detalles adicionales
+
+  user   User   @relation(fields: [userId], references: [id])
+  guild  Guild  @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, guildId])
+  @@index([action])
+  @@index([createdAt])
 }

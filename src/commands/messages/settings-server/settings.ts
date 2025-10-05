@@ -95,26 +95,55 @@ export const command: CommandMessage = {
 
         collector.on("collect", async (interaction: any) => {
             if (interaction.customId === "open_prefix_modal") {
-                // Crear y mostrar modal para cambiar prefix
+                // Crear y mostrar modal para cambiar prefix (formato consistente con otros modales)
                 const prefixModal = {
                     title: "⚙️ Configurar Prefix del Servidor",
-                    custom_id: "prefix_settings_modal",
+                    customId: "prefix_settings_modal",
                     components: [
-                        { type: 1, components: [ { type: 4, custom_id: "new_prefix_input", label: "Nuevo Prefix", style: 1, placeholder: `Prefix actual: ${currentPrefix}`, required: true, max_length: 10, min_length: 1, value: currentPrefix } ] },
-                        { type: 1, components: [ { type: 4, custom_id: "prefix_description", label: "¿Por qué cambiar el prefix? (Opcional)", style: 2, placeholder: "Ej: Evitar conflictos con otros bots...", required: false, max_length: 200 } ] }
+                        {
+                            type: ComponentType.Label,
+                            label: "Nuevo Prefix",
+                            component: {
+                                type: ComponentType.TextInput,
+                                customId: "new_prefix_input",
+                                style: TextInputStyle.Short,
+                                placeholder: `Prefix actual: ${currentPrefix}`,
+                                required: true,
+                                maxLength: 10,
+                                minLength: 1,
+                                value: currentPrefix
+                            }
+                        },
+                        {
+                            type: ComponentType.Label,
+                            label: "Motivo (opcional)",
+                            component: {
+                                type: ComponentType.TextInput,
+                                customId: "prefix_description",
+                                style: TextInputStyle.Paragraph,
+                                placeholder: "Ej: evitar conflictos con otros bots...",
+                                required: false,
+                                maxLength: 200
+                            }
+                        }
                     ]
-                };
+                } as const;
 
-                await interaction.showModal(prefixModal);
+                try {
+                    await interaction.showModal(prefixModal);
+                } catch (err) {
+                    try { await interaction.reply({ content: '❌ No se pudo abrir el modal de prefix.', flags: 64 }); } catch {}
+                    return;
+                }
 
-                const modalCollector = interaction.awaitModalSubmit({
-                    time: 300000,
-                    filter: (modalInt: any) => modalInt.customId === "prefix_settings_modal" && modalInt.user.id === message.author.id
-                });
+                try {
+                    const modalInteraction = await interaction.awaitModalSubmit({
+                        time: 300000,
+                        filter: (modalInt: any) => modalInt.customId === "prefix_settings_modal" && modalInt.user.id === message.author.id
+                    });
 
-                modalCollector.then(async (modalInteraction: any) => {
-                    const newPrefix = modalInteraction.fields.getTextInputValue("new_prefix_input");
-                    const description = modalInteraction.fields.getTextInputValue("prefix_description") || "Sin descripción";
+                    const newPrefix = modalInteraction.components.getTextInputValue("new_prefix_input");
+                    const description = modalInteraction.components.getTextInputValue("prefix_description") || "Sin descripción";
 
                     if (!newPrefix || newPrefix.length > 10) {
                         await modalInteraction.reply({ content: "❌ **Error:** El prefix debe tener entre 1 y 10 caracteres.", flags: 64 });
@@ -159,9 +188,9 @@ export const command: CommandMessage = {
 
                         await modalInteraction.update({ components: [errorPanel, retryRow] });
                     }
-                }).catch(async (error: any) => {
-                    logger.info("Modal timeout o error:", error.message);
-                });
+                } catch (error: any) {
+                    logger.info("Modal timeout o error:", error?.message || String(error));
+                }
             }
 
             if (interaction.customId === "open_staff_modal") {

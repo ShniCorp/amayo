@@ -12,7 +12,8 @@
     "dev:optimized": "MEMORY_LOG_INTERVAL_SECONDS=300 ENABLE_MEMORY_OPTIMIZER=true NODE_OPTIONS='--expose-gc' npx tsx watch src/main.ts",
     "start:prod": "NODE_ENV=production NODE_OPTIONS=--max-old-space-size=384 npx tsx src/main.ts",
     "start:prod-optimized": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx src/main.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "seed:minigames": "tsx src/game/minigames/seed.ts"
   },
   "keywords": [],
   "author": "",

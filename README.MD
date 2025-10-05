@@ -1,5 +1,7 @@
 # Amayo Bot — Guía de Comandos para Discord
 
+> Nota: Para crear y editar Items, Mobs, Áreas, Niveles y Ofertas con los editores interactivos, consulta la guía: [CREACION_DE_CONTENIDO.md](./CREACION_DE_CONTENIDO.md)
+
 Bienvenido/a. Aquí tienes una guía lista para pegar en tu servidor de Discord con todos los comandos disponibles y lo que hacen.
 
 - Prefix por defecto: `!` (puede cambiarse con `!configuracion`)
@@ -123,4 +125,3 @@ Slash
 
 Más ayuda: !ayuda | !ayuda <comando> | !ayuda <categoría>
 ```
-

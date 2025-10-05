@@ -575,7 +575,7 @@ export class AIService {
      * Procesar imágenes adjuntas para análisis con Gemini Vision
      */
     private async processImageAttachments(attachments: any[]): Promise<any[]> {
-        const imageAttachments = [];
+        const imageAttachments: Array<{ inlineData: { data: string; mimeType: string } }> = [];
 
         for (const attachment of attachments) {
             if (this.hasImageAttachments([attachment])) {
@@ -1121,7 +1121,7 @@ Responde de forma directa y útil:`;
                 .filter((role: any) => role.id !== guild.id) // Excluir @everyone
                 .sort((a: any, b: any) => b.position - a.position)
                 .map((role: any) => {
-                    const permissions = [];
+                    const permissions: string[] = [];
                     if (role.permissions.has('Administrator')) permissions.push('Admin');
                     if (role.permissions.has('ManageGuild')) permissions.push('Manage Server');
                     if (role.permissions.has('ManageChannels')) permissions.push('Manage Channels');
