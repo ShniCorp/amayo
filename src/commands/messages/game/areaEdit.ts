@@ -2,7 +2,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import { prisma } from '../../../core/database/prisma';
-import { Message, MessageComponentInteraction, MessageFlags, ButtonInteraction } from 'discord.js';
+import { Message, MessageComponentInteraction, MessageFlags, ButtonInteraction, TextBasedChannel } from 'discord.js';
 import { ComponentType, TextInputStyle, ButtonStyle } from 'discord-api-types/v10';
 
 interface AreaState {
@@ -33,7 +33,8 @@ export const command: CommandMessage = {
 
     const state: AreaState = { key, name: area.name, type: area.type, config: area.config ?? {}, metadata: area.metadata ?? {} };
 
-    const editorMsg = await message.channel.send({
+    const channel = message.channel as TextBasedChannel & { send: Function };
+    const editorMsg = await channel.send({
       content: `🗺️ Editor de Área (editar): \`${key}\``,
       components: [ { type: 1, components: [
         { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'ga_base' },

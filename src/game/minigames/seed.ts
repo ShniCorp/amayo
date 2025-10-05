@@ -1,7 +1,7 @@
 import { prisma } from '../../core/database/prisma';
 import { Prisma } from '@prisma/client';
 
-async function upsertEconomyItem(guildId: string | null, key: string, data: Omit<Parameters<typeof prisma.economyItem.create>[0]['data'], 'key' | 'guildId'>) {
+async function upsertEconomyItem(guildId: string | null, key: string, data: Omit<Prisma.EconomyItemUncheckedCreateInput, 'key' | 'guildId'>) {
   if (guildId) {
     return prisma.economyItem.upsert({ where: { guildId_key: { guildId, key } }, update: {}, create: { ...data, key, guildId } });
   }
@@ -10,7 +10,7 @@ async function upsertEconomyItem(guildId: string | null, key: string, data: Omit
   return prisma.economyItem.create({ data: { ...data, key, guildId: null } });
 }
 
-async function upsertGameArea(guildId: string | null, key: string, data: Omit<Parameters<typeof prisma.gameArea.create>[0]['data'], 'key' | 'guildId'>) {
+async function upsertGameArea(guildId: string | null, key: string, data: Omit<Prisma.GameAreaUncheckedCreateInput, 'key' | 'guildId'>) {
   if (guildId) {
     return prisma.gameArea.upsert({ where: { guildId_key: { guildId, key } }, update: {}, create: { ...data, key, guildId } });
   }
@@ -19,7 +19,7 @@ async function upsertGameArea(guildId: string | null, key: string, data: Omit<Pa
   return prisma.gameArea.create({ data: { ...data, key, guildId: null } });
 }
 
-async function upsertMob(guildId: string | null, key: string, data: Omit<Parameters<typeof prisma.mob.create>[0]['data'], 'key' | 'guildId'>) {
+async function upsertMob(guildId: string | null, key: string, data: Omit<Prisma.MobUncheckedCreateInput, 'key' | 'guildId'>) {
   if (guildId) {
     return prisma.mob.upsert({ where: { guildId_key: { guildId, key } }, update: { stats: (data as any).stats, drops: (data as any).drops, name: (data as any).name }, create: { ...data, key, guildId } });
   }

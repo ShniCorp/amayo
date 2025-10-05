@@ -64,7 +64,7 @@ async function validateRequirements(userId: string, guildId: string, req?: Level
 
   // Auto-select tool when required and not provided
   if (!toolKeyUsed && toolReq.required && toolReq.toolType) {
-    toolKeyUsed = await findBestToolKey(userId, guildId, toolReq.toolType, { minTier: toolReq.minTier, allowedKeys: toolReq.allowedKeys });
+    toolKeyUsed = await findBestToolKey(userId, guildId, toolReq.toolType, { minTier: toolReq.minTier, allowedKeys: toolReq.allowedKeys }) ?? undefined;
   }
 
   // herramienta requerida

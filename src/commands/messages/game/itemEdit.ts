@@ -1,4 +1,4 @@
-import { Message, MessageFlags, MessageComponentInteraction, ButtonInteraction } from 'discord.js';
+import { Message, MessageFlags, MessageComponentInteraction, ButtonInteraction, TextBasedChannel } from 'discord.js';
 import { ComponentType, TextInputStyle, ButtonStyle } from 'discord-api-types/v10';
 import type { CommandMessage } from '../../../core/types/commands';
 import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
@@ -47,7 +47,8 @@ export const command: CommandMessage = {
       props: item.props ?? {},
     };
 
-    const editorMsg = await message.channel.send({
+    const channel = message.channel as TextBasedChannel & { send: Function };
+    const editorMsg = await channel.send({
       content: `🛠️ Editor de Item (editar): \`${key}\``,
       components: [ { type: 1, components: [
         { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'it_base' },
