@@ -1,5 +1,5 @@
 import { prisma } from '../../core/database/prisma';
-import type { Prisma } from '@prisma/client';
+import { Prisma } from '@prisma/client';
 
 async function upsertEconomyItem(guildId: string | null, key: string, data: Omit<Parameters<typeof prisma.economyItem.create>[0]['data'], 'key' | 'guildId'>) {
   if (guildId) {
