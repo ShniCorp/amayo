@@ -59,6 +59,18 @@ export type ShopProps = {
   purchasable?: boolean; // si puede venderse en la tienda (además de ShopOffer)
 };
 
+export type ToolProps = {
+  type: 'pickaxe' | 'rod' | 'sword' | 'bow' | 'halberd' | 'net' | string; // extensible
+  tier?: number; // nivel/calidad de la herramienta
+};
+
+export type FoodProps = {
+  healHp?: number; // sanación plana
+  healPercent?: number; // sanación porcentual del maxHp
+  cooldownKey?: string; // clave de cooldown personalizada
+  cooldownSeconds?: number; // cd para volver a usar
+};
+
 export type ItemProps = {
   // Flags y bloques de config opcionales
   breakable?: BreakableProps; // romperse
@@ -73,6 +85,12 @@ export type ItemProps = {
   usableFrom?: string;
   usableTo?: string;
   shop?: ShopProps; // metadatos de tienda
+  tool?: ToolProps; // metadatos de herramienta (pico, caña, espada, etc.)
+  food?: FoodProps; // metadatos de comida/poción (curación, cooldown)
+  // Stats básicos de combate (opcionales)
+  damage?: number; // para armas
+  defense?: number; // para armaduras
+  maxHpBonus?: number; // para capas u otros
   // Cualquier otra extensión libre
   [k: string]: unknown;
 };
@@ -98,4 +116,3 @@ export type OpenChestResult = {
   rolesToGrant: string[]; // IDs de roles a otorgar
   consumed: boolean; // si el ítem/cofre se consumió
 };
-
