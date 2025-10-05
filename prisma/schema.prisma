@@ -52,6 +52,15 @@ model Guild {
   ActionCooldown     ActionCooldown[]
   SmeltJob           SmeltJob[]
   ScheduledMobAttack ScheduledMobAttack[]
+
+  // Nuevas relaciones para sistemas de engagement
+  Achievement       Achievement[]
+  PlayerAchievement PlayerAchievement[]
+  Quest             Quest[]
+  QuestProgress     QuestProgress[]
+  PlayerStats       PlayerStats[]
+  PlayerStreak      PlayerStreak[]
+  AuditLog          AuditLog[]
 }
 
 /**
@@ -80,6 +89,13 @@ model User {
   ActionCooldown     ActionCooldown[]
   SmeltJob           SmeltJob[]
   ScheduledMobAttack ScheduledMobAttack[]
+
+  // Nuevas relaciones para sistemas de engagement
+  PlayerAchievement PlayerAchievement[]
+  QuestProgress     QuestProgress[]
+  PlayerStats       PlayerStats[]
+  PlayerStreak      PlayerStreak[]
+  AuditLog          AuditLog[]
 }
 
 /**
@@ -742,4 +758,231 @@ model ScheduledMobAttack {
 
   @@index([scheduleAt])
   @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Logros (Achievements)
+ * -----------------------------------------------------------------------------
+ */
+model Achievement {
+  id          String   @id @default(cuid())
+  key         String
+  name        String
+  description String
+  icon        String?
+  category    String   // "mining", "crafting", "combat", "economy", "exploration"
+
+  // Requisitos para desbloquear (JSON flexible)
+  requirements Json    // { type: "mine_count", value: 100 }
+
+  // Recompensas al desbloquear
+  rewards      Json?   // { coins: 500, items: [...], title: "..." }
+
+  guildId      String?
+  guild        Guild?  @relation(fields: [guildId], references: [id])
+
+  // Logros desbloqueados por usuarios
+  unlocked     PlayerAchievement[]
+
+  hidden       Boolean @default(false) // logros secretos
+  points       Int     @default(10)    // puntos que otorga el logro
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, key])
+  @@index([guildId])
+}
+
+model PlayerAchievement {
+  id            String   @id @default(cuid())
+  userId        String
+  guildId       String
+  achievementId String
+
+  user        User        @relation(fields: [userId], references: [id])
+  guild       Guild       @relation(fields: [guildId], references: [id])
+  achievement Achievement @relation(fields: [achievementId], references: [id])
+
+  progress    Int      @default(0)    // progreso actual hacia el logro
+  unlockedAt  DateTime?               // null si aún no está desbloqueado
+  notified    Boolean  @default(false) // si ya se notificó al usuario
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId, achievementId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Misiones (Quests)
+ * -----------------------------------------------------------------------------
+ */
+model Quest {
+  id          String   @id @default(cuid())
+  key         String
+  name        String
+  description String
+  icon        String?
+
+  // Tipo de misión
+  type        String   // "daily", "weekly", "event", "permanent"
+  category    String   // "mining", "combat", "economy", "exploration"
+
+  // Requisitos
+  requirements Json    // { type: "mine", count: 10 }
+
+  // Recompensas
+  rewards      Json    // { coins: 500, items: [...], xp: 100 }
+
+  // Disponibilidad
+  startAt     DateTime?
+  endAt       DateTime?
+
+  guildId     String?
+  guild       Guild?   @relation(fields: [guildId], references: [id])
+
+  progress    QuestProgress[]
+
+  active      Boolean  @default(true)
+  repeatable  Boolean  @default(false) // si se puede repetir después de completar
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, key])
+  @@index([guildId])
+  @@index([type])
+}
+
+model QuestProgress {
+  id       String @id @default(cuid())
+  userId   String
+  guildId  String
+  questId  String
+
+  progress   Int     @default(0) // progreso actual
+  completed  Boolean @default(false)
+  claimed    Boolean @default(false) // si ya reclamó recompensa
+
+  user   User  @relation(fields: [userId], references: [id])
+  guild  Guild @relation(fields: [guildId], references: [id])
+  quest  Quest @relation(fields: [questId], references: [id])
+
+  completedAt DateTime?
+  claimedAt   DateTime?
+  expiresAt   DateTime? // para misiones diarias/semanales
+  metadata    Json?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId, questId, expiresAt])
+  @@index([userId, guildId])
+  @@index([questId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Estadísticas del Jugador
+ * -----------------------------------------------------------------------------
+ */
+model PlayerStats {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  // Stats de minijuegos
+  minesCompleted      Int @default(0)
+  fishingCompleted    Int @default(0)
+  fightsCompleted     Int @default(0)
+  farmsCompleted      Int @default(0)
+
+  // Stats de combate
+  mobsDefeated        Int @default(0)
+  damageDealt         Int @default(0)
+  damageTaken         Int @default(0)
+  timesDefeated       Int @default(0)
+
+  // Stats de economía
+  totalCoinsEarned    Int @default(0)
+  totalCoinsSpent     Int @default(0)
+  itemsCrafted        Int @default(0)
+  itemsSmelted        Int @default(0)
+  itemsPurchased      Int @default(0)
+
+  // Stats de items
+  chestsOpened        Int @default(0)
+  itemsConsumed       Int @default(0)
+  itemsEquipped       Int @default(0)
+
+  // Récords personales
+  highestDamageDealt  Int @default(0)
+  longestWinStreak    Int @default(0)
+  currentWinStreak    Int @default(0)
+  mostCoinsAtOnce     Int @default(0)
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Sistema de Rachas (Streaks)
+ * -----------------------------------------------------------------------------
+ */
+model PlayerStreak {
+  id       String @id @default(cuid())
+  userId   String
+  guildId  String
+
+  currentStreak      Int      @default(0)
+  longestStreak      Int      @default(0)
+  lastActiveDate     DateTime @default(now())
+  totalDaysActive    Int      @default(0)
+
+  // Recompensas reclamadas por día
+  rewardsClaimed     Json?    // { day3: true, day7: true, etc }
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Log de Auditoría
+ * -----------------------------------------------------------------------------
+ */
+model AuditLog {
+  id       String   @id @default(cuid())
+  userId   String
+  guildId  String
+  action   String   // "buy", "craft", "trade", "equip", "mine", "fight", etc.
+  target   String?  // ID del item/mob/área afectado
+  details  Json?    // detalles adicionales
+
+  user   User   @relation(fields: [userId], references: [id])
+  guild  Guild  @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  @@index([userId, guildId])
+  @@index([action])
+  @@index([createdAt])
 }
