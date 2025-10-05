@@ -4,6 +4,7 @@ import { ComponentType, ButtonStyle, TextInputStyle } from "discord-api-types/v1
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
 import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 import logger from "../../../core/lib/logger";
+import { DESCRIPTION_PLACEHOLDER, ensureDescriptionTextComponent, normalizeDisplayContent, syncDescriptionComponent } from "../../../core/types/displayComponentEditor";
 
 // Botones de edición (máx 5 por fila)
 const btns = (disabled = false) => ([
@@ -665,23 +666,73 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "edit_thumbnail": {
-                        const textDisplays = blockState.components.map((c: any, idx: number) => ({ c, idx })).filter(({ c }: any) => c.type === 10);
+                        ensureDescriptionTextComponent(blockState, { placeholder: DESCRIPTION_PLACEHOLDER });
+
+                        const descriptionNormalized = normalizeDisplayContent(blockState.description);
+                        const textDisplays = blockState.components
+                            .map((c: any, idx: number) => ({ c, idx }))
+                            .filter(({ c }: any) => c?.type === 10);
+
                         if (textDisplays.length === 0) {
-                            await i.deferReply({ flags: 64 });
+                            await i.deferReply({ flags: 64 }).catch(() => {});
                             // @ts-ignore
-                            await i.editReply({ content: '❌ No hay bloques de texto para editar thumbnail.' });
+                            await i.editReply({ content: '❌ No hay bloques de texto para editar thumbnail.' }).catch(() => {});
                             break;
                         }
-                        const options = textDisplays.map(({ c, idx }: any) => ({ label: `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`, value: String(idx), description: c.thumbnail ? 'Con thumbnail' : c.linkButton ? 'Con botón link' : 'Sin accesorio' }));
+
+                        const options = textDisplays.map(({ c, idx }: any) => ({
+                            label: descriptionNormalized && normalizeDisplayContent(c.content) === descriptionNormalized
+                                ? 'Descripción principal'
+                                : `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`,
+                            value: String(idx),
+                            description: c.thumbnail ? 'Con thumbnail' : c.linkButton ? 'Con botón link' : 'Sin accesorio'
+                        }));
+
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Elige el TextDisplay a editar su thumbnail:', components: [{ type: 1, components: [ { type: 3, custom_id: 'choose_text_for_thumbnail', placeholder: 'Selecciona un bloque de texto', options } ] }] });
+                        await i.reply({
+                            flags: 64,
+                            content: 'Elige el bloque de texto para gestionar su thumbnail:',
+                            components: [
+                                {
+                                    type: 1,
+                                    components: [
+                                        {
+                                            type: 3,
+                                            custom_id: 'choose_text_for_thumbnail',
+                                            placeholder: 'Selecciona un bloque de texto',
+                                            options
+                                        }
+                                    ]
+                                }
+                            ]
+                        });
+
                         // @ts-ignore
                         const replyMsg = await i.fetchReply();
                         // @ts-ignore
                         const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
                         selCollector.on('collect', async (sel: any) => {
-                            const idx = parseInt(sel.values[0]);
+                            selCollector.stop('selected');
+                            const idx = parseInt(sel.values[0], 10);
+                            if (Number.isNaN(idx)) {
+                                try {
+                                    if (!sel.replied && !sel.deferred) {
+                                        await sel.reply({ content: '❌ Selección inválida.', flags: 64 });
+                                    }
+                                } catch {}
+                                return;
+                            }
+
                             const textComp = blockState.components[idx];
+                            if (!textComp || textComp.type !== 10) {
+                                try {
+                                    if (!sel.replied && !sel.deferred) {
+                                        await sel.reply({ content: '❌ El bloque seleccionado ya no existe.', flags: 64 });
+                                    }
+                                } catch {}
+                                return;
+                            }
+
                             const modal = {
                                 title: '📎 Editar Thumbnail',
                                 customId: `edit_thumbnail_modal_${idx}`,
@@ -699,7 +750,19 @@ export const command: CommandMessage = {
                                     }
                                 }]
                             } as const;
-                            await sel.showModal(modal);
+
+                            try {
+                                await sel.showModal(modal);
+                            } catch (error) {
+                                logger.error({ err: error }, 'No se pudo mostrar el modal de thumbnail en editDisplay');
+                            }
+                        });
+
+                        selCollector.on('end', async () => {
+                            try {
+                                // @ts-ignore
+                                await replyMsg.edit({ components: [] });
+                            } catch {}
                         });
                         break;
                     }
@@ -871,11 +934,13 @@ export const command: CommandMessage = {
                     logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Título actualizado mediante modal.');
                     await sendResponse('✅ Título actualizado.');
                 } else if (id === 'edit_description_modal') {
-                    const previousDescription = blockState.description ?? null;
-                    const newDescription = interaction.components.getTextInputValue('description_input').trim();
-                    blockState.description = newDescription.length > 0 ? newDescription : undefined;
+                    const previousDescription = typeof blockState.description === 'string' ? blockState.description : null;
+                    const rawDescription = interaction.components.getTextInputValue('description_input');
+                    syncDescriptionComponent(blockState, rawDescription, {
+                        previousDescription,
+                        placeholder: DESCRIPTION_PLACEHOLDER
+                    });
                     stripLegacyDescriptionComponent(blockState, previousDescription);
-                    stripLegacyDescriptionComponent(blockState);
                     logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Descripción actualizada mediante modal.');
                     await sendResponse('✅ Descripción actualizada.');
                 } else if (id === 'edit_color_modal') {
