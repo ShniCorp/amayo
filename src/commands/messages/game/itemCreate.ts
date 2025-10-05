@@ -26,15 +26,54 @@ export const command: CommandMessage = {
   category: 'Economía',
   usage: 'item-crear <key-única>',
   run: async (message: Message, args: string[], client: Amayo) => {
+    const channel = message.channel as TextBasedChannel & { send: Function };
     const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, client.prisma);
     if (!allowed) {
-      await message.reply('❌ No tienes permisos de ManageGuild ni rol de staff.');
+      await (channel.send as any)({
+        flags: 32768,
+        components: [{
+          type: 17,
+          accent_color: 0xFF0000,
+          components: [{
+            type: 9,
+            components: [{
+              type: 10,
+              content: '❌ **Error de Permisos**\n└ No tienes permisos de ManageGuild ni rol de staff.'
+            }]
+          }]
+        }],
+        message_reference: {
+          message_id: message.id,
+          channel_id: message.channel.id,
+          guild_id: message.guild!.id,
+          fail_if_not_exists: false
+        }
+      });
       return;
     }
 
     const key = args[0]?.trim();
     if (!key) {
-      await message.reply('Uso: `!item-crear <key-única>`');
+      await (channel.send as any)({
+        flags: 32768,
+        components: [{
+          type: 17,
+          accent_color: 0xFFA500,
+          components: [{
+            type: 9,
+            components: [{
+              type: 10,
+              content: '⚠️ **Uso Incorrecto**\n└ Uso: `!item-crear <key-única>`'
+            }]
+          }]
+        }],
+        message_reference: {
+          message_id: message.id,
+          channel_id: message.channel.id,
+          guild_id: message.guild!.id,
+          fail_if_not_exists: false
+        }
+      });
       return;
     }
 
@@ -42,7 +81,26 @@ export const command: CommandMessage = {
 
     const exists = await client.prisma.economyItem.findFirst({ where: { key, guildId } });
     if (exists) {
-      await message.reply('❌ Ya existe un item con esa key en este servidor.');
+      await (channel.send as any)({
+        flags: 32768,
+        components: [{
+          type: 17,
+          accent_color: 0xFF0000,
+          components: [{
+            type: 9,
+            components: [{
+              type: 10,
+              content: '❌ **Item Ya Existe**\n└ Ya existe un item con esa key en este servidor.'
+            }]
+          }]
+        }],
+        message_reference: {
+          message_id: message.id,
+          channel_id: message.channel.id,
+          guild_id: message.guild!.id,
+          fail_if_not_exists: false
+        }
+      });
       return;
     }
 
@@ -100,10 +158,10 @@ export const command: CommandMessage = {
       }
     });
 
-    const channel = message.channel as TextBasedChannel & { send: Function };
-    const editorMsg = await channel.send({
-      ...createDisplay(),
+    const editorMsg = await (channel.send as any)({
+      flags: 32768,
       components: [
+        createDisplay().display,
         { type: 1, components: [
           { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'it_base' },
           { type: 2, style: ButtonStyle.Secondary, label: 'Tags', custom_id: 'it_tags' },
@@ -172,7 +230,20 @@ export const command: CommandMessage = {
             },
           });
           await i.reply({ content: '✅ Item guardado!', flags: MessageFlags.Ephemeral });
-          await editorMsg.edit({ content: `✅ Item \`${state.key}\` creado.`, components: [], display: undefined });
+          await editorMsg.edit({ 
+            flags: 32768,
+            components: [{
+              type: 17,
+              accent_color: 0x00FF00,
+              components: [{
+                type: 9,
+                components: [{
+                  type: 10,
+                  content: `✅ **Item Creado**\n└ Item \`${state.key}\` creado exitosamente.`
+                }]
+              }]
+            }]
+          });
           collector.stop('saved');
           return;
         }
@@ -238,7 +309,10 @@ async function showBaseModal(i: ButtonInteraction, state: ItemEditorState, edito
     }
 
     await sub.deferUpdate();
-    await editorMsg.edit(createDisplay());
+    await editorMsg.edit({
+      flags: 32768,
+      components: [createDisplay().display]
+    });
   } catch {}
 }
 
@@ -256,7 +330,10 @@ async function showTagsModal(i: ButtonInteraction, state: ItemEditorState, edito
     const tags = sub.components.getTextInputValue('tags');
     state.tags = tags ? tags.split(',').map((t) => t.trim()).filter(Boolean) : [];
     await sub.deferUpdate();
-    await editorMsg.edit(createDisplay());
+    await editorMsg.edit({
+      flags: 32768,
+      components: [createDisplay().display]
+    });
   } catch {}
 }
 
@@ -289,7 +366,11 @@ async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, edit
       try {
         const parsed = JSON.parse(raw);
         state.props = parsed;
-        await sub.deferUpdate(); await editorMsg.edit(createDisplay());
+        await sub.deferUpdate(); 
+        await editorMsg.edit({
+          flags: 32768,
+          components: [createDisplay().display]
+        });
       } catch (e) {
         await sub.reply({ content: '❌ JSON inválido.', flags: MessageFlags.Ephemeral });
       }
