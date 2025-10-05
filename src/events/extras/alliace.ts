@@ -456,6 +456,7 @@ async function processConfigVariables(config: any, user: any, guild: any, userSt
     if (Array.isArray(config)) {
         const processedArray = [];
         for (const item of config) {
+            // @ts-ignore
             processedArray.push(await processConfigVariables(item, user, guild, userStats, inviteObject));
         }
         return processedArray;

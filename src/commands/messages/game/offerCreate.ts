@@ -30,7 +30,7 @@ export const command: CommandMessage = {
     const guildId = message.guild!.id;
     const state: OfferState = { enabled: true, price: {}, perUserLimit: null, stock: null, metadata: {} };
 
-    const editorMsg = await message.channel.send({
+    const editorMsg = await (message.channel as any).send({
       content: `🛒 Editor de Oferta (crear)`,
       components: [
         { type: 1, components: [

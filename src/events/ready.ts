@@ -28,10 +28,7 @@ bot.on(Events.ClientReady, () => {
     process.on('unhandledRejection', (reason: unknown) => {
         // Interceptar rechazos relacionados con el mismo bug
         if (reason &&
-            typeof reason === 'object' &&
-            reason !== null &&
-            'message' in reason &&
-            typeof (reason as any).message === 'string' &&
+            typeof reason === 'object' && 'message' in reason && typeof (reason as any).message === 'string' &&
             (reason as any).message.includes("Cannot read properties of undefined (reading 'id')")) {
 
             logger.warn('🔧 Discord.js promise rejection interceptada: GuildMemberManager error');

@@ -37,7 +37,7 @@ const btns = (disabled = false) => ([
 const isValidUrl = isValidUrlOrVariable;
 
 const validateContent = (content: string | undefined | null): string => {
-    if (!content || typeof content !== 'string') return "Sin contenido";
+    if (!content) return "Sin contenido";
     const cleaned = content.trim();
     if (!cleaned) return "Sin contenido";
     if (cleaned.length > 4000) return cleaned.slice(0, 3997) + "...";

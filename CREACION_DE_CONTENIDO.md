@@ -1,183 +1,536 @@
-# Guía de creación de contenido (Items, Mobs, Áreas, Niveles, Ofertas)
 
-Este README explica cómo crear y editar contenido del motor de juego mediante los comandos de mensajes interactivos del bot. Está pensado para administradores o staff con permisos Manage Guild.
+# Documentación del Sistema de Economía y Minijuegos
 
-Fuentes de verdad y alcance
-- Código del bot: comandos bajo `src/commands/messages/game/**` y lógica bajo `src/game/**` (rutas reales del repo).
-- Tipos de economía: `src/game/economy/types.ts` (autor-provided, referencia principal para los JSON).
-- Librería Discord: `discord.js@15.0.0-dev...` instalada en `node_modules` (autoritaria). La documentación oficial puede estar desfasada.
+## Índice
+1. [Items (EconomyItem)](#items)
+2. [Mobs (Enemigos)](#mobs)
+3. [Áreas de Juego (GameArea)](#areas)
+4. [Niveles de Área (GameAreaLevel)](#niveles)
+5. [Ofertas de Tienda (ShopOffer)](#ofertas)s
+6. [Servicios del Sistema](#servicios)
 
-Requisitos previos
-- Permisos: debes tener Manage Guild o rol de staff (el bot lo comprueba en cada editor).
-- Prefijo: usa el prefijo configurado del bot en tu servidor (en los ejemplos usaremos `!`).
-- Canales: ejecuta los comandos en un canal donde el bot pueda enviar mensajes y componentes.
+---
 
-Límites prácticos en Discord
-- Máximo 5 componentes por fila de acciones (action row). Los editores ya respetan esto.
-- Los modales aceptan hasta ~4000 caracteres por campo; el bot recorta valores largos.
-- Los editores expiran a los 30 minutos si no hay interacción.
+## Items (EconomyItem) {#items}
 
-Arranque y validación (opcional para desarrolladores)
-- Typecheck de tipos:
-  ```bash
-  npx tsc --noEmit
-  ```
-- Ejecutar en desarrollo:
-  ```bash
-  npm run dev
-  ```
-- Saludo de salud (memoria/CPU) durante pruebas:
-  ```js
-  console.log(process.memoryUsage());
-  ```
+### Crear Items
+**Comando:** `!item-crear <key-única>`  
+**Archivos:** `src/commands/messages/game/itemCreate.ts`
 
-Comandos disponibles (editores interactivos)
-1) Items (Economía)
-- Crear: `!item-crear <key-única>`
-- Editar: `!item-editar <key-única>`
+#### Editor Interactivo
+El comando abre un editor con botones:
+- **Base**: Configuración básica del item
+- **Tags**: Etiquetas del item (separadas por coma)
+- **Props (JSON)**: Propiedades avanzadas en formato JSON
+- **Guardar**: Crea el item en la base de datos
+- **Cancelar**: Cancela la operación
 
-Flujo del editor de Items
-- Base: nombre, descripción, categoría, icon URL, stackable y máximo por inventario.
-- Tags: lista separada por comas.
-- Props (JSON): configuración libre extendida, basada en `ItemProps`.
-- Guardar/Cancelar.
+#### Modal "Base"
+- **Nombre** (requerido): Nombre del item
+- **Descripción**: Descripción del item
+- **Categoría**: Categoría del item
+- **Icon URL**: URL de la imagen del item
+- **Stackable y Máx inventario**: Formato `true,10` donde:
+    - Primer valor: `true`/`false` (si es apilable)
+    - Segundo valor: número máximo por inventario (vacío = ilimitado)
 
-Plantilla de Props (JSON)
-Referencias de `src/game/economy/types.ts` (autor-provided):
+#### Modal "Tags"
+Lista de tags separados por comas (ej: `weapon, rare, sword`)
+
+#### Modal "Props (JSON)"
+Objeto JSON con propiedades avanzadas. Plantilla:
+
 ```json
 {
-  "breakable": { "enabled": true, "maxDurability": 100, "durabilityPerUse": 1 },
-  "craftable": { "enabled": false },
-  "chest": { "enabled": false, "rewards": [], "consumeOnOpen": true },
-  "eventCurrency": { "enabled": false, "eventKey": "HALLOWEEN" },
-  "passiveEffects": [ { "key": "xpBoost", "value": 0.1 } ],
-  "mutationPolicy": { "allowedKeys": ["reforged"], "deniedKeys": [] },
-  "craftingOnly": false,
-  "availableFrom": "2025-10-05T00:00:00.000Z",
-  "availableTo": null,
-  "usableFrom": null,
-  "usableTo": null,
-  "shop": { "purchasable": true },
   "tool": { "type": "pickaxe", "tier": 1 },
-  "food": { "healHp": 25, "cooldownKey": "food", "cooldownSeconds": 30 },
+  "breakable": { "enabled": true, "maxDurability": 100, "durabilityPerUse": 1 },
+  "chest": { "enabled": true, "rewards": [
+    { "type": "coins", "amount": 100 },
+    { "type": "item", "itemKey": "copper_ore", "qty": 5 }
+  ], "consumeOnOpen": true },
+  "eventCurrency": { "enabled": false, "eventKey": "" },
+  "passiveEffects": [],
+  "mutationPolicy": { "allowedKeys": [], "deniedKeys": [] },
+  "craftingOnly": false,
+  "food": { "healHp": 50, "cooldownSeconds": 60 },
   "damage": 10,
-  "defense": 0,
-  "maxHpBonus": 0
+  "defense": 5,
+  "maxHpBonus": 20
 }
 ```
-Campos opcionales y extensibles: cualquier clave adicional se acepta, el motor trata `ItemProps` como JSON flexible.
 
-2) Mobs (Enemigos)
-- Crear: `!mob-crear <key-única>`
-- Editar: `!mob-editar <key-única>`
 
-Flujo del editor de Mobs
-- Base: nombre y categoría.
-- Stats (JSON): libre (p. ej., `{ "attack": 5, "hp": 50, "defense": 2 }`).
-- Drops (JSON): libre (tabla de recompensas que tu juego interpretará).
-- Guardar/Cancelar.
+### Editar Items
+**Comando:** `!item-editar <key-única>`  
+**Archivos:** `src/commands/messages/game/itemEdit.ts`
 
-Ejemplo de `stats` y `drops`
+Mismo editor que crear, pero carga los datos existentes del item.
+
+### Tipos de Props Disponibles
+
+#### 1. **tool** (Herramientas)
 ```json
 {
-  "stats": { "attack": 8, "hp": 60, "defense": 3 },
-  "drops": {
-    "coins": { "min": 5, "max": 20 },
-    "items": [ { "itemKey": "mineral_cobre", "qty": 1 } ]
+  "tool": {
+    "type": "pickaxe|rod|sword|bow|halberd|net",
+    "tier": 1
   }
 }
 ```
 
-3) Áreas del juego
-- Crear: `!area-crear <key-única>`
-- Editar: `!area-editar <key-única>`
+- `type`: Tipo de herramienta (pico, caña, espada, arco, alabarda, red)
+- `tier`: Nivel/calidad de la herramienta (usado en requisitos de minijuegos)
 
-Flujo del editor de Áreas
-- Base: nombre y tipo (`MINE`, `LAGOON`, `FIGHT`, `FARM`, etc.).
-- Config (JSON): libre, define reglas de esa área (p. ej., rates, spawns, etc.).
-- Meta (JSON): libre, metadatos no funcionales o de UI.
-- Guardar/Cancelar.
-
-Ejemplo de `config` para mina
+#### 2. **breakable** (Rompible/Durabilidad)
 ```json
 {
-  "spawnRates": { "mineral_cobre": 0.6, "mineral_hierro": 0.3, "gema_rara": 0.1 },
-  "toolRequired": "pickaxe",
-  "tierMin": 1
+  "breakable": {
+    "enabled": true,
+    "maxDurability": 100,
+    "durabilityPerUse": 1
+  }
 }
 ```
 
-4) Niveles por Área
-- Crear/Editar: `!area-nivel <areaKey> <level>`
+Para items no apilables que se desgastan con el uso.
 
-Flujo del editor de Niveles
-- Requisitos (JSON): condiciones para acceder/subir al nivel.
-- Recompensas (JSON): lo que se otorga al completar el nivel.
-- Mobs (JSON): configuración de enemigos que aparecen en ese nivel.
-- Ventana: fechas (ISO) opcionales `Desde/Hasta` de disponibilidad.
-- Guardar/Cancelar.
-
-Ejemplo de `requirements`, `rewards`, `mobs`
+#### 3. **chest** (Cofres)
 ```json
 {
-  "requirements": { "level": 10, "items": [{ "itemKey": "permiso_mina", "qty": 1 }] },
-  "rewards": { "coins": 100, "xp": 250 },
-  "mobs": [ { "key": "slime_verde", "count": 5 }, { "key": "golem_piedra", "count": 1 } ]
+  "chest": {
+    "enabled": true,
+    "rewards": [
+      { "type": "coins", "amount": 100 },
+      { "type": "item", "itemKey": "iron_ore", "qty": 5 },
+      { "type": "role", "roleId": "1234567890" }
+    ],
+    "consumeOnOpen": true
+  }
 }
 ```
 
-5) Ofertas de Tienda (Shop Offers)
-- Crear: `!offer-crear`
-- Editar: `!offer-editar <offerId>` (usa el ID ya existente)
 
-Flujo del editor de Ofertas
-- Base: `itemKey` del ítem a vender y si está habilitada.
-- Precio (JSON): ver tipo `Price`.
-- Ventana: fechas (ISO) opcionales `Inicio/Fin` de venta.
-- Límites: por usuario (int o vacío = sin límite) y stock global (int o vacío = ilimitado).
-- Meta (JSON): libre (banderas, tags, notas, etc.).
-- Guardar/Cancelar.
-
-Plantilla de `price` (Price)
-Derivada de `src/game/economy/types.ts`:
+#### 4. **food** (Comida/Pociones)
 ```json
 {
-  "coins": 150,
-  "items": [ { "itemKey": "ticket_evento", "qty": 2 } ],
-  "extra": { "promo": "octubre", "descuento": 0.1 }
+  "food": {
+    "healHp": 50,
+    "healPercent": 25,
+    "cooldownKey": "healing_potion",
+    "cooldownSeconds": 60
+  }
 }
 ```
 
-Notas importantes del editor de ofertas
-- El `itemKey` debe existir (el editor valida buscando por `guildId` actual o global `null`).
-- Si usas ventanas de tiempo, emplea formato ISO válido: `YYYY-MM-DDTHH:mm:ss.sssZ`.
-- Límites en blanco significan sin límites; los valores se normalizan a enteros >= 0.
 
-Referencias de tipos (economía)
-Archivo: `src/game/economy/types.ts` (autor-provided).
-- `Price`: monedas, componentes de ítem y `extra` libre.
-- `ItemProps`: bloques opcionales (`tool`, `food`, `chest`, `breakable`, stats de combate, etc.).
-- `InventoryState`: si manejas instancias no apilables con durabilidad/caducidad.
+#### 5. **Stats de Combate**
+```json
+{
+  "damage": 10,
+  "defense": 5,
+  "maxHpBonus": 20
+}
+```
 
-Consejos y solución de problemas
-- Error 400 `BASE_TYPE_BAD_LENGTH: Must be between 1 and 5 in length.`
-  - Causa: una fila de botones superó 5 componentes. Los editores actuales ya agrupan en 2 filas cuando hace falta.
-- JSON inválido en modales
-  - Asegúrate de pegar JSON válido. El editor responderá con error si no puede parsearlo.
-- Editor expirado
-  - Tras 30 minutos sin interacción, el editor se desactiva. Vuelve a lanzar el comando.
-- Permisos insuficientes
-  - Necesitas Manage Guild o rol de staff para abrir editores.
 
-Anexos
-- Semillas de minijuegos (opcional):
-  ```bash
-  npm run seed:minigames
-  ```
-- Ayuda general del bot: consulta el comando de ayuda y/o paneles en `src/commands/messages/help.ts`.
+---
 
-Historial de comprobación
-- Comandos y flujos validados contra los editores implementados en `src/commands/messages/game/**` (código del repo).
-- Formatos de JSON basados en `src/game/economy/types.ts` (autor-provided, principal).
-- Límite de 5 componentes por fila y comportamiento de componentes verificados con `discord.js` dev instalada en `node_modules` (autoritaria); la documentación oficial puede no reflejar cambios de la versión dev.
+## Mobs (Enemigos) {#mobs}
 
+### Crear Mobs
+**Comando:** `!mob-crear <key-única>`  
+**Archivos:** `src/commands/messages/game/mobCreate.ts`
+
+#### Editor Interactivo
+- **Base**: Nombre y categoría
+- **Stats (JSON)**: Estadísticas del mob
+- **Drops (JSON)**: Tabla de recompensas al derrotar
+- **Guardar/Cancelar**
+
+#### Modal "Base"
+- **Nombre** (requerido)
+- **Categoría** (opcional)
+
+#### Modal "Stats (JSON)"
+```json
+{
+  "attack": 10,
+  "hp": 100,
+  "defense": 5,
+  "xpReward": 50
+}
+```
+
+
+#### Modal "Drops (JSON)"
+```json
+{
+  "draws": 2,
+  "table": [
+    { "type": "coins", "amount": 50, "weight": 10 },
+    { "type": "item", "itemKey": "leather", "qty": 1, "weight": 5 }
+  ]
+}
+```
+
+
+### Editar Mobs
+**Comando:** `!mob-editar <key-única>`  
+**Archivos:** `src/commands/messages/game/mobEdit.ts`
+
+Mismo editor que crear, pero carga los datos existentes.
+
+---
+
+## Áreas de Juego (GameArea) {#areas}
+
+### Crear Áreas
+**Comando:** `!area-crear <key-única>`  
+**Archivos:** `src/commands/messages/game/areaCreate.ts`
+
+Las áreas representan lugares donde se pueden realizar actividades (minar, pescar, pelear, plantar).
+
+#### Editor Interactivo
+- **Base**: Nombre y tipo
+- **Config (JSON)**: Configuración del área
+- **Meta (JSON)**: Metadatos adicionales
+- **Guardar/Cancelar**
+
+#### Modal "Base"
+- **Nombre** (requerido)
+- **Tipo** (requerido): `MINE`, `LAGOON`, `FIGHT`, `FARM`
+
+#### Modal "Config (JSON)"
+```json
+{
+  "cooldownSeconds": 60,
+  "description": "Una mina profunda",
+  "icon": "⛏️"
+}
+```
+
+
+#### Modal "Meta (JSON)"
+```json
+{
+  "difficulty": "medium",
+  "recommendedLevel": 5
+}
+```
+
+
+### Editar Áreas
+**Comando:** `!area-editar <key-única>`  
+**Archivos:** `src/commands/messages/game/areaEdit.ts`
+
+---
+
+## Niveles de Área (GameAreaLevel) {#niveles}
+
+### Crear/Editar Niveles
+**Comando:** `!area-nivel <areaKey> <level>`  
+**Archivos:** `src/commands/messages/game/areaNivel.ts`
+
+Los niveles definen requisitos, recompensas y mobs que aparecen en cada nivel de un área.
+
+#### Editor Interactivo
+- **Requisitos**: Qué se necesita para acceder al nivel
+- **Recompensas**: Qué se obtiene al completarlo
+- **Mobs**: Qué enemigos pueden aparecer
+- **Ventana**: Fechas de disponibilidad
+- **Guardar/Cancelar**
+
+#### Modal "Requisitos (JSON)"
+```json
+{
+  "tool": {
+    "required": true,
+    "toolType": "pickaxe",
+    "minTier": 2,
+    "allowedKeys": ["iron_pickaxe", "diamond_pickaxe"]
+  }
+}
+```
+
+- `required`: Si es obligatorio tener herramienta
+- `toolType`: Tipo de herramienta requerida
+- `minTier`: Nivel mínimo de la herramienta
+- `allowedKeys`: Lista de items específicos permitidos
+
+#### Modal "Recompensas (JSON)"
+```json
+{
+  "draws": 3,
+  "table": [
+    { "type": "coins", "amount": 100, "weight": 10 },
+    { "type": "item", "itemKey": "iron_ore", "qty": 2, "weight": 5 },
+    { "type": "item", "itemKey": "gold_ore", "qty": 1, "weight": 1 }
+  ]
+}
+```
+
+- `draws`: Número de extracciones de la tabla
+- `table`: Array de recompensas ponderadas por `weight`
+
+#### Modal "Mobs (JSON)"
+```json
+{
+  "draws": 2,
+  "table": [
+    { "mobKey": "goblin", "weight": 10 },
+    { "mobKey": "troll", "weight": 3 },
+    { "mobKey": "dragon", "weight": 1 }
+  ]
+}
+```
+
+
+#### Modal "Ventana"
+- **Desde (ISO)**: Fecha inicio (ej: `2025-01-01T00:00:00Z`)
+- **Hasta (ISO)**: Fecha fin (opcional)
+
+---
+
+## Ofertas de Tienda (ShopOffer) {#ofertas}
+
+### Crear Ofertas
+**Comando:** `!offer-crear`  
+**Archivos:** `src/commands/messages/game/offerCreate.ts`
+
+#### Editor Interactivo
+- **Base**: Item y estado
+- **Precio (JSON)**: Costo de la oferta
+- **Ventana**: Fechas de disponibilidad
+- **Límites**: Stock y límite por usuario
+- **Meta (JSON)**: Metadatos
+- **Guardar/Cancelar**
+
+#### Modal "Base"
+- **Item Key** (requerido): Key del item a vender
+- **Habilitada?**: `true`/`false`
+
+#### Modal "Precio (JSON)"
+```json
+{
+  "coins": 100,
+  "items": [
+    { "itemKey": "iron_ore", "qty": 5 },
+    { "itemKey": "wood", "qty": 10 }
+  ]
+}
+```
+
+
+#### Modal "Ventana"
+- **Inicio (ISO)**: Fecha inicio (opcional)
+- **Fin (ISO)**: Fecha fin (opcional)
+
+#### Modal "Límites"
+- **Límite por usuario**: Máximo que puede comprar cada usuario (vacío = ilimitado)
+- **Stock global**: Stock total disponible (vacío = ilimitado)
+
+### Editar Ofertas
+**Comando:** `!offer-editar <offerId>`  
+**Archivos:** `src/commands/messages/game/offerEdit.ts`
+
+---
+
+## Servicios del Sistema {#servicios}
+
+### Economy Service
+**Archivo:** `src/game/economy/service.ts`
+
+#### Funciones Principales:
+
+**Gestión de Items:**
+- `findItemByKey(guildId, key)`: Busca un item por key (servidor o global)
+- `addItemByKey(userId, guildId, itemKey, qty)`: Agrega items al inventario
+- `consumeItemByKey(userId, guildId, itemKey, qty)`: Consume items del inventario
+- `getInventoryEntry(userId, guildId, itemKey)`: Obtiene entrada de inventario
+
+**Wallet:**
+- `getOrCreateWallet(userId, guildId)`: Obtiene/crea billetera
+- `adjustCoins(userId, guildId, delta)`: Ajusta monedas (positivo o negativo)
+
+**Cofres:**
+- `openChestByKey(userId, guildId, itemKey)`: Abre un cofre y entrega recompensas
+
+**Crafting:**
+- `craftByProductKey(userId, guildId, productKey)`: Craftea un item según receta
+
+**Compras:**
+- `buyFromOffer(userId, guildId, offerId, qty)`: Compra desde una oferta
+
+**Mutaciones:**
+- `findMutationByKey(guildId, key)`: Busca una mutación
+- `applyMutationToInventory(userId, guildId, itemKey, mutationKey)`: Aplica mutación a item
+
+### Minigames Service
+**Archivo:** `src/game/minigames/service.ts`
+
+#### Funciones Principales:
+
+**Motor de Minijuegos:**
+- `runMinigame(userId, guildId, areaKey, level, opts)`: Ejecuta un minijuego
+    - Valida cooldowns
+    - Verifica requisitos (herramientas, etc.)
+    - Aplica recompensas
+    - Genera mobs
+    - Reduce durabilidad de herramientas
+    - Actualiza progreso del jugador
+
+**Atajos:**
+- `runMining(userId, guildId, level?, toolKey?)`: Ejecuta minería
+- `runFishing(userId, guildId, level?, toolKey?)`: Ejecuta pesca
+
+**Herramientas:**
+- `findBestToolKey(userId, guildId, toolType, opts)`: Busca mejor herramienta del inventario
+- `reduceToolDurability(userId, guildId, toolKey)`: Reduce durabilidad de herramienta
+
+### Equipment Service
+**Archivo:** `src/game/combat/equipmentService.ts`
+
+#### Funciones Principales:
+
+**Equipamiento:**
+- `getEquipment(userId, guildId)`: Obtiene equipamiento actual
+- `setEquipmentSlot(userId, guildId, slot, itemId)`: Equipa item en slot (weapon/armor/cape)
+
+**Stats:**
+- `getEffectiveStats(userId, guildId)`: Calcula stats efectivos incluyendo:
+    - Daño de arma + mutaciones
+    - Defensa de armadura + mutaciones
+    - HP máximo de capa + mutaciones
+    - HP actual
+- `adjustHP(userId, guildId, delta)`: Ajusta HP del jugador
+
+**Mutaciones:**
+- Calcula bonos de mutaciones aplicadas a items equipados
+- Los bonos incluyen: `damageBonus`, `defenseBonus`, `maxHpBonus`
+
+---
+
+## Tipos de Datos Importantes
+
+### ItemProps (src/game/economy/types.ts:74-96)
+Propiedades opcionales de items:
+- `tool`: Metadatos de herramienta
+- `breakable`: Configuración de durabilidad
+- `chest`: Configuración de cofre
+- `food`: Configuración de comida/poción
+- `eventCurrency`: Moneda de evento
+- `passiveEffects`: Efectos pasivos
+- `mutationPolicy`: Política de mutaciones
+- `craftingOnly`: Solo para crafteo
+- `damage/defense/maxHpBonus`: Stats de combate
+- `availableFrom/To`: Ventana de disponibilidad
+- `usableFrom/To`: Ventana de uso
+
+### Price (src/game/economy/types.ts:10-14)
+Precio de ofertas:
+```typescript
+{
+  coins?: number;
+  items?: Array<{ itemKey?: string; itemId?: string; qty: number }>;
+}
+```
+
+
+### LevelRequirements (src/game/minigames/types.ts:11-15)
+Requisitos para niveles de área:
+```typescript
+{
+  tool?: {
+    required?: boolean;
+    toolType?: string;
+    minTier?: number;
+    allowedKeys?: string[];
+  };
+}
+```
+
+
+---
+
+## Ejemplos Completos
+
+### Ejemplo 1: Crear Pico de Hierro
+```
+!item-crear iron_pickaxe
+```
+
+**Base:**
+- Nombre: `Pico de Hierro`
+- Descripción: `Un pico resistente para minar minerales`
+- Categoría: `tools`
+- Stackable: `false,1`
+
+**Props:**
+```json
+{
+  "tool": { "type": "pickaxe", "tier": 2 },
+  "breakable": { "enabled": true, "maxDurability": 150, "durabilityPerUse": 1 }
+}
+```
+
+
+### Ejemplo 2: Crear Área de Mina
+```
+!area-crear mine.iron_cavern
+```
+
+**Base:**
+- Nombre: `Caverna de Hierro`
+- Tipo: `MINE`
+
+**Config:**
+```json
+{ "cooldownSeconds": 60 }
+```
+
+
+### Ejemplo 3: Crear Nivel de Mina
+```
+!area-nivel mine.iron_cavern 1
+```
+
+**Requisitos:**
+```json
+{
+  "tool": { "required": true, "toolType": "pickaxe", "minTier": 2 }
+}
+```
+
+
+**Recompensas:**
+```json
+{
+  "draws": 3,
+  "table": [
+    { "type": "coins", "amount": 50, "weight": 10 },
+    { "type": "item", "itemKey": "iron_ore", "qty": 2, "weight": 8 },
+    { "type": "item", "itemKey": "gold_ore", "qty": 1, "weight": 2 }
+  ]
+}
+```
+
+
+**Mobs:**
+```json
+{
+  "draws": 1,
+  "table": [
+    { "mobKey": "cave_spider", "weight": 10 },
+    { "mobKey": "bat", "weight": 5 }
+  ]
+}
+```
+
+
+---
+
+## Permisos Requeridos
+
+Todos los comandos de creación/edición requieren:
+- Permiso `ManageGuild` en Discord, **O**
+- Rol de staff configurado en el servidor (verificado en `hasManageGuildOrStaff`)
