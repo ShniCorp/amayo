@@ -41,6 +41,17 @@ model Guild {
   ItemMutation     ItemMutation[]
   EconomyWallet    EconomyWallet[]
   ShopPurchase     ShopPurchase[]
+
+  // Nuevas relaciones para el motor de minijuegos
+  gameAreas          GameArea[]
+  minigameRuns       MinigameRun[]
+  playerProgress     PlayerProgress[]
+  Mob                Mob[]
+  PlayerState        PlayerState[]
+  PlayerEquipment    PlayerEquipment[]
+  ActionCooldown     ActionCooldown[]
+  SmeltJob           SmeltJob[]
+  ScheduledMobAttack ScheduledMobAttack[]
 }
 
 /**
@@ -60,6 +71,15 @@ model User {
   InventoryEntry   InventoryEntry[]
   EconomyWallet    EconomyWallet[]
   ShopPurchase     ShopPurchase[]
+
+  // Nuevas relaciones para el motor de minijuegos
+  minigameRuns       MinigameRun[]
+  playerProgress     PlayerProgress[]
+  PlayerState        PlayerState[]
+  PlayerEquipment    PlayerEquipment[]
+  ActionCooldown     ActionCooldown[]
+  SmeltJob           SmeltJob[]
+  ScheduledMobAttack ScheduledMobAttack[]
 }
 
 /**
@@ -276,6 +296,7 @@ model EconomyItem {
   createdAt        DateTime           @default(now())
   updatedAt        DateTime           @updatedAt
   RecipeIngredient RecipeIngredient[]
+  SmeltJob         SmeltJob[]
 
   @@unique([guildId, key])
   @@index([guildId])
@@ -464,5 +485,261 @@ model ShopPurchase {
   createdAt DateTime @default(now())
 
   @@index([offerId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Áreas (Minas, Lagunas, Arenas de pelea, Campos de cultivo)
+ * -----------------------------------------------------------------------------
+ * - Extensible vía JSON: requirements/rewards/mobs por nivel
+ */
+model GameArea {
+  id   String @id @default(cuid())
+  // Clave única por servidor (o global si guildId es null)
+  key  String
+  name String
+  type String // "MINE" | "LAGOON" | "FIGHT" | "FARM" | otros
+
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
+
+  // Configuración general del área (cooldowns, multiplicadores, etc.)
+  config   Json?
+  metadata Json?
+
+  levels   GameAreaLevel[]
+  runs     MinigameRun[]
+  progress PlayerProgress[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([guildId, key])
+  @@index([guildId])
+}
+
+model GameAreaLevel {
+  id     String @id @default(cuid())
+  areaId String
+  level  Int
+
+  // Requisitos para participar (tipo de herramienta, tier mínimo, etc.)
+  requirements Json?
+  // Tabla de recompensas (ítems/monedas) con pesos
+  rewards      Json?
+  // Tabla de mobs con pesos
+  mobs         Json?
+  metadata     Json?
+
+  availableFrom DateTime?
+  availableTo   DateTime?
+
+  area GameArea @relation(fields: [areaId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([areaId, level])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Mobs (usados en minas, lagunas/pesca, peleas)
+ * -----------------------------------------------------------------------------
+ */
+model Mob {
+  id       String  @id @default(cuid())
+  key      String
+  name     String
+  category String?
+
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
+
+  stats    Json? // { hp, attack, defense, luckModifiers, ... }
+  drops    Json? // Reward table específica del mob (opcional)
+  metadata Json?
+
+  createdAt          DateTime             @default(now())
+  updatedAt          DateTime             @updatedAt
+  ScheduledMobAttack ScheduledMobAttack[]
+
+  @@unique([guildId, key])
+  @@index([guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Registro de partidas/ejecuciones
+ * -----------------------------------------------------------------------------
+ */
+model MinigameRun {
+  id String @id @default(cuid())
+
+  userId     String
+  guildId    String
+  areaId     String
+  level      Int
+  toolItemId String?
+
+  success Boolean
+  result  Json // { rewards:..., mobs:..., tool:{ durabilityDelta, broken }, notes }
+
+  startedAt  DateTime @default(now())
+  finishedAt DateTime @default(now())
+
+  user  User     @relation(fields: [userId], references: [id])
+  guild Guild    @relation(fields: [guildId], references: [id])
+  area  GameArea @relation(fields: [areaId], references: [id])
+
+  @@index([userId, guildId])
+  @@index([areaId])
+  @@index([startedAt])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Minijuegos: Progreso del jugador por área
+ * -----------------------------------------------------------------------------
+ */
+model PlayerProgress {
+  id           String @id @default(cuid())
+  userId       String
+  guildId      String
+  areaId       String
+  highestLevel Int    @default(1)
+  metadata     Json?
+
+  user  User     @relation(fields: [userId], references: [id])
+  guild Guild    @relation(fields: [guildId], references: [id])
+  area  GameArea @relation(fields: [areaId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId, areaId])
+  @@index([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Estado del Jugador (HP, stats base) por servidor
+ * -----------------------------------------------------------------------------
+ */
+model PlayerState {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  hp       Int   @default(100)
+  maxHp    Int   @default(100)
+  stats    Json? // { attack, defense, strength, luck, ... }
+  metadata Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Equipamiento del Jugador por servidor (arma, armadura, capa, etc.)
+ * -----------------------------------------------------------------------------
+ */
+model PlayerEquipment {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  weaponItemId String?
+  armorItemId  String?
+  capeItemId   String?
+  // accesorios u otros slots libres
+  accessories  Json?
+  metadata     Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([userId, guildId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Cooldowns por acción arbitraria (clave libre)
+ * -----------------------------------------------------------------------------
+ */
+model ActionCooldown {
+  id       String   @id @default(cuid())
+  userId   String
+  guildId  String
+  key      String
+  until    DateTime
+  metadata Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  @@unique([userId, guildId, key])
+  @@index([until])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Fundición (smelting) con cooldown/tiempo de preparación
+ * -----------------------------------------------------------------------------
+ */
+model SmeltJob {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+
+  // entradas y parámetros de fundición
+  inputs       Json // { items: [{ itemKey, qty }], extra?: any }
+  outputItemId String
+  outputQty    Int    @default(1)
+
+  startedAt DateTime @default(now())
+  readyAt   DateTime
+  status    String   @default("pending") // pending|ready|claimed|cancelled
+  metadata  Json?
+
+  user       User        @relation(fields: [userId], references: [id])
+  guild      Guild       @relation(fields: [guildId], references: [id])
+  outputItem EconomyItem @relation(fields: [outputItemId], references: [id])
+
+  @@index([userId, guildId])
+  @@index([readyAt])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Ataques programados de mobs al jugador (para eventos sin comandos)
+ * -----------------------------------------------------------------------------
+ */
+model ScheduledMobAttack {
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+  mobId   String
+
+  scheduleAt  DateTime
+  processedAt DateTime?
+  status      String    @default("scheduled") // scheduled|processing|done|failed
+  metadata    Json?
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+  mob   Mob   @relation(fields: [mobId], references: [id])
+
+  @@index([scheduleAt])
   @@index([userId, guildId])
 }
