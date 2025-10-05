@@ -205,8 +205,9 @@ export async function generateDailyQuests(guildId: string) {
       }
     });
 
-    // Templates de misiones diarias
+    // Templates de misiones diarias expandidas
     const dailyTemplates = [
+      // Minería
       {
         key: 'daily_mine',
         name: 'Minero Diario',
@@ -216,6 +217,15 @@ export async function generateDailyQuests(guildId: string) {
         rewards: { coins: 500 }
       },
       {
+        key: 'daily_mine_hard',
+        name: 'Minero Dedicado',
+        description: 'Mina 20 veces',
+        category: 'mining',
+        requirements: { type: 'mine_count', count: 20 },
+        rewards: { coins: 1200 }
+      },
+      // Pesca
+      {
         key: 'daily_fish',
         name: 'Pescador Diario',
         description: 'Pesca 8 veces',
@@ -223,6 +233,15 @@ export async function generateDailyQuests(guildId: string) {
         requirements: { type: 'fish_count', count: 8 },
         rewards: { coins: 400 }
       },
+      {
+        key: 'daily_fish_hard',
+        name: 'Pescador Experto',
+        description: 'Pesca 15 veces',
+        category: 'fishing',
+        requirements: { type: 'fish_count', count: 15 },
+        rewards: { coins: 900 }
+      },
+      // Combate
       {
         key: 'daily_fight',
         name: 'Guerrero Diario',
@@ -232,12 +251,88 @@ export async function generateDailyQuests(guildId: string) {
         rewards: { coins: 600 }
       },
       {
+        key: 'daily_mob_slayer',
+        name: 'Cazador de Monstruos',
+        description: 'Derrota 10 mobs',
+        category: 'combat',
+        requirements: { type: 'mob_defeat_count', count: 10 },
+        rewards: { coins: 800 }
+      },
+      // Crafteo
+      {
         key: 'daily_craft',
         name: 'Artesano Diario',
         description: 'Craftea 3 items',
         category: 'crafting',
         requirements: { type: 'craft_count', count: 3 },
         rewards: { coins: 300 }
+      },
+      {
+        key: 'daily_craft_hard',
+        name: 'Maestro Artesano',
+        description: 'Craftea 10 items',
+        category: 'crafting',
+        requirements: { type: 'craft_count', count: 10 },
+        rewards: { coins: 1000 }
+      },
+      // Economía
+      {
+        key: 'daily_coins',
+        name: 'Acumulador',
+        description: 'Gana 5000 monedas',
+        category: 'economy',
+        requirements: { type: 'coins_earned', count: 5000 },
+        rewards: { coins: 1000 }
+      },
+      {
+        key: 'daily_purchase',
+        name: 'Comprador',
+        description: 'Compra 3 items en la tienda',
+        category: 'economy',
+        requirements: { type: 'items_purchased', count: 3 },
+        rewards: { coins: 500 }
+      },
+      // Items
+      {
+        key: 'daily_consume',
+        name: 'Consumidor',
+        description: 'Consume 5 items',
+        category: 'items',
+        requirements: { type: 'items_consumed', count: 5 },
+        rewards: { coins: 300 }
+      },
+      {
+        key: 'daily_equip',
+        name: 'Equipador',
+        description: 'Equipa 3 items diferentes',
+        category: 'items',
+        requirements: { type: 'items_equipped', count: 3 },
+        rewards: { coins: 400 }
+      },
+      // Fundición
+      {
+        key: 'daily_smelt',
+        name: 'Fundidor',
+        description: 'Funde 5 items',
+        category: 'smelting',
+        requirements: { type: 'items_smelted', count: 5 },
+        rewards: { coins: 700 }
+      },
+      // Combinadas
+      {
+        key: 'daily_variety',
+        name: 'Multitarea',
+        description: 'Mina, pesca y pelea 3 veces cada uno',
+        category: 'variety',
+        requirements: { 
+          type: 'variety',
+          conditions: [
+            { type: 'mine_count', count: 3 },
+            { type: 'fish_count', count: 3 },
+            { type: 'fight_count', count: 3 }
+          ]
+        },
+        rewards: { coins: 1500 }
       }
     ];
 
