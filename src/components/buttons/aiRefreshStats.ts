@@ -1,5 +1,5 @@
 import logger from "../../core/lib/logger";
-import { ButtonInteraction, MessageFlags, ContainerBuilder, TextDisplayBuilder, SectionBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ButtonInteraction, MessageFlags } from 'discord.js';
 import { buildAIAdminPanel } from '../../commands/messages/AI/stats';
 
 const OWNER_ID = '327207082203938818'; // Solo el dueño puede usar este panel
@@ -22,14 +22,15 @@ export default {
       const refreshedPanel = buildAIAdminPanel();
 
       await interaction.message.edit({
-        components: [refreshedPanel],
-        flags: MessageFlags.IsComponentsV2
+        // @ts-ignore - Flag de componentes V2
+        flags: 32768,
+        components: [refreshedPanel]
       });
+
       logger.info(`Estadísticas de IA refrescadas por el dueño ${interaction.user.username} (${interaction.user.id})`);
 
     } catch (error) {
-        //@ts-ignore
-      logger.error('Error refrescando estadísticas de IA:', error);
+      logger.error({ err: error }, 'Error refrescando estadísticas de IA');
       if (!interaction.deferred && !interaction.replied) {
         await interaction.reply({ 
           content: '❌ Error refrescando las estadísticas del sistema de IA.',  

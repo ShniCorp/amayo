@@ -8,6 +8,7 @@ const apiKey = process.env.APPWRITE_API_KEY || '';
 
 export const APPWRITE_DATABASE_ID = process.env.APPWRITE_DATABASE_ID || '';
 export const APPWRITE_COLLECTION_REMINDERS_ID = process.env.APPWRITE_COLLECTION_REMINDERS_ID || '';
+export const APPWRITE_COLLECTION_AI_CONVERSATIONS_ID = process.env.APPWRITE_COLLECTION_AI_CONVERSATIONS_ID || '';
 
 let client: Client | null = null;
 let databases: Databases | null = null;
@@ -26,4 +27,8 @@ export function getDatabases(): Databases | null {
 
 export function isAppwriteConfigured(): boolean {
   return Boolean(endpoint && projectId && apiKey && APPWRITE_DATABASE_ID && APPWRITE_COLLECTION_REMINDERS_ID);
+}
+
+export function isAIConversationsConfigured(): boolean {
+  return Boolean(endpoint && projectId && apiKey && APPWRITE_DATABASE_ID && APPWRITE_COLLECTION_AI_CONVERSATIONS_ID);
 }

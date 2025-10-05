@@ -1,6 +1,8 @@
 import logger from "../../core/lib/logger";
-import { ButtonInteraction, MessageFlags, PermissionFlagsBits } from 'discord.js';
+import { ButtonInteraction, MessageFlags } from 'discord.js';
 import { buildLeaderboardPanel } from '../../commands/messages/alliaces/leaderboard';
+import { hasManageGuildOrStaff } from "../../core/lib/permissions";
+import { prisma } from "../../core/database/prisma";
 
 export default {
   customId: 'ld_refresh',
@@ -11,9 +13,9 @@ export default {
     try {
       await interaction.deferUpdate();
 
-      // Verificar si el usuario es administrador
+      // Verificar si el usuario es admin o staff
       const member = await interaction.guild.members.fetch(interaction.user.id);
-      const isAdmin = member.permissions.has(PermissionFlagsBits.ManageGuild);
+      const isAdmin = await hasManageGuildOrStaff(member, interaction.guild.id, prisma);
 
       // Reusar el builder esperando un objeto con guild y author
       const fakeMessage: any = { guild: interaction.guild, author: interaction.user };

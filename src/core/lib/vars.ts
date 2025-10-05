@@ -30,10 +30,16 @@ const getGuildIcon = (g?: Guild) => {
 };
 
 // Construye datos de invite similares a la versión previa
-const getInviteObject = (invite?: Invite) => invite?.guild ? {
-    name: invite.guild.name,
-    icon: invite.guild.icon ? `https://cdn.discordapp.com/icons/${invite.guild.id}/${invite.guild.icon}.webp?size=256` : ''
-} : null;
+const getInviteObject = (invite?: Invite) => {
+    // En discord.js dev, necesitamos verificar si es GuildInvite
+    if (invite && 'guild' in invite && invite.guild) {
+        return {
+            name: invite.guild.name,
+            icon: invite.guild.icon ? `https://cdn.discordapp.com/icons/${invite.guild.id}/${invite.guild.icon}.webp?size=256` : ''
+        };
+    }
+    return null;
+};
 
 // Helper: calcula el rank dentro del servidor para un campo (weeklyPoints / monthlyPoints / totalPoints)
 async function computeRankInGuild(

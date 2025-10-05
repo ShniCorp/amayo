@@ -2,16 +2,18 @@ import logger from "../../../core/lib/logger";
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { EmbedBuilder, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
+import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
 export const command: CommandMessage = {
-    name: "eliminar-canal-alianza",
+    name: "eliminar-canal",
     type: "message",
     aliases: ["removechannel-alliance", "removealchannel", "delalchannel"],
     cooldown: 10,
     // @ts-ignore
     run: async (message, args, client) => {
-        if (!message.member?.permissions.has("Administrator")) {
-            return message.reply("❌ No tienes permisos de Administrador.");
+        const allowed = await hasManageGuildOrStaff(message.member, message.guildId!, client.prisma);
+        if (!allowed) {
+            return message.reply("❌ No tienes permisos de ManageGuild ni rol de staff.");
         }
 
         // Obtener canales configurados existentes

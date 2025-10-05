@@ -1,16 +1,21 @@
 import { CommandMessage } from "../../../core/types/commands";
 // @ts-ignore
 import { ComponentType, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
+import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
 export const command: CommandMessage = {
     name: "canal-alianza",
     type: "message",
     aliases: ["alchannel", "channelally"],
+    description: "Configura canales para el sistema de alianzas con bloques DisplayComponents.",
+    usage: "canal-alianza",
+    category: "Alianzas",
     cooldown: 10,
     // @ts-ignore
     run: async (message, args, client) => {
-        if (!message.member?.permissions.has("Administrator")) {
-            return message.reply("❌ No tienes permisos de Administrador.");
+        const allowed = await hasManageGuildOrStaff(message.member, message.guildId!, client.prisma);
+        if (!allowed) {
+            return message.reply("❌ No tienes permisos de ManageGuild ni rol de staff.");
         }
 
         // Obtener canales configurados existentes

@@ -1,3 +1,4 @@
+
 import Amayo from "./core/client";
 import { loadCommands } from "./core/loaders/loader";
 import { loadEvents } from "./core/loaders/loaderEvents";
@@ -9,6 +10,7 @@ import {memoryOptimizer} from "./core/memory/memoryOptimizer";
 import { startReminderPoller } from "./core/api/reminders";
 import { ensureRemindersSchema } from "./core/api/remindersSchema";
 import logger from "./core/lib/logger";
+import { applyModalSubmitInteractionPatch } from "./core/patches/discordModalPatch";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
@@ -19,6 +21,13 @@ if (__memInt > 0) {
 // Activar optimizador de memoria adicional
 if (process.env.ENABLE_MEMORY_OPTIMIZER === 'true') {
     memoryOptimizer.start();
+}
+
+// Apply safety patch for ModalSubmitInteraction members resolution before anything else
+try {
+    applyModalSubmitInteractionPatch();
+} catch (e) {
+    logger.warn({ err: e }, 'No se pudo aplicar el patch de ModalSubmitInteraction');
 }
 
 export const bot = new Amayo();

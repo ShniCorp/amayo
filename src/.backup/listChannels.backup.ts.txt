@@ -1,4 +1,4 @@
-import { CommandMessage } from "../../../core/types/commands";
+import { CommandMessage } from "../core/types/commands";
 // @ts-ignore
 import { EmbedBuilder, ButtonStyle, MessageFlags, ChannelType } from "discord.js";
 

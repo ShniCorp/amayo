@@ -6,7 +6,7 @@ import type Amayo from '../../core/client';
 export default {
     customId: "prefixsettingsmodal",
     run: async (interaction: ModalSubmitInteraction, client: Amayo) => {
-        const newPrefix = interaction.fields.getTextInputValue("prefixInput");
+        const newPrefix = interaction.components.getTextInputValue("prefixInput");
 
         if (!newPrefix || newPrefix.length > 10) {
             return interaction.reply({

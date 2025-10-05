@@ -1,31 +1,38 @@
-# Custom instructions for GitHub Copilot
+# Custom instructions for GitHub Copilot (discord.js 15.0.0-dev)
 
-Whenever generating code, commit messages, or explanations related to Discord.js or the Discord API:
+When generating or modifying code for Discord.js version `15.0.0-dev.1759363313-f510b5ffa`:
 
-1. Always **consult and reference** the following sources for accurate and up-to-date information:
-    - [Discord.js Guide](https://discordjs.guide)
-    - [discord.js GitHub Repository](https://github.com/discordjs/discord.js)
-    - [Discord API Types GitHub Repository](https://github.com/discordjs/discord-api-types)
-    - [Discord Developer Documentation](https://discord.com/developers/docs/intro)
+1. **Primary Source of Truth**
+    - Do not assume the official docs, guide, or GitHub repositories are fully up-to-date.
+    - Always prioritize the installed package in `node_modules/discord.js` as the most reliable source.
+    - Always cross-reference with the provided file `example.ts.txt` to understand new or experimental APIs.
 
-2. Always **prefer official documentation** over blogs, forums, or tutorials.
-    - If no clear answer is found in docs, **inspect the installed dependency in `node_modules`** to confirm if a method, property, or class truly exists.
+2. **Secondary Sources**
+    - Only use these as references when the information is still valid:
+        - [Discord.js Guide](https://discordjs.guide)
+        - [discord.js GitHub](https://github.com/discordjs/discord.js)
+        - [Discord API Types GitHub](https://github.com/discordjs/discord-api-types)
+        - [Discord Developer Documentation](https://discord.com/developers/docs/intro)
+    - Mark clearly if the information is outdated compared to the development version.
 
-3. When suggesting code, ensure it matches the **latest stable release of Discord.js and related packages (June 2025 or newer)**.
-    - If examples belong to an older version, adapt them to the most recent stable release.
-    - If uncertain, indicate that verification against the `node_modules` implementation is required.
+3. **Code Analysis**
+    - Inspect the type definitions and source files inside `node_modules/discord.js` before suggesting new methods or classes.
+    - If `example.ts.txt` shows usage not covered in documentation, assume that is the intended API for this development version.
 
-4. When installing or suggesting npm packages related to Discord.js:
-    - Verify against their **GitHub repository** for recent updates, breaking changes, or migration notes.
-    - Always check if the changelog or releases page contains updates after **June 2025** and adjust suggestions accordingly.
-
-5. Always provide **links to relevant official documentation** (Discord.js Guide, GitHub repos, or Discord Developer Docs).
-    - If the info is missing in docs, but exists in the actual installed package, explain that and provide the discovered usage.
-
-6. **Error validation requirement:**
-    - After generating or modifying code, always remind the user to check for TypeScript errors by running:
+4. **Validation**
+    - Always suggest running:
       ```bash
       npx tsc --noEmit
       ```
-      (or equivalent `tsc` command).
-    - If type errors are found, propose fixes before finalizing the solution.
+      to validate typings.
+    - Remind to check runtime memory and CPU usage with:
+      ```js
+      console.log(process.memoryUsage());
+      ```
+      and external profilers if needed.
+
+5. **Communication**
+    - When suggesting code, state explicitly whether it comes from:
+        - `node_modules` (preferred, authoritative)
+        - `example.ts.txt` (author-provided experimental reference)
+        - official docs (secondary, possibly outdated)

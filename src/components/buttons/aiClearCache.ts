@@ -1,5 +1,6 @@
 import logger from "../../core/lib/logger";
-import { ButtonInteraction, MessageFlags, ContainerBuilder, TextDisplayBuilder, SectionBuilder, ButtonBuilder, ButtonStyle } from 'discord.js';
+import { ButtonInteraction, MessageFlags } from 'discord.js';
+import { ComponentType, ButtonStyle } from 'discord-api-types/v10';
 import { aiService } from '../../core/services/AIService';
 
 const OWNER_ID = '327207082203938818'; // Solo el dueño puede usar este panel
@@ -18,37 +19,44 @@ export default {
     try {
       await interaction.deferUpdate();
       
-      // Limpiar cache de conversaciones
+      // Limpiar cache pero mantener memoria persistente
       const stats = aiService.getStats();
       const conversationsCleared = stats.activeConversations;
       
-      // Aquí iría la lógica real de limpieza:
-      // aiService.clearAllConversations();
+      // Usar el nuevo método que mantiene memoria persistente
+      aiService.clearCache();
 
-      // Crear container de éxito usando la API real
-      const successContainer = new ContainerBuilder()
-        .addTextDisplayComponents(
-          new TextDisplayBuilder()
-            .setContent('## 🧹 Cache Limpiado Exitosamente\n-# Se han limpiado ' + conversationsCleared + ' conversaciones activas.\n\n✅ **Estado:** Cache limpiado\n🔄 **Conversaciones eliminadas:** ' + conversationsCleared + '\n⏰ **Timestamp:** ' + new Date().toISOString().replace('T', ' ').split('.')[0] + ' UTC\n👤 **Dueño:** ' + interaction.user.username)
-        )
-        .addSectionComponents(
-          new SectionBuilder()
-            .addTextDisplayComponents(
-              new TextDisplayBuilder()
-                .setContent("🔙 Volver al panel principal de administración")
-            )
-              .setButtonAccessory(
-              new ButtonBuilder()
-                .setCustomId('ai_refresh_stats')
-                .setLabel('Volver al Panel')
-                .setEmoji('🔙')
-                .setStyle(ButtonStyle.Primary)
-            )
-        );
+      // Crear panel de éxito usando objetos planos
+      const successPanel = {
+        type: ComponentType.Container,
+        components: [
+          {
+            type: ComponentType.TextDisplay,
+            content: '## 🧹 Cache Limpiado Exitosamente\n-# Se han limpiado ' + conversationsCleared + ' conversaciones activas.\n\n✅ **Estado:** Cache limpiado\n🔄 **Conversaciones eliminadas:** ' + conversationsCleared + '\n⏰ **Timestamp:** ' + new Date().toISOString().replace('T', ' ').split('.')[0] + ' UTC\n👤 **Dueño:** ' + interaction.user.username
+          },
+          {
+            type: ComponentType.Section,
+            components: [
+              {
+                type: ComponentType.TextDisplay,
+                content: "🔙 Volver al panel principal de administración"
+              }
+            ],
+            accessory: {
+              type: ComponentType.Button,
+              custom_id: 'ai_refresh_stats',
+              label: 'Volver al Panel',
+              emoji: { name: '🔙' },
+              style: ButtonStyle.Primary
+            }
+          }
+        ]
+      };
 
       await interaction.message.edit({
-        components: [successContainer],
-        flags: MessageFlags.IsComponentsV2
+        // @ts-ignore - Flag de componentes V2
+        flags: 32768,
+        components: [successPanel]
       });
       logger.info(`Cache de IA limpiado por el dueño ${interaction.user.username} (${interaction.user.id})`);
 

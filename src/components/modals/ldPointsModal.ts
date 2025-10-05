@@ -2,10 +2,27 @@ import logger from "../../core/lib/logger";
 import { 
   ModalSubmitInteraction, 
   MessageFlags,
-  PermissionFlagsBits,
-  EmbedBuilder
+  EmbedBuilder,
+  User,
+  Collection,
+  Snowflake
 } from 'discord.js';
 import { prisma } from '../../core/database/prisma';
+import { hasManageGuildOrStaff } from "../../core/lib/permissions";
+
+interface UserSelectComponent {
+  custom_id: string;
+  type: number;
+  values: string[];
+}
+
+interface ComponentData {
+  components?: ComponentData[];
+  component?: ComponentData;
+  custom_id?: string;
+  type?: number;
+  values?: string[];
+}
 
 export default {
   customId: 'ld_points_modal',
@@ -19,37 +36,114 @@ export default {
       });
     }
 
-    // Verificar permisos
+    // Verificar permisos (ManageGuild o rol staff)
     const member = await interaction.guild.members.fetch(interaction.user.id);
-    if (!member.permissions.has(PermissionFlagsBits.ManageGuild)) {
+    const allowed = await hasManageGuildOrStaff(member, interaction.guild.id, prisma);
+    if (!allowed) {
       return interaction.reply({
-        content: '❌ Solo los administradores pueden gestionar puntos.',
+        content: '❌ Solo admins o staff pueden gestionar puntos.',
         flags: MessageFlags.Ephemeral
       });
     }
 
     try {
-      // Extraer el userId del customId (formato: ld_points_modal:userId)
-      const userId = interaction.customId.split(':')[1];
-      logger.info(`🔍 UserId extraído: ${userId}`);
+      // Obtener valores del modal con manejo seguro de errores
+      let totalInput: string = '';
+      let selectedUsers: ReturnType<typeof interaction.components.getSelectedUsers> = null;
+      let userId: string | undefined = undefined;
+      let userName: string | undefined = undefined;
 
-      if (!userId) {
+      try {
+        totalInput = interaction.components.getTextInputValue('points_input').trim();
+      } catch (error) {
+        // @ts-ignore
+          logger.error('Error obteniendo points_input:', String(error));
         return interaction.reply({
-          content: '❌ Error al identificar el usuario.',
+          content: '❌ Error al obtener el valor de puntos del modal.',
           flags: MessageFlags.Ephemeral
         });
       }
 
-      // Obtener valor del modal
-      // @ts-ignore
-      const totalInput = interaction.fields.getTextInputValue('total_points').trim();
+      // Manejo seguro del UserSelect con fallback
+      try {
+        selectedUsers = interaction.components.getSelectedUsers('user_select');
+
+        if (!selectedUsers || selectedUsers.size === 0) {
+          // Fallback: intentar obtener los IDs directamente de los datos raw
+          const rawData = (interaction as any).data?.components as ComponentData[] | undefined;
+          if (rawData) {
+            const userSelectComponent = findUserSelectComponent(rawData, 'user_select');
+            if (userSelectComponent?.values?.length && userSelectComponent.values.length > 0) {
+              userId = userSelectComponent.values[0];
+              logger.info(`🔄 Fallback: UserId extraído de datos raw: ${userId}`);
+            }
+          }
+
+          if (!userId) {
+            return interaction.reply({
+              content: '❌ Debes seleccionar un usuario del leaderboard.',
+              flags: MessageFlags.Ephemeral
+            });
+          }
+        } else {
+          const selectedUser = Array.from(selectedUsers.values())[0] as User;
+          if (selectedUser) {
+            userId = selectedUser.id;
+            userName = selectedUser.tag ?? selectedUser.username ?? userId;
+          }
+        }
+      } catch (error) {
+        // @ts-ignore
+          logger.error('Error procesando UserSelect, intentando fallback:', String(error));
+
+        // Fallback más agresivo: obtener directamente de los datos raw
+        try {
+          const rawData = (interaction as any).data?.components as ComponentData[] | undefined;
+          const userSelectComponent = findUserSelectComponent(rawData, 'user_select');
+
+          if (userSelectComponent?.values?.length && userSelectComponent.values.length > 0) {
+            userId = userSelectComponent.values[0];
+            logger.info(`🔄 Fallback agresivo: UserId extraído: ${userId}`);
+          } else {
+            throw new Error('No se pudo extraer userId de los datos raw');
+          }
+        } catch (fallbackError) {
+          // @ts-ignore
+            logger.error('Falló el fallback:', String(fallbackError));
+          return interaction.reply({
+            content: '❌ Error procesando la selección de usuario. Inténtalo de nuevo.',
+            flags: MessageFlags.Ephemeral
+          });
+        }
+      }
+
       logger.info(`🔍 Input recibido: ${totalInput}`);
+      logger.info(`🔍 UserId extraído: ${userId}`);
 
       if (!totalInput) {
         return interaction.reply({
           content: '❌ Debes ingresar un valor para modificar.',
           flags: MessageFlags.Ephemeral
         });
+      }
+
+      if (!userId) {
+        return interaction.reply({
+          content: '❌ Error al identificar el usuario seleccionado.',
+          flags: MessageFlags.Ephemeral
+        });
+      }
+
+      // Si no tenemos userName, intentar obtenerlo del servidor
+      if (!userName) {
+        try {
+          const targetMember = await interaction.guild.members.fetch(userId);
+          userName = targetMember.displayName || targetMember.user.username;
+        } catch (error) {
+          // @ts-ignore
+            logger.warn(`No se pudo obtener info del usuario ${userId}:`, String(error));
+          userName = `Usuario ${userId}`;
+        }
       }
 
       // Obtener o crear el registro de stats del usuario
@@ -163,20 +257,6 @@ export default {
 
       logger.info(`✅ Puntos actualizados exitosamente en la base de datos`);
 
-      // Obtener nombre del usuario
-      let userName = 'Usuario';
-      try {
-        const targetMember = await interaction.guild.members.fetch(userId);
-        userName = targetMember.displayName || targetMember.user.username;
-      } catch {
-        try {
-          const user = await interaction.client.users.fetch(userId);
-          userName = user.username;
-        } catch {
-          userName = userId;
-        }
-      }
-
       // Calcular las diferencias
       const totalDiff = newTotalPoints - stats.totalPoints;
       const weeklyDiff = newWeeklyPoints - stats.weeklyPoints;
@@ -206,14 +286,9 @@ export default {
             name: '📅 Puntos Semanales',
             value: `${stats.weeklyPoints} → **${newWeeklyPoints}** (${weeklyDiffText})`,
             inline: true
-          },
-          {
-            name: '📝 Operación',
-            value: `\`${totalInput}\``,
-            inline: false
           }
         )
-        .setFooter({ text: `Modificado por ${interaction.user.username}` })
+        .setFooter({ text: `Actualizado por ${interaction.user.username}` })
         .setTimestamp();
 
       await interaction.reply({
@@ -221,22 +296,43 @@ export default {
         flags: MessageFlags.Ephemeral
       });
 
-      logger.info(`✅ Respuesta enviada al usuario`);
+    } catch (error) {
+      // @ts-ignore
+        // @ts-ignore
+        logger.error('❌ Error en ldPointsModal:', String(error));
 
-    } catch (e) {
-      logger.error({ err: e }, 'Error en ldPointsModal');
-
-      // Intentar responder con el error
-      try {
-        if (!interaction.replied && !interaction.deferred) {
-          await interaction.reply({
-            content: '❌ Error al actualizar los puntos.',
-            flags: MessageFlags.Ephemeral
-          });
-        }
-      } catch (replyError) {
-        logger.error({ err: replyError }, 'Error al enviar respuesta de error');
+      if (!interaction.replied && !interaction.deferred) {
+        await interaction.reply({
+          content: '❌ Error interno al procesar la solicitud. Revisa los logs para más detalles.',
+          flags: MessageFlags.Ephemeral
+        });
       }
     }
   }
 };
+
+// Función auxiliar para buscar componentes UserSelect en datos raw
+function findUserSelectComponent(components: ComponentData[] | undefined, customId: string): UserSelectComponent | null {
+  if (!components) return null;
+
+  for (const comp of components) {
+    if (comp.components) {
+      const found = findUserSelectComponent(comp.components, customId);
+      if (found) return found;
+    }
+
+    if (comp.component) {
+      if (comp.component.custom_id === customId) {
+        return comp.component as UserSelectComponent;
+      }
+      const found = findUserSelectComponent([comp.component], customId);
+      if (found) return found;
+    }
+
+    if (comp.custom_id === customId) {
+      return comp as UserSelectComponent;
+    }
+  }
+
+  return null;
+}

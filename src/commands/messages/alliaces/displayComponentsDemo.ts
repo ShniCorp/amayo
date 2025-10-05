@@ -154,47 +154,49 @@ async function handleDemoInteractions(demoMessage: Message, originalMessage: Mes
         filter: (interaction: MessageComponentInteraction) => interaction.user.id === originalMessage.author.id
     });
 
-    collector.on("collect", async (interaction: ButtonInteraction) => {
+    collector.on("collect", async (interaction: MessageComponentInteraction) => {
         try {
-            switch (interaction.customId) {
-                case "quick_action":
-                    await interaction.reply({
-                        content: "⚡ **Acción Rápida Ejecutada!**\n\nEste botón estaba como accesorio en una sección.",
-                        ephemeral: true
-                    });
-                    break;
+            if (interaction.isButton()) {
+                switch (interaction.customId) {
+                    case "quick_action":
+                        await interaction.reply({
+                            content: "⚡ **Acción Rápida Ejecutada!**\n\nEste botón estaba como accesorio en una sección.",
+                            flags: 64
+                        });
+                        break;
 
-                case "show_more_examples":
-                    await handleMoreExamples(interaction, originalMessage);
-                    break;
+                    case "show_more_examples":
+                        await handleMoreExamples(interaction, originalMessage);
+                        break;
 
-                case "change_styles":
-                    await handleStylesDemo(interaction);
-                    break;
+                    case "change_styles":
+                        await handleStylesDemo(interaction);
+                        break;
 
-                case "back_to_main":
-                    const mainPanel = createMainPanel(originalMessage);
-                    const actionRow = createActionRow();
-                    await interaction.update({
-                        components: [mainPanel, actionRow]
-                    });
-                    break;
+                    case "back_to_main":
+                        const mainPanel = createMainPanel(originalMessage);
+                        const actionRow = createActionRow();
+                        await interaction.update({
+                            components: [mainPanel, actionRow]
+                        });
+                        break;
 
-                case "close_demo":
-                    await handleCloseDemo(interaction);
-                    collector.stop();
-                    break;
+                    case "close_demo":
+                        await handleCloseDemo(interaction);
+                        collector.stop();
+                        break;
 
-                default:
-                    await handleStyleButtons(interaction);
-                    break;
+                    default:
+                        await handleStyleButtons(interaction);
+                        break;
+                }
             }
         } catch (error) {
             console.error("Error handling demo interaction:", error);
             if (!interaction.replied && !interaction.deferred) {
                 await interaction.reply({
                     content: "❌ Ocurrió un error al procesar la interacción.",
-                    ephemeral: true
+                    flags: 64
                 });
             }
         }
@@ -411,7 +413,7 @@ async function handleStyleButtons(interaction: ButtonInteraction): Promise<void>
     if (styleName) {
         await interaction.reply({
             content: `🎯 **Botón ${styleName} activado!**\n\nEste botón era un accesorio de una sección.`,
-            ephemeral: true
+            flags: 64
         });
     }
 }

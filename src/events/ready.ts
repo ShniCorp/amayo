@@ -6,6 +6,45 @@ bot.on(Events.ClientReady, () => {
     logger.info("Ready!");
 
     // ============================================
+    // 🛡️ HANDLER GLOBAL PARA ERRORES DE DISCORD.JS
+    // ============================================
+
+    process.on('uncaughtException', (error: Error) => {
+        // Interceptar errores específicos de Discord.js GuildMemberManager
+        if (error.message?.includes("Cannot read properties of undefined (reading 'id')") &&
+            error.stack?.includes('GuildMemberManager._add')) {
+
+            logger.warn('🔧 Discord.js bug interceptado: GuildMemberManager error con UserSelect en modal');
+            // NO terminar el proceso, solo logear el error
+            return;
+        }
+
+        // Para otros errores críticos, mantener el comportamiento original
+        // @ts-ignore
+        logger.error('💥 UncaughtException crítico:', error);
+        process.exit(1);
+    });
+
+    process.on('unhandledRejection', (reason: unknown) => {
+        // Interceptar rechazos relacionados con el mismo bug
+        if (reason &&
+            typeof reason === 'object' &&
+            reason !== null &&
+            'message' in reason &&
+            typeof (reason as any).message === 'string' &&
+            (reason as any).message.includes("Cannot read properties of undefined (reading 'id')")) {
+
+            logger.warn('🔧 Discord.js promise rejection interceptada: GuildMemberManager error');
+            // NO terminar el proceso
+            return;
+        }
+
+        // Para otras promesas rechazadas, logear pero continuar
+        // @ts-ignore
+        logger.error('🚨 UnhandledRejection:', reason as Error);
+    });
+
+    // ============================================
     // 🚀 OPCIÓN 1: ACTIVIDAD FIJA (RECOMENDADO PARA HEROKU 512MB)
     // ============================================
     // Una sola actividad, sin interval, sin uso adicional de recursos
