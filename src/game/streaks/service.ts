@@ -85,7 +85,7 @@ export async function updateStreak(userId: string, guildId: string) {
       daysIncreased: daysDiff === 1
     };
   } catch (error) {
-    logger.error(`Error updating streak for ${userId}:`, error);
+    console.error(`Error updating streak for ${userId}:`, error);
     throw error;
   }
 }

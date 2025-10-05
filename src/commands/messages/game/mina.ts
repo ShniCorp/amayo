@@ -2,6 +2,9 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { runMinigame } from '../../../game/minigames/service';
 import { resolveArea, getDefaultLevel, findBestToolKey } from './_helpers';
+import { updateStats } from '../../../game/stats/service';
+import { updateQuestProgress } from '../../../game/quests/service';
+import { checkAchievements } from '../../../game/achievements/service';
 
 export const command: CommandMessage = {
   name: 'mina',
@@ -26,13 +29,34 @@ export const command: CommandMessage = {
 
     try {
       const result = await runMinigame(userId, guildId, areaKey, level, { toolKey: toolKey ?? undefined });
+      
+      // Actualizar stats
+      await updateStats(userId, guildId, { minesCompleted: 1 });
+      
+      // Actualizar progreso de misiones
+      await updateQuestProgress(userId, guildId, 'mine_count', 1);
+      
+      // Verificar logros
+      const newAchievements = await checkAchievements(userId, guildId, 'mine_count');
+      
       const rewards = result.rewards.map(r => r.type === 'coins' ? `🪙 +${r.amount}` : `📦 ${r.itemKey} x${r.qty}`).join(' · ') || '—';
       const mobs = result.mobs.length ? result.mobs.join(', ') : '—';
       const toolInfo = result.tool?.key ? `🔧 ${result.tool.key}${result.tool.broken ? ' (rota)' : ` (-${result.tool.durabilityDelta} dur.)`}` : '—';
-      await message.reply(`⛏️ Mina (nivel ${level})
+      
+      let response = `⛏️ Mina (nivel ${level})
 Recompensas: ${rewards}
 Mobs: ${mobs}
-Herramienta: ${toolInfo}`);
+Herramienta: ${toolInfo}`;
+
+      // Notificar logros desbloqueados
+      if (newAchievements.length > 0) {
+        response += `\n\n🏆 ¡Logro desbloqueado!`;
+        for (const ach of newAchievements) {
+          response += `\n✨ **${ach.name}** - ${ach.description}`;
+        }
+      }
+      
+      await message.reply(response);
     } catch (e: any) {
       await message.reply(`❌ No se pudo minar: ${e?.message ?? e}`);
     }

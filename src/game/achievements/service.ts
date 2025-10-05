@@ -26,7 +26,7 @@ export async function checkAchievements(
       }
     });
 
-    const newUnlocks = [];
+    const newUnlocks: any[] = [];
     const stats = await getOrCreatePlayerStats(userId, guildId);
 
     for (const achievement of achievements) {
@@ -118,7 +118,7 @@ export async function checkAchievements(
 
     return newUnlocks;
   } catch (error) {
-    logger.error(`Error checking achievements for ${userId}:`, error);
+    console.error(`Error checking achievements for ${userId}:`, error);
     return [];
   }
 }

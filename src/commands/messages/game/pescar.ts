@@ -2,6 +2,9 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { runMinigame } from '../../../game/minigames/service';
 import { resolveArea, getDefaultLevel, findBestToolKey } from './_helpers';
+import { updateStats } from '../../../game/stats/service';
+import { updateQuestProgress } from '../../../game/quests/service';
+import { checkAchievements } from '../../../game/achievements/service';
 
 export const command: CommandMessage = {
   name: 'pescar',
@@ -26,13 +29,29 @@ export const command: CommandMessage = {
 
     try {
       const result = await runMinigame(userId, guildId, areaKey, level, { toolKey: toolKey ?? undefined });
+      
+      // Actualizar stats y misiones
+      await updateStats(userId, guildId, { fishingCompleted: 1 });
+      await updateQuestProgress(userId, guildId, 'fish_count', 1);
+      const newAchievements = await checkAchievements(userId, guildId, 'fish_count');
+      
       const rewards = result.rewards.map(r => r.type === 'coins' ? `🪙 +${r.amount}` : `🐟 ${r.itemKey} x${r.qty}`).join(' · ') || '—';
       const mobs = result.mobs.length ? result.mobs.join(', ') : '—';
       const toolInfo = result.tool?.key ? `🎣 ${result.tool.key}${result.tool.broken ? ' (rota)' : ` (-${result.tool.durabilityDelta} dur.)`}` : '—';
-      await message.reply(`🎣 Pesca (nivel ${level})
+      
+      let response = `🎣 Pesca (nivel ${level})
 Recompensas: ${rewards}
 Mobs: ${mobs}
-Herramienta: ${toolInfo}`);
+Herramienta: ${toolInfo}`;
+
+      if (newAchievements.length > 0) {
+        response += `\n\n🏆 ¡Logro desbloqueado!`;
+        for (const ach of newAchievements) {
+          response += `\n✨ **${ach.name}** - ${ach.description}`;
+        }
+      }
+      
+      await message.reply(response);
     } catch (e: any) {
       await message.reply(`❌ No se pudo pescar: ${e?.message ?? e}`);
     }

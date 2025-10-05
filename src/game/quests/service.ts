@@ -16,15 +16,11 @@ export async function updateQuestProgress(
     const quests = await prisma.quest.findMany({
       where: {
         OR: [{ guildId }, { guildId: null }],
-        active: true,
-        OR: [
-          { endAt: null },
-          { endAt: { gte: new Date() } }
-        ]
+        active: true
       }
     });
 
-    const updates = [];
+    const updates: any[] = [];
 
     for (const quest of quests) {
       const req = quest.requirements as any;
@@ -94,7 +90,7 @@ export async function updateQuestProgress(
 
     return updates;
   } catch (error) {
-    logger.error(`Error updating quest progress for ${userId}:`, error);
+    console.error(`Error updating quest progress for ${userId}:`, error);
     return [];
   }
 }
@@ -144,7 +140,7 @@ export async function claimQuestReward(
 
     return { quest: progress.quest, rewards };
   } catch (error) {
-    logger.error(`Error claiming quest reward for ${userId}:`, error);
+    console.error(`Error claiming quest reward for ${userId}:`, error);
     throw error;
   }
 }
@@ -156,11 +152,7 @@ export async function getPlayerQuests(userId: string, guildId: string) {
   const quests = await prisma.quest.findMany({
     where: {
       OR: [{ guildId }, { guildId: null }],
-      active: true,
-      OR: [
-        { endAt: null },
-        { endAt: { gte: new Date() } }
-      ]
+      active: true
     },
     orderBy: [
       { type: 'asc' },
@@ -272,10 +264,10 @@ export async function generateDailyQuests(guildId: string) {
       });
     }
 
-    logger.info(`Generated ${selectedTemplates.length} daily quests for guild ${guildId}`);
+    console.log(`Generated ${selectedTemplates.length} daily quests for guild ${guildId}`);
     return selectedTemplates.length;
   } catch (error) {
-    logger.error(`Error generating daily quests for ${guildId}:`, error);
+    console.error(`Error generating daily quests for ${guildId}:`, error);
     return 0;
   }
 }
@@ -295,6 +287,6 @@ export async function cleanExpiredQuests(guildId: string) {
     }
   });
 
-  logger.info(`Deactivated ${result.count} expired quests for guild ${guildId}`);
+  console.log(`Deactivated ${result.count} expired quests for guild ${guildId}`);
   return result.count;
 }

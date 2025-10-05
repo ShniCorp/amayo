@@ -66,7 +66,7 @@ export const command: CommandMessage = {
         embed.addFields({ name: '🏆 Récords', value: recordsText || 'Sin datos', inline: true });
       }
 
-      embed.setFooter({ text: `Usa ${client.prefix}ranking-stats para ver el ranking global` });
+      embed.setFooter({ text: 'Usa !ranking-stats para ver el ranking global' });
 
       await message.reply({ embeds: [embed] });
     } catch (error) {

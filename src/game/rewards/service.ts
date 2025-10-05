@@ -52,15 +52,15 @@ export async function giveRewards(
         guildId,
         action: 'reward_given',
         target: source,
-        details: rewards
+        details: rewards as any
       }
     }).catch(() => {}); // Silencioso si falla el log
 
-    logger.info(`Rewards given to ${userId} in ${guildId} from ${source}:`, rewards);
+    console.log(`Rewards given to ${userId} in ${guildId} from ${source}:`, rewards);
 
     return results;
   } catch (error) {
-    logger.error(`Error giving rewards to ${userId} in ${guildId}:`, error);
+    console.error(`Error giving rewards to ${userId} in ${guildId}:`, error);
     throw error;
   }
 }
