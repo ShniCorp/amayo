@@ -1,1 +1,1 @@
-web: npm run start:optimize-relic
+web: npm run start:prod-optimized
