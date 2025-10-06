@@ -30,3 +30,38 @@ export async function findBestToolKey(userId: string, guildId: string, toolType:
   return best?.key ?? null;
 }
 
+export interface ParsedGameArgs {
+  areaKey: string;
+  levelArg: number | null;
+  providedTool: string | null;
+}
+
+const AREA_OVERRIDE_PREFIX = 'area:';
+
+export function parseGameArgs(args: string[], defaultAreaKey: string): ParsedGameArgs {
+  const tokens = args.filter((arg): arg is string => typeof arg === 'string' && arg.trim().length > 0);
+
+  let areaKey = defaultAreaKey;
+  let levelArg: number | null = null;
+  let providedTool: string | null = null;
+
+  for (const token of tokens) {
+    if (token.startsWith(AREA_OVERRIDE_PREFIX)) {
+      const override = token.slice(AREA_OVERRIDE_PREFIX.length).trim();
+      if (override) areaKey = override;
+      continue;
+    }
+
+    if (levelArg === null && /^\d+$/.test(token)) {
+      levelArg = parseInt(token, 10);
+      continue;
+    }
+
+    if (!providedTool) {
+      providedTool = token;
+    }
+  }
+
+  return { areaKey, levelArg, providedTool };
+}
+

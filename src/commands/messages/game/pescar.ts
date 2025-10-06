@@ -1,7 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { runMinigame } from '../../../game/minigames/service';
-import { resolveArea, getDefaultLevel, findBestToolKey } from './_helpers';
+import { resolveArea, getDefaultLevel, findBestToolKey, parseGameArgs } from './_helpers';
 import { updateStats } from '../../../game/stats/service';
 import { updateQuestProgress } from '../../../game/quests/service';
 import { checkAchievements } from '../../../game/achievements/service';
@@ -12,23 +12,23 @@ export const command: CommandMessage = {
   aliases: ['fish'],
   cooldown: 5,
   description: 'Pesca en la laguna (usa caña si está disponible) y obtén recompensas.',
-  usage: 'pescar [nivel] [toolKey] (ej: pescar 1 tool.rod.basic)',
+  usage: 'pescar [nivel] [toolKey] [area:clave] (ej: pescar 1 tool.rod.basic)',
   run: async (message, args, _client: Amayo) => {
     const userId = message.author.id;
     const guildId = message.guild!.id;
-    const areaKey = args[0] === 'lagoon.shore' ? args[0] : 'lagoon.shore'; // Forzar key de área de laguna
+    const { areaKey, levelArg, providedTool } = parseGameArgs(args, 'lagoon.shore');
 
     const area = await resolveArea(guildId, areaKey);
-    if (!area) { await message.reply('⚠️ Área de laguna no configurada. Crea `gameArea` con key `lagoon.shore`.'); return; }
-
-    const levelArg = args[0] && /^\d+$/.test(args[0]) ? parseInt(args[0], 10) : null;
-    const providedTool = args.find((a) => a && !/^\d+$/.test(a));
+    if (!area) {
+      await message.reply(`⚠️ Área de laguna no configurada. Crea \`gameArea\` con key \`${areaKey}\`.`);
+      return;
+    }
 
     const level = levelArg ?? await getDefaultLevel(userId, guildId, area.id);
     const toolKey = providedTool ?? await findBestToolKey(userId, guildId, 'rod');
 
     try {
-      const result = await runMinigame(userId, guildId, areaKey, level, { toolKey: toolKey ?? undefined });
+      const result = await runMinigame(userId, guildId, area.key, level, { toolKey: toolKey ?? undefined });
       
       // Actualizar stats y misiones
       await updateStats(userId, guildId, { fishingCompleted: 1 });

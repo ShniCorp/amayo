@@ -1,7 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { runMinigame } from '../../../game/minigames/service';
-import { resolveArea, getDefaultLevel, findBestToolKey } from './_helpers';
+import { resolveArea, getDefaultLevel, findBestToolKey, parseGameArgs } from './_helpers';
 import { updateStats } from '../../../game/stats/service';
 import { updateQuestProgress } from '../../../game/quests/service';
 import { checkAchievements } from '../../../game/achievements/service';
@@ -12,29 +12,29 @@ export const command: CommandMessage = {
   aliases: ['minar'],
   cooldown: 5,
   description: 'Ir a la mina (usa pico si está disponible) y obtener recompensas según el nivel.',
-  usage: 'mina [nivel] [toolKey] (ej: mina 2 tool.pickaxe.basic)',
+  usage: 'mina [nivel] [toolKey] [area:clave] (ej: mina 2 tool.pickaxe.basic)',
   run: async (message, args, _client: Amayo) => {
     const userId = message.author.id;
     const guildId = message.guild!.id;
-    const areaKey = args[0] === 'mine.cavern' ? args[0] : 'mine.cavern'; // Forzar key de área de mina
+    const { areaKey, levelArg, providedTool } = parseGameArgs(args, 'mine.cavern');
 
     const area = await resolveArea(guildId, areaKey);
-    if (!area) { await message.reply('⚠️ Área de mina no configurada. Pide a un admin crear `gameArea` con key `mine.cavern`.'); return; }
-
-    const levelArg = args[0] && /^\d+$/.test(args[0]) ? parseInt(args[0], 10) : null;
-    const providedTool = args.find((a) => a && !/^\d+$/.test(a));
+    if (!area) {
+      await message.reply(`⚠️ Área de mina no configurada. Pide a un admin crear \`gameArea\` con key \`${areaKey}\`.`);
+      return;
+    }
 
     const level = levelArg ?? await getDefaultLevel(userId, guildId, area.id);
     const toolKey = providedTool ?? await findBestToolKey(userId, guildId, 'pickaxe');
 
     try {
-      const result = await runMinigame(userId, guildId, areaKey, level, { toolKey: toolKey ?? undefined });
+      const result = await runMinigame(userId, guildId, area.key, level, { toolKey: toolKey ?? undefined });
       
       // Actualizar stats
       await updateStats(userId, guildId, { minesCompleted: 1 });
       
-      // Actualizar progreso de misiones
-      await updateQuestProgress(userId, guildId, 'mine_count', 1);
+    // Actualizar progreso de misiones
+    await updateQuestProgress(userId, guildId, 'mine_count', 1);
       
       // Verificar logros
       const newAchievements = await checkAchievements(userId, guildId, 'mine_count');
