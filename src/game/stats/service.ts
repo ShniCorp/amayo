@@ -30,26 +30,16 @@ export async function updateStats(
   try {
     await getOrCreatePlayerStats(userId, guildId);
 
-    // Convertir incrementos a operaciones atómicas
-    const incrementData: any = {};
-    const setData: any = {};
+    const updateData: Prisma.PlayerStatsUpdateInput = {};
 
     for (const [key, value] of Object.entries(updates)) {
-      if (typeof value === 'number') {
-        // Si es un número, incrementar
-        incrementData[key] = value;
-      } else {
-        // Si no, establecer valor
-        setData[key] = value;
-      }
-    }
+      if (value === undefined || value === null) continue;
 
-    const updateData: any = {};
-    if (Object.keys(incrementData).length > 0) {
-      updateData.increment = incrementData;
-    }
-    if (Object.keys(setData).length > 0) {
-      Object.assign(updateData, setData);
+      if (typeof value === 'number') {
+        (updateData as Record<string, any>)[key] = { increment: value };
+      } else {
+        (updateData as Record<string, any>)[key] = value;
+      }
     }
 
     const stats = await prisma.playerStats.update({
