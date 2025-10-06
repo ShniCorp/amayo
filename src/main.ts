@@ -12,6 +12,7 @@ import { ensureRemindersSchema } from "./core/api/remindersSchema";
 import logger from "./core/lib/logger";
 import { applyModalSubmitInteractionPatch } from "./core/patches/discordModalPatch";
 import { server } from "./server/server";
+import 'newrelic';
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
