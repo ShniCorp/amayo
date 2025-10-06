@@ -83,6 +83,46 @@ function isAPIError(error: unknown): error is { message: string; code?: string }
     );
 }
 
+const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
+
+function isServiceUnavailableError(error: unknown): boolean {
+    if (!error) {
+        return false;
+    }
+
+    const message = getErrorMessage(error).toLowerCase();
+
+    if (
+        message.includes('503') ||
+        message.includes('service unavailable') ||
+        message.includes('model is overloaded') ||
+        message.includes('model estuvo sobrecargado') ||
+        message.includes('overloaded') ||
+        message.includes('temporarily unavailable')
+    ) {
+        return true;
+    }
+
+    const status = (error as any)?.status ?? (error as any)?.statusCode ?? (error as any)?.code;
+    if (typeof status === 'number' && status === 503) {
+        return true;
+    }
+    if (typeof status === 'string' && status.includes('503')) {
+        return true;
+    }
+
+    if (isAPIError(error)) {
+        const apiMessage = error.message.toLowerCase();
+        return (
+            apiMessage.includes('503') ||
+            apiMessage.includes('service unavailable') ||
+            apiMessage.includes('overloaded')
+        );
+    }
+
+    return false;
+}
+
 export class AIService {
     private genAI: GoogleGenerativeAI;
     private genAIv2: any;
@@ -412,6 +452,9 @@ export class AIService {
             if (apiMessage.includes('quota') || apiMessage.includes('exceeded')) {
                 return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
             }
+            if (apiMessage.includes('service unavailable') || apiMessage.includes('overloaded') || apiMessage.includes('503')) {
+                return 'El servicio de IA está saturado. Intenta de nuevo en unos segundos';
+            }
             if (apiMessage.includes('safety') || apiMessage.includes('blocked')) {
                 return 'Tu mensaje fue bloqueado por las políticas de seguridad';
             }
@@ -433,6 +476,9 @@ export class AIService {
         if (message.includes('quota') || message.includes('exceeded')) {
             return 'Se ha alcanzado el límite de uso de la API. Intenta más tarde';
         }
+        if (message.includes('service unavailable') || message.includes('overloaded') || message.includes('503')) {
+            return 'El servicio de IA está saturado. Intenta de nuevo en unos segundos';
+        }
         if (message.includes('safety') || message.includes('blocked')) {
             return 'Tu mensaje fue bloqueado por las políticas de seguridad';
         }
@@ -447,6 +493,47 @@ export class AIService {
         }
 
         return 'Error temporal del servicio de IA. Intenta de nuevo';
+    }
+
+    private async generateContentWithRetries(model: any, content: any, options?: {
+        maxAttempts?: number;
+        baseDelayMs?: number;
+        maxDelayMs?: number;
+    }): Promise<any> {
+        const {
+            maxAttempts = 3,
+            baseDelayMs = 1200,
+            maxDelayMs = 10_000
+        } = options ?? {};
+
+        let lastError: unknown;
+
+        for (let attempt = 0; attempt < maxAttempts; attempt++) {
+            try {
+                return await model.generateContent(content);
+            } catch (error) {
+                lastError = error;
+                const isRetryable = isServiceUnavailableError(error);
+                const isLastAttempt = attempt === maxAttempts - 1;
+
+                if (!isRetryable || isLastAttempt) {
+                    throw error;
+                }
+
+                const backoff = Math.min(maxDelayMs, Math.floor(baseDelayMs * Math.pow(2, attempt)));
+                const jitter = Math.floor(Math.random() * Math.max(200, Math.floor(baseDelayMs / 2)));
+                const waitMs = backoff + jitter;
+
+                logger.warn(
+                    { attempt: attempt + 1, waitMs },
+                    `Gemini respondió 503 (overloaded). Reintentando en ${waitMs}ms (intento ${attempt + 2}/${maxAttempts})`
+                );
+
+                await sleep(waitMs);
+            }
+        }
+
+        throw lastError ?? new Error('Error desconocido al generar contenido con Gemini');
     }
 
     /**
@@ -696,7 +783,7 @@ export class AIService {
 
             // Usar gemini-2.5-flash-preview-09-2025 que puede leer imágenes y responder con texto
             const model = this.genAI.getGenerativeModel({
-                model: "gemini-2.5-flash-preview-09-2025",
+                model: "gemini-2.5-flash",
                 generationConfig: {
                     maxOutputTokens: Math.min(this.config.maxOutputTokens, Math.max(1024, estimatedTokens * 0.5)),
                     temperature: 0.7,
@@ -729,7 +816,7 @@ export class AIService {
                 content = systemPrompt;
             }
 
-            const result = await model.generateContent(content);
+            const result = await this.generateContentWithRetries(model, content);
             const response = await result.response;
             const aiResponse = response.text()?.trim();
 
