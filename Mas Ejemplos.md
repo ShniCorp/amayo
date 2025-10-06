@@ -72,6 +72,35 @@ Este documento reúne ejemplos prácticos y flujos de trabajo completos **para e
 5. Pulsa **Receta** (⭐ nuevo) si quieres que el ítem sea crafteable. Ver [sección de Crafteos](#crear-nuevas-recetas-de-crafteo-directo-desde-discord) para más detalles.
 6. Cuando todo esté listo, pulsa **Guardar**. El bot confirmará con "✅ Item creado".
 
+### 🎮 Cómo se ve el editor de ítems
+
+El editor interactivo muestra toda la información del ítem y los botones de configuración:
+
+```
+┌─────────────────────────────────────────────────────┐
+│  📦 Editor de Ítem: iron_sword                      │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  Nombre: Espada de Hierro                          │
+│  Key: iron_sword                                   │
+│  Stackable: ❌  |  Max Inv: 1                      │
+│  Tags: weapon, tier2                               │
+│  Receta: ✅ Habilitada (3 ingredientes → 1 unidad)│  ← ¡NUEVO!
+│                                                     │
+├─────────────────────────────────────────────────────┤
+│                                                     │
+│  [📝 Base]  [🏷️ Tags]  [⚙️ Receta]  [🔧 Props]    │  ← Botón Receta
+│                                                     │
+│  [💾 Guardar]  [❌ Cancelar]                        │
+│                                                     │
+└─────────────────────────────────────────────────────┘
+```
+
+**Elementos clave**:
+- **Línea "Receta"**: Estado actual (✅ Habilitada o ❌ Deshabilitada) + detalles
+- **Botón "⚙️ Receta"**: Click para configurar ingredientes y cantidad producida
+- **Actualización en tiempo real**: Los cambios se reflejan inmediatamente
+
 ### Editar, listar y borrar
 
 - `!item-editar` abre el mismo editor, pero cargando un ítem existente.
@@ -610,6 +639,22 @@ Cuando guardas, el bot:
 }
 ```
 **Receta sugerida**: `wood_plank:8, iron_ingot:2, gold_ingot:1`
+
+---
+
+### 📋 Tabla resumen de Props JSON por tipo
+
+| Tipo de Ítem | Props Esenciales | Receta Ejemplo |
+| --- | --- | --- |
+| **Arma** | `craftable`, `tool`, `damage`, `breakable` | `iron_ingot:3, wood_plank:1` |
+| **Armadura** | `craftable`, `wearable`, `defense`, `maxHpBonus` | `iron_ingot:8, leather:2` |
+| **Consumible** | `craftable`, `food`, `stackable` | `red_herb:2, water_bottle:1` |
+| **Material** | `craftable`, `craftingOnly`, `stackable` | `iron_ore:2, coal:1` (x3 output) |
+| **Herramienta** | `craftable`, `tool`, `breakable` | `steel_ingot:3, diamond:2` |
+| **Cofre** | `craftable`, `chest`, `stackable` | `wood_plank:8, iron_ingot:2` |
+| **Coleccionable** | `craftable`, `collectible`, `rarity` | `mythril:10, dragon_scale:5` |
+
+> 💡 **Tip**: Todos los ítems crafteables **DEBEN** tener `"craftable": {"enabled": true}` en sus props para que el comando `!craftear` funcione.
 
 ---
 
