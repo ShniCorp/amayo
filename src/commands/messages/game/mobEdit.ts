@@ -20,40 +20,32 @@ function createMobDisplay(state: MobEditorState, editing: boolean = false) {
     type: 17,
     accent_color: 0xFF0000,
     components: [
+      { type: 10, content: `# 👹 ${title}: \`${state.key}\`` },
+      { type: 14, divider: true },
       {
-        type: 9,
-        components: [{
-          type: 10,
-          content: `👹 **${title}: \`${state.key}\`**`
-        }]
+        type: 10,
+        content: [
+          '**📋 Estado Actual:**',
+          `**Nombre:** ${state.name || '❌ No configurado'}`,
+          `**Categoría:** ${state.category || 'Sin categoría'}`,
+          `**Attack:** ${stats.attack || 0}`,
+          `**HP:** ${stats.hp || 0}`,
+          `**Defense:** ${stats.defense || 0}`,
+          `**Drops:** ${Object.keys(state.drops || {}).length} items`,
+        ].join('\n'),
       },
       { type: 14, divider: true },
       {
-        type: 9,
-        components: [{
-          type: 10,
-          content: `**📋 Estado Actual:**\n` +
-                   `**Nombre:** ${state.name || '❌ No configurado'}\n` +
-                   `**Categoría:** ${state.category || 'Sin categoría'}\n` +
-                   `**Attack:** ${stats.attack || 0}\n` +
-                   `**HP:** ${stats.hp || 0}\n` +
-                   `**Defense:** ${stats.defense || 0}\n` +
-                   `**Drops:** ${Object.keys(state.drops || {}).length} items`
-        }]
+        type: 10,
+        content: [
+          '**🎮 Instrucciones:**',
+          '• **Base**: Nombre y categoría',
+          '• **Stats (JSON)**: Estadísticas del mob',
+          '• **Drops (JSON)**: Items que dropea',
+          '• **Guardar**: Confirma los cambios',
+          '• **Cancelar**: Descarta los cambios',
+        ].join('\n'),
       },
-      { type: 14, divider: true },
-      {
-        type: 9,
-        components: [{
-          type: 10,
-          content: `**🎮 Instrucciones:**\n` +
-                   `• **Base**: Nombre y categoría\n` +
-                   `• **Stats (JSON)**: Estadísticas del mob\n` +
-                   `• **Drops (JSON)**: Items que dropea\n` +
-                   `• **Guardar**: Confirma los cambios\n` +
-                   `• **Cancelar**: Descarta los cambios`
-        }]
-      }
     ]
   };
 }
