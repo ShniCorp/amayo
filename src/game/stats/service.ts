@@ -1,11 +1,15 @@
 import { prisma } from '../../core/database/prisma';
 import type { Prisma } from '@prisma/client';
 import logger from '../../core/lib/logger';
+import { ensureUserAndGuildExist } from '../core/userService';
 
 /**
  * Obtener o crear las estadísticas de un jugador
  */
 export async function getOrCreatePlayerStats(userId: string, guildId: string) {
+  // Asegurar que User y Guild existan antes de crear/buscar stats
+  await ensureUserAndGuildExist(userId, guildId);
+  
   let stats = await prisma.playerStats.findUnique({
     where: { userId_guildId: { userId, guildId } }
   });

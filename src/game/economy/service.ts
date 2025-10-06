@@ -1,6 +1,7 @@
 import { prisma } from '../../core/database/prisma';
 import type { ItemProps, InventoryState, Price, OpenChestResult } from './types';
 import type { Prisma } from '@prisma/client';
+import { ensureUserAndGuildExist } from '../core/userService';
 
 // Utilidades de tiempo
 function now(): Date {
@@ -30,6 +31,9 @@ export async function findItemByKey(guildId: string, key: string) {
 }
 
 export async function getOrCreateWallet(userId: string, guildId: string) {
+  // Asegurar que User y Guild existan antes de crear/buscar wallet
+  await ensureUserAndGuildExist(userId, guildId);
+  
   return prisma.economyWallet.upsert({
     where: { userId_guildId: { userId, guildId } },
     update: {},

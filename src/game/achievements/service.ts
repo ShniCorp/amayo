@@ -2,6 +2,7 @@ import { prisma } from '../../core/database/prisma';
 import { giveRewards, type Reward } from '../rewards/service';
 import { getOrCreatePlayerStats } from '../stats/service';
 import logger from '../../core/lib/logger';
+import { ensureUserAndGuildExist } from '../core/userService';
 
 /**
  * Verificar y desbloquear logros según un trigger
@@ -12,6 +13,9 @@ export async function checkAchievements(
   trigger: string
 ): Promise<any[]> {
   try {
+    // Asegurar que User y Guild existan antes de buscar achievements
+    await ensureUserAndGuildExist(userId, guildId);
+    
     // Obtener todos los logros del servidor que no estén desbloqueados
     const achievements = await prisma.achievement.findMany({
       where: {

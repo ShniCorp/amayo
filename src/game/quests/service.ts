@@ -1,6 +1,7 @@
 import { prisma } from '../../core/database/prisma';
 import { giveRewards, type Reward } from '../rewards/service';
 import logger from '../../core/lib/logger';
+import { ensureUserAndGuildExist } from '../core/userService';
 
 /**
  * Actualizar progreso de misiones del jugador
@@ -12,6 +13,9 @@ export async function updateQuestProgress(
   increment: number = 1
 ) {
   try {
+    // Asegurar que User y Guild existan antes de crear/buscar quest progress
+    await ensureUserAndGuildExist(userId, guildId);
+    
     // Obtener misiones activas que coincidan con el tipo
     const quests = await prisma.quest.findMany({
       where: {
