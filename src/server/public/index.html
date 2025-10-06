@@ -1,0 +1,1234 @@
+<!DOCTYPE html>
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amayo Docs | Guía de Contenido</title>
+    <meta
+      name="description"
+      content="Documentación interactiva para crear items, mobs, áreas, logros, misiones y más en Amayo."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+              mono: [
+                'JetBrains Mono',
+                'ui-monospace',
+                'SFMono-Regular',
+                'SFMono',
+                'Menlo',
+                'Monaco',
+                'Consolas',
+                'Liberation Mono',
+                'Courier New',
+                'monospace'
+              ]
+            },
+            boxShadow: {
+              glow: '0 40px 120px -45px rgba(99, 102, 241, 0.45)'
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100 antialiased">
+    <div class="flex min-h-screen flex-col">
+      <header class="relative overflow-hidden">
+        <div class="pointer-events-none absolute inset-0">
+          <div class="absolute -top-32 left-1/2 h-96 w-96 -translate-x-1/2 rounded-full bg-indigo-600/40 blur-3xl"></div>
+          <div class="absolute top-16 -left-28 h-72 w-72 rounded-full bg-sky-500/25 blur-3xl"></div>
+          <div class="absolute bottom-0 right-0 h-80 w-80 translate-y-1/3 rounded-full bg-fuchsia-500/20 blur-3xl"></div>
+        </div>
+        <div class="relative mx-auto flex max-w-5xl flex-col items-center px-6 pb-20 pt-16 text-center lg:px-8">
+          <p class="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/5 px-4 py-1 text-xs font-semibold uppercase tracking-[0.35em] text-slate-200">
+            Amayo • Docs
+          </p>
+          <h1 class="mt-6 text-4xl font-bold text-white sm:text-5xl md:text-6xl">
+            Documentación de Contenido Amayo
+          </h1>
+          <p class="mt-4 max-w-2xl text-base text-slate-200 sm:text-lg">
+            Crea y gestiona items, enemigos, áreas, niveles, logros, misiones, cofres,
+            mutaciones y más usando los comandos del bot. Esta guía reúne los flujos
+            completos y plantillas listas para copiar.
+          </p>
+          <div class="mt-8 flex flex-wrap items-center justify-center gap-3">
+            <a
+              class="inline-flex items-center justify-center rounded-full bg-gradient-to-r from-indigo-500 to-fuchsia-500 px-6 py-3 text-sm font-semibold text-white shadow-xl shadow-indigo-500/30 transition hover:-translate-y-0.5 hover:shadow-indigo-500/40"
+              href="#items"
+            >
+              Empezar ahora
+            </a>
+            <button
+              class="inline-flex items-center justify-center rounded-full border border-white/10 bg-white/5 px-6 py-3 text-sm font-semibold text-slate-100 transition hover:border-indigo-400/70 hover:text-white"
+              id="toggle-nav"
+            >
+              Abrir índice
+            </button>
+          </div>
+          <div class="mt-6 flex flex-wrap items-center justify-center gap-3 text-xs text-slate-300">
+            <span class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1">
+              Actualizado: 5 Oct 2025
+            </span>
+            <span class="inline-flex items-center rounded-full border border-white/10 bg-white/5 px-3 py-1">
+              Compatible con DisplayComponents V2
+            </span>
+          </div>
+        </div>
+      </header>
+
+      <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 pb-16 lg:flex-row lg:px-10">
+        <nav
+          id="toc"
+          class="hidden w-full max-w-xs rounded-3xl border border-white/10 bg-slate-900/80 p-6 text-left shadow-2xl shadow-indigo-500/20 backdrop-blur lg:sticky lg:top-24 lg:block lg:max-h-[calc(100vh-6rem)] lg:w-72 lg:overflow-y-auto"
+        >
+          <div class="text-xs font-semibold uppercase tracking-[0.3em] text-slate-400">
+            Índice
+          </div>
+          <ul class="mt-4 space-y-3 text-sm">
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#overview">Conceptos básicos</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#items">Items</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#mobs">Mobs</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#areas">Áreas de juego</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#levels">Niveles de área</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#offers">Ofertas de tienda</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#achievements">Logros</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#missions">Misiones</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#chests">Cofres y recompensas</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#crafting">Crafteos</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#mutations">Mutaciones</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#potions">Pociones y consumibles</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#tools">Herramientas y durabilidad</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#services">Servicios del sistema</a></li>
+            <li><a class="text-slate-200 transition hover:text-indigo-300" href="#faq">Preguntas frecuentes</a></li>
+          </ul>
+        </nav>
+
+        <main class="flex-1">
+          <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
+            <section id="overview" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Conceptos básicos</h2>
+              <p class="text-slate-200">
+                Toda pieza de contenido en Amayo se identifica mediante una <strong class="text-white">key</strong>
+                única. Estas keys se usan en comandos, relaciones y validaciones. Usa un formato consistente como
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">categoria_nombre</code>
+                (ej: <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">item_iron_sword</code>).
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Permisos necesarios</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li>Permiso de Discord <strong class="text-white">Administrar Servidor</strong>.</li>
+                    <li>O un rol Staff configurado para los comandos del bot.</li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Sistema de pesos</h3>
+                  <p class="text-sm text-slate-200">
+                    Al definir tablas de recompensas o aparición de enemigos, usa un campo <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">weight</code>.
+                    Cuanto mayor sea el peso, mayor la probabilidad de ser seleccionado.
+                  </p>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{ "itemKey": "iron_ore", "weight": 10 }
+{ "itemKey": "gold_ore", "weight": 3 }</code></pre>
+                </div>
+              </div>
+            </section>
+
+            <section id="items" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Items (EconomyItem)</h2>
+              <p class="text-slate-200">
+                Administra todo el inventario del juego. Usa <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">!item-crear</code>
+                para abrir el editor interactivo y completa cada pestaña antes de guardar.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Comandos clave</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!item-crear &lt;key&gt;</code> — Crear un item nuevo.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!item-editar &lt;key&gt;</code> — Editar un item existente.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!items-lista [página]</code> — Ver listado paginado.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!item-ver &lt;key&gt;</code> — Ver detalles completos.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!item-eliminar &lt;key&gt;</code> — Eliminar un item.</li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Campos del modal Base</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><strong class="text-white">Nombre:</strong> Texto visible para jugadores.</li>
+                    <li><strong class="text-white">Descripción:</strong> Lore o efectos.</li>
+                    <li><strong class="text-white">Categoría:</strong> Agrupa items (ej. <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">weapons</code>).</li>
+                    <li><strong class="text-white">Icon URL:</strong> Imagen opcional.</li>
+                    <li><strong class="text-white">Stackable y Máx inventario:</strong> Usa <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">true,10</code>,
+                      <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">false,1</code> o deja el límite vacío para infinito.
+                    </li>
+                  </ul>
+                </div>
+              </div>
+              <div class="space-y-4 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                <h3 class="text-lg font-semibold text-white">Props disponibles</h3>
+                <div class="grid gap-4 md:grid-cols-2">
+                  <details open class="space-y-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 text-slate-200">
+                    <summary class="cursor-pointer text-base font-semibold text-indigo-200">Herramientas (<code class="font-mono text-xs">tool</code>)</summary>
+                    <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "tool": { "type": "pickaxe|rod|sword|bow|halberd|net", "tier": 1 }
+}</code></pre>
+                    <p class="text-sm">Define el tipo de actividad que habilita tu item. El campo <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">tier</code> controla los requisitos mínimos.</p>
+                  </details>
+                  <details class="space-y-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 text-slate-200">
+                    <summary class="cursor-pointer text-base font-semibold text-indigo-200">Durabilidad (<code class="font-mono text-xs">breakable</code>)</summary>
+                    <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "breakable": {
+    "enabled": true,
+    "maxDurability": 100,
+    "durabilityPerUse": 1
+  }
+}</code></pre>
+                    <p class="text-sm">Sólo funciona con items <em>no apilables</em>. Ajusta la pérdida de durabilidad por uso para balancear actividades.</p>
+                  </details>
+                  <details class="space-y-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 text-slate-200">
+                    <summary class="cursor-pointer text-base font-semibold text-indigo-200">Cofres (<code class="font-mono text-xs">chest</code>)</summary>
+                    <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "chest": {
+    "enabled": true,
+    "rewards": [ ... ],
+    "consumeOnOpen": true
+  }
+}</code></pre>
+                    <p class="text-sm">Permite definir loot tables internas, recompensas de monedas, items o roles.</p>
+                  </details>
+                  <details class="space-y-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 text-slate-200">
+                    <summary class="cursor-pointer text-base font-semibold text-indigo-200">Comida y pociones (<code class="font-mono text-xs">food</code>)</summary>
+                    <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "food": {
+    "healHp": 50,
+    "healPercent": 25,
+    "cooldownSeconds": 60
+  }
+}</code></pre>
+                    <p class="text-sm">Útil para pociones curativas o consumibles con cooldown.</p>
+                  </details>
+                  <details class="space-y-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 text-slate-200">
+                    <summary class="cursor-pointer text-base font-semibold text-indigo-200">Bonos de combate</summary>
+                    <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "damage": 10,
+  "defense": 5,
+  "maxHpBonus": 20
+}</code></pre>
+                    <p class="text-sm">Configura stats extra para armas, armaduras o capas.</p>
+                  </details>
+                  <details class="space-y-3 rounded-2xl border border-indigo-500/25 bg-indigo-500/5 p-4 text-slate-200">
+                    <summary class="cursor-pointer text-base font-semibold text-indigo-200">Etiquetas y metadatos</summary>
+                    <p class="text-sm">Usa el modal <em>Tags</em> para añadir etiquetas separadas por coma, como <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">weapon,rare,crafteable</code>. Sirven para filtrar o aplicar reglas.</p>
+                  </details>
+                </div>
+              </div>
+            </section>
+
+            <section id="mobs" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Mobs (Enemigos)</h2>
+              <p class="text-slate-200">
+                Los enemigos definen los encuentros durante minijuegos y niveles de área. Se crean con
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">!mob-crear</code> y usan stats y tablas de drop en formato JSON.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Campos principales</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><strong class="text-white">Base:</strong> Nombre y categoría opcional.</li>
+                    <li><strong class="text-white">Stats:</strong> Define <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">attack</code>,
+                      <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">hp</code>, <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">defense</code>, <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">xpReward</code>.</li>
+                    <li><strong class="text-white">Drops:</strong> Incluye <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">draws</code> y una tabla con premios ponderados.</li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Ejemplo de configuración</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "attack": 10,
+  "hp": 100,
+  "defense": 5,
+  "xpReward": 50
+}</code></pre>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "draws": 2,
+  "table": [
+    { "type": "coins", "amount": 50, "weight": 10 },
+    { "type": "item", "itemKey": "leather", "qty": 1, "weight": 5 }
+  ]
+}</code></pre>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5 text-sm text-sky-200">
+                <strong class="block text-base font-semibold text-sky-100">Tip:</strong>
+                Usa <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!mobs-lista</code> para auditar stats rápidamente y
+                <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!mob-ver &lt;key&gt;</code> para revisar drops antes de activar un área.
+              </div>
+            </section>
+
+            <section id="areas" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Áreas de juego (GameArea)</h2>
+              <p class="text-slate-200">
+                Las áreas definen dónde se desarrollan las actividades principales (minar, pescar, pelear, plantar). Cada área puede tener múltiples niveles configurables.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Modal Base</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><strong class="text-white">Nombre:</strong> Ej. <em>Caverna de Hierro</em>.</li>
+                    <li><strong class="text-white">Tipo:</strong> <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">MINE</code>,
+                      <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">LAGOON</code>, <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">FIGHT</code> o <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">FARM</code>.
+                    </li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Modal Config (JSON)</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "cooldownSeconds": 60,
+  "description": "Una mina profunda",
+  "icon": "⛏️"
+}</code></pre>
+                  <p class="text-sm text-slate-200">El ícono se mostrará en las tarjetas generadas por DisplayComponents.</p>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">
+                <strong class="block text-base font-semibold text-amber-200">Recuerda:</strong>
+                Si eliminas un área con <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!area-eliminar</code>, revisa niveles asociados para evitar referencias rotas.
+              </div>
+            </section>
+
+            <section id="levels" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Niveles de área (GameAreaLevel)</h2>
+              <p class="text-slate-200">
+                Cada nivel controla requisitos, mobs, recompensas y vigencia. Gestiona niveles con
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">!area-nivel &lt;areaKey&gt; &lt;level&gt;</code>.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Requisitos</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "tool": {
+    "required": true,
+    "toolType": "pickaxe",
+    "minTier": 2,
+    "allowedKeys": ["iron_pickaxe", "diamond_pickaxe"]
+  }
+}</code></pre>
+                  <p class="text-sm text-slate-200">Sirve para validar herramientas necesarias. Combínalo con los tiers definidos en los items.</p>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Recompensas</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "draws": 3,
+  "table": [
+    { "type": "coins", "amount": 100, "weight": 10 },
+    { "type": "item", "itemKey": "iron_ore", "qty": 2, "weight": 5 }
+  ]
+}</code></pre>
+                  <p class="text-sm text-slate-200">Define múltiples extracciones de la tabla con pesos personalizados.</p>
+                </div>
+              </div>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Mobs</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "mobPool": {
+    "draws": 2,
+    "table": [
+      { "mobKey": "goblin", "weight": 10 },
+      { "mobKey": "troll", "weight": 3 }
+    ]
+  }
+}</code></pre>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Ventana</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "window": {
+    "from": "2025-01-01T00:00:00Z",
+    "to": "2025-01-31T23:59:59Z"
+  }
+}</code></pre>
+                </div>
+              </div>
+            </section>
+
+            <section id="offers" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Ofertas de tienda (ShopOffer)</h2>
+              <p class="text-slate-200">
+                Usa <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">!offer-crear</code> para lanzar nuevas ofertas con stock limitado,
+                precios compuestos y ventanas temporales.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Precio (JSON)</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "coins": 100,
+  "items": [
+    { "itemKey": "iron_ore", "qty": 5 },
+    { "itemKey": "wood", "qty": 10 }
+  ]
+}</code></pre>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Límites y ventana</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><strong class="text-white">Límite por usuario:</strong> Máximo por jugador.</li>
+                    <li><strong class="text-white">Stock global:</strong> Total disponible.</li>
+                    <li><strong class="text-white">Ventana:</strong> Fechas ISO de inicio y fin.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="achievements" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Logros</h2>
+              <p class="text-slate-200">
+                Motiva a los jugadores con hitos permanentes. Crea logros con
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">!logro-crear</code> y configúralos usando el editor DisplayComponents.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Requisitos comunes</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">collect_items</code>: Recolectar items específicos.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">complete_missions</code>: Completar misiones listadas.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">reach_level</code>: Alcanzar cierto nivel o racha.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">stat_value</code>: Llegar a un valor en estadísticas.</li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Recompensas posibles</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li>Monedas</li>
+                    <li>Items entregados automáticamente</li>
+                    <li>Roles (usa ID de Discord)</li>
+                    <li>Puntos de logro</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/10 p-5 text-sm text-emerald-100">
+                <strong class="block text-base font-semibold text-emerald-200">Nota:</strong>
+                Usa <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!logros-lista</code> para auditar logros y
+                <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!logro-ver &lt;key&gt;</code> para validar estructura antes de publicarlos.
+              </div>
+            </section>
+
+            <section id="missions" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Misiones</h2>
+              <p class="text-slate-200">
+                Las misiones permiten objetivos diarios, semanales o repetibles. Adminístralas con
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">!mision-crear</code> y
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">!misiones-lista</code>.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Tipos de misión</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><strong class="text-white">daily:</strong> Reinicia cada día.</li>
+                    <li><strong class="text-white">weekly:</strong> Reinicia cada semana.</li>
+                    <li><strong class="text-white">one_time:</strong> Se completa una vez.</li>
+                    <li><strong class="text-white">repeatable:</strong> Puede repetirse sin límite.</li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Requisitos combinables</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li>Consumir items o recursos.</li>
+                    <li>Completar minijuegos específicos.</li>
+                    <li>Derrotar mobs concretos.</li>
+                    <li>Lograr cantidades de monedas.</li>
+                  </ul>
+                </div>
+              </div>
+              <div class="rounded-2xl border border-sky-500/30 bg-sky-500/10 p-5 text-sm text-sky-100">
+                <strong class="block text-base font-semibold text-sky-200">Tip:</strong>
+                Aprovecha la ventana de disponibilidad para crear eventos temáticos limitados.
+              </div>
+            </section>
+
+            <section id="chests" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Cofres y recompensas</h2>
+              <p class="text-slate-200">
+                Configura cofres usando props <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">chest</code> en los items y define tablas de recompensas con pesos.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Recompensas soportadas</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li>Monedas (<code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">coins</code>)</li>
+                    <li>Items (usa <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">itemKey</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">qty</code>)</li>
+                    <li>Roles de Discord (<code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">roleId</code>)</li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Consejos</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li>Usa <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">consumeOnOpen</code> para cofres desechables.</li>
+                    <li>Combina cofres con logros y eventos para mejores recompensas.</li>
+                    <li>Define varias entradas con pesos distintos para crear rarezas.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="crafting" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Crafteos</h2>
+              <p class="text-slate-200">
+                Gestiona recetas desde la base de datos o crea comandos personalizados. El servicio de economía incluye
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">craftByProductKey</code> para validar materiales y entregar productos.
+              </p>
+              <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                <li>Define recetas en Prisma con entradas y productos.</li>
+                <li>Usa misiones o eventos para desbloquear recetas temporales combinando props y tags.</li>
+                <li>Considera usar <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">craftingOnly: true</code> en items que no se consiguen por drops.</li>
+              </ul>
+            </section>
+
+            <section id="mutations" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Mutaciones</h2>
+              <p class="text-slate-200">
+                Las mutaciones permiten modificar items existentes con efectos adicionales (ej. reforjar armas). Usa
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">findMutationByKey</code> y
+                <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">applyMutationToInventory</code> desde el servicio de economía.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Políticas</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "mutationPolicy": {
+    "allowedKeys": ["fire_upgrade", "ice_upgrade"],
+    "deniedKeys": ["cursed_upgrade"]
+  }
+}</code></pre>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Sugerencias</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li>Crea mutaciones exclusivas por eventos.</li>
+                    <li>Combínalas con logros o misiones épicas.</li>
+                    <li>Controla conflictos usando <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">deniedKeys</code>.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="potions" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Pociones y consumibles</h2>
+              <p class="text-slate-200">
+                Usa props <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">food</code> para crear pociones curativas, boosters temporales o consumibles con cooldown.
+              </p>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Ejemplo de poción</h3>
+                  <pre class="overflow-x-auto rounded-xl border border-indigo-500/30 bg-slate-900/70 p-4 text-xs text-indigo-100"><code>{
+  "food": {
+    "healHp": 75,
+    "healPercent": 15,
+    "cooldownKey": "healing_potion",
+    "cooldownSeconds": 45
+  }
+}</code></pre>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Buenas prácticas</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li>Usa <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">cooldownKey</code> para compartir cooldown.</li>
+                    <li>Balancea <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">healHp</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">healPercent</code> para distintos niveles.</li>
+                    <li>Combina con logros para recompensar uso estratégico.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="tools" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Herramientas y durabilidad</h2>
+              <p class="text-slate-200">
+                La durabilidad se administra a través de la combinación de props <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">tool</code>
+                y <code class="rounded bg-indigo-500/15 px-1.5 py-0.5 font-mono text-xs text-indigo-200">breakable</code>. Para que un item pierda durabilidad, debe ser
+                <strong class="text-white">no apilable</strong> (<code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">stackable=false</code>).
+              </p>
+              <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                <li>La función <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">reduceToolDurability</code> descuenta <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">durabilityPerUse</code> tras cada minijuego.</li>
+                <li>Cuando la durabilidad llega a 0, el item se elimina del inventario.</li>
+                <li>Si <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">breakable.enabled</code> es <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">false</code>, la herramienta es indestructible.</li>
+                <li>Usa tiers para bloquear áreas avanzadas. Ejemplo: Un área puede requerir una herramienta <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">pickaxe</code> con <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">tier &gt;= 2</code>.</li>
+              </ul>
+              <div class="rounded-2xl border border-amber-500/30 bg-amber-500/10 p-5 text-sm text-amber-100">
+                <strong class="block text-base font-semibold text-amber-200">Importante:</strong>
+                Después de cambiar items apilables a no apilables, recrea el item en los inventarios existentes para evitar stacks rotos.
+              </div>
+            </section>
+
+            <section id="services" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Servicios del sistema</h2>
+              <div class="grid gap-6 md:grid-cols-2">
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Economy Service</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">findItemByKey</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">addItemByKey</code></li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">consumeItemByKey</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">getInventoryEntry</code></li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">craftByProductKey</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">buyFromOffer</code></li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">findMutationByKey</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">applyMutationToInventory</code></li>
+                  </ul>
+                </div>
+                <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+                  <h3 class="text-lg font-semibold text-white">Minigames Service</h3>
+                  <ul class="list-disc space-y-1 pl-5 text-sm text-slate-200">
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">runMinigame</code> para ejecutar cualquier actividad.</li>
+                    <li><code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">runMining</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">runFishing</code> como atajos.</li>
+                    <li>Valida cooldowns, requisitos de herramientas y entrega recompensas.</li>
+                    <li>Reduce durabilidad automáticamente cuando corresponde.</li>
+                  </ul>
+                </div>
+              </div>
+            </section>
+
+            <section id="faq" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">Preguntas frecuentes</h2>
+              <div class="space-y-4">
+                <details class="rounded-2xl border border-white/5 bg-slate-900/60 p-4 text-slate-200">
+                  <summary class="cursor-pointer text-base font-semibold text-white">¿Qué pasa si olvido definir <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">stackable</code>?</summary>
+                  <p class="mt-3 text-sm">
+                    Por defecto los items son apilables. Si tu herramienta pierde durabilidad, asegúrate de marcarla como <em>no apilable</em> en el modal Base.
+                  </p>
+                </details>
+                <details class="rounded-2xl border border-white/5 bg-slate-900/60 p-4 text-slate-200">
+                  <summary class="cursor-pointer text-base font-semibold text-white">¿Cómo pruebo mis configuraciones?</summary>
+                  <p class="mt-3 text-sm">
+                    Usa comandos de prueba en un servidor privado con el bot y confirma con
+                    <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!player</code>,
+                    <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!stats</code> y <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">!inventario</code>.
+                  </p>
+                </details>
+                <details class="rounded-2xl border border-white/5 bg-slate-900/60 p-4 text-slate-200">
+                  <summary class="cursor-pointer text-base font-semibold text-white">¿Puedo clonar contenido entre servidores?</summary>
+                  <p class="mt-3 text-sm">
+                    Sí. Los items globales están disponibles en todos los servidores; los locales se limitan a su guild. Usa las herramientas de exportación de Prisma si necesitas migraciones masivas.
+                  </p>
+                </details>
+                <details class="rounded-2xl border border-white/5 bg-slate-900/60 p-4 text-slate-200">
+                  <summary class="cursor-pointer text-base font-semibold text-white">¿Cómo despliego esta documentación?</summary>
+                  <p class="mt-3 text-sm">
+                    Consulta las instrucciones en <code class="rounded bg-indigo-500/15 px-1 py-0.5 font-mono text-xs text-indigo-200">server/README.md</code> para publicar en Heroku como app independiente.
+                  </p>
+                </details>
+              </div>
+            </section>
+          </div>
+        </main>
+      </div>
+
+      <footer class="border-t border-white/5 bg-slate-950/80 py-10 text-center text-sm text-slate-400">
+        <p>Amayo © 2025 — Documentación no oficial para administradores de comunidad.</p>
+        <a class="mt-3 inline-flex items-center gap-2 text-indigo-300 transition hover:text-indigo-200" href="#overview">
+          Volver arriba
+          <span aria-hidden="true">↑</span>
+        </a>
+      </footer>
+    </div>
+
+    <script src="./assets/js/main.js" type="module"></script>
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amayo Docs | Guía de Contenido</title>
+    <meta
+      name="description"
+      content="Documentación interactiva para crear items, mobs, áreas, logros, misiones y más en Amayo."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
+  <body>
+    <header class="hero">
+      <div class="hero__content">
+        <h1>Documentación de Contenido Amayo</h1>
+        <p>
+          Crea y gestiona items, enemigos, áreas, niveles, logros, misiones, cofres,
+          mutaciones y más usando los comandos del bot. Esta guía reúne los flujos
+          completos y plantillas listas para copiar.
+        </p>
+        <div class="hero__cta">
+          <a class="btn primary" href="#items">Empezar ahora</a>
+          <button class="btn ghost" id="toggle-nav">Abrir índice</button>
+        </div>
+      </div>
+      <div class="hero__meta">
+        <span class="badge">Actualizado: 5 Oct 2025</span>
+        <span class="badge">Compatible con DisplayComponents V2</span>
+      </div>
+    </header>
+
+    <div class="layout">
+      <nav class="toc" id="toc">
+        <div class="toc__title">Índice</div>
+        <ul>
+          <li><a href="#overview">Conceptos básicos</a></li>
+          <li><a href="#items">Items</a></li>
+          <li><a href="#mobs">Mobs</a></li>
+          <li><a href="#areas">Áreas de juego</a></li>
+          <li><a href="#levels">Niveles de área</a></li>
+          <li><a href="#offers">Ofertas de tienda</a></li>
+          <li><a href="#achievements">Logros</a></li>
+          <li><a href="#missions">Misiones</a></li>
+          <li><a href="#chests">Cofres y recompensas</a></li>
+          <li><a href="#crafting">Crafteos</a></li>
+          <li><a href="#mutations">Mutaciones</a></li>
+          <li><a href="#potions">Pociones y consumibles</a></li>
+          <li><a href="#tools">Herramientas y durabilidad</a></li>
+          <li><a href="#services">Servicios del sistema</a></li>
+          <li><a href="#faq">Preguntas frecuentes</a></li>
+        </ul>
+      </nav>
+
+      <main class="content">
+      <section id="overview" class="card">
+        <h2>Conceptos básicos</h2>
+        <p>
+          Toda pieza de contenido en Amayo se identifica mediante una <strong>key</strong>
+          única. Estas keys se usan en comandos, relaciones y validaciones. Usa un
+          formato consistente como <code>categoria_nombre</code> (ej:
+          <code>item_iron_sword</code>).
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Permisos necesarios</h3>
+            <ul>
+              <li>Permiso de Discord <strong>Administrar Servidor</strong>.</li>
+              <li>O bien un rol Staff configurado para los comandos del bot.</li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Sistema de pesos</h3>
+            <p>
+              Al definir tablas de recompensas o aparición de enemigos, usa un campo
+              <code>weight</code>. Cuanto mayor sea el peso, mayor la probabilidad de ser
+              seleccionado.
+            </p>
+            <pre><code>{ "itemKey": "iron_ore", "weight": 10 }
+{ "itemKey": "gold_ore", "weight": 3 }</code></pre>
+          </div>
+        </div>
+      </section>
+
+      <section id="items" class="card">
+        <h2>Items (EconomyItem)</h2>
+        <p>
+          Administra todo el inventario del juego. Usa <code>!item-crear</code> para abrir
+          el editor interactivo y completa cada pestaña antes de guardar.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Comandos clave</h3>
+            <ul>
+              <li><code>!item-crear &lt;key&gt;</code> — Crear un item nuevo.</li>
+              <li><code>!item-editar &lt;key&gt;</code> — Editar un item existente.</li>
+              <li><code>!items-lista [página]</code> — Ver listado paginado.</li>
+              <li><code>!item-ver &lt;key&gt;</code> — Ver detalles completos.</li>
+              <li><code>!item-eliminar &lt;key&gt;</code> — Eliminar un item.</li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Campos del modal Base</h3>
+            <ul>
+              <li><strong>Nombre:</strong> Texto visible para jugadores.</li>
+              <li><strong>Descripción:</strong> Lore o efectos.</li>
+              <li><strong>Categoría:</strong> Agrupa items (ej. <code>weapons</code>).</li>
+              <li><strong>Icon URL:</strong> Imagen opcional.</li>
+              <li>
+                <strong>Stackable y Máx inventario:</strong> Usa
+                <code>true,10</code>, <code>false,1</code> o deja el límite vacío para
+                infinito.
+              </li>
+            </ul>
+          </div>
+        </div>
+        <div class="card__sub">
+          <h3>Props disponibles</h3>
+          <div class="grid two">
+            <details open>
+              <summary>Herramientas (<code>tool</code>)</summary>
+              <pre><code>{
+  "tool": { "type": "pickaxe|rod|sword|bow|halberd|net", "tier": 1 }
+}</code></pre>
+              <p>
+                Define el tipo de actividad que habilita tu item. El campo
+                <code>tier</code> controla los requisitos mínimos de áreas y minijuegos.
+              </p>
+            </details>
+            <details>
+              <summary>Durabilidad (<code>breakable</code>)</summary>
+              <pre><code>{
+  "breakable": {
+    "enabled": true,
+    "maxDurability": 100,
+    "durabilityPerUse": 1
+  }
+}</code></pre>
+              <p>
+                Sólo funciona con items <em>no apilables</em>. Ajusta la pérdida de
+                durabilidad por uso para balancear actividades.
+              </p>
+            </details>
+            <details>
+              <summary>Cofres (<code>chest</code>)</summary>
+              <pre><code>{
+  "chest": {
+    "enabled": true,
+    "rewards": [ ... ],
+    "consumeOnOpen": true
+  }
+}</code></pre>
+              <p>
+                Permite definir loot tables internas, recompensas de monedas, items o roles.
+              </p>
+            </details>
+            <details>
+              <summary>Comida y pociones (<code>food</code>)</summary>
+              <pre><code>{
+  "food": {
+    "healHp": 50,
+    "healPercent": 25,
+    "cooldownSeconds": 60
+  }
+}</code></pre>
+              <p>Útil para pociones curativas o consumibles con cooldown.</p>
+            </details>
+            <details>
+              <summary>Bonos de combate</summary>
+              <pre><code>{
+  "damage": 10,
+  "defense": 5,
+  "maxHpBonus": 20
+}</code></pre>
+              <p>Configura stats extra para armas, armaduras o capas.</p>
+            </details>
+            <details>
+              <summary>Etiquetas y metadatos</summary>
+              <p>
+                Usa el modal <em>Tags</em> para añadir etiquetas separadas por coma, como
+                <code>weapon,rare,crafteable</code>. Sirven para filtrar o aplicar reglas.
+              </p>
+            </details>
+          </div>
+        </div>
+      </section>
+
+      <section id="mobs" class="card">
+        <h2>Mobs (Enemigos)</h2>
+        <p>
+          Los enemigos definen los encuentros durante minijuegos y niveles de área. Se
+          crean con <code>!mob-crear</code> y usan stats y tablas de drop en formato JSON.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Campos principales</h3>
+            <ul>
+              <li><strong>Base:</strong> Nombre y categoría opcional.</li>
+              <li>
+                <strong>Stats:</strong> Define <code>attack</code>, <code>hp</code>,
+                <code>defense</code>, <code>xpReward</code>.
+              </li>
+              <li>
+                <strong>Drops:</strong> Incluye <code>draws</code> y una tabla con premios
+                ponderados.
+              </li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Ejemplo de configuración</h3>
+            <pre><code>{
+  "attack": 10,
+  "hp": 100,
+  "defense": 5,
+  "xpReward": 50
+}</code></pre>
+            <pre><code>{
+  "draws": 2,
+  "table": [
+    { "type": "coins", "amount": 50, "weight": 10 },
+    { "type": "item", "itemKey": "leather", "qty": 1, "weight": 5 }
+  ]
+}</code></pre>
+          </div>
+        </div>
+        <div class="callout info">
+          <strong>Tip:</strong> Usa <code>!mobs-lista</code> para auditar stats rápidamente y
+          <code>!mob-ver &lt;key&gt;</code> para revisar drops antes de activar un área.
+        </div>
+      </section>
+
+      <section id="areas" class="card">
+        <h2>Áreas de juego (GameArea)</h2>
+        <p>
+          Las áreas definen dónde se desarrollan las actividades principales (minar,
+          pescar, pelear, plantar). Cada área puede tener múltiples niveles configurables.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Modal Base</h3>
+            <ul>
+              <li><strong>Nombre:</strong> Ej. <em>Caverna de Hierro</em>.</li>
+              <li><strong>Tipo:</strong> <code>MINE</code>, <code>LAGOON</code>,
+                <code>FIGHT</code> o <code>FARM</code>.</li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Modal Config (JSON)</h3>
+            <pre><code>{
+  "cooldownSeconds": 60,
+  "description": "Una mina profunda",
+  "icon": "⛏️"
+}</code></pre>
+            <p>El ícono se mostrará en las tarjetas generadas por DisplayComponents.</p>
+          </div>
+        </div>
+        <div class="callout warning">
+          <strong>Recuerda:</strong> Si eliminas un área con <code>!area-eliminar</code>,
+          revisa niveles asociados para evitar referencias rotas.
+        </div>
+      </section>
+
+      <section id="levels" class="card">
+        <h2>Niveles de área (GameAreaLevel)</h2>
+        <p>
+          Cada nivel controla requisitos, mobs, recompensas y vigencia. Gestiona niveles con
+          <code>!area-nivel &lt;areaKey&gt; &lt;level&gt;</code>.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Requisitos</h3>
+            <pre><code>{
+  "tool": {
+    "required": true,
+    "toolType": "pickaxe",
+    "minTier": 2,
+    "allowedKeys": ["iron_pickaxe", "diamond_pickaxe"]
+  }
+}</code></pre>
+            <p>
+              Sirve para validar herramientas necesarias. Combínalo con los tiers definidos
+              en los items.
+            </p>
+          </div>
+          <div class="card__sub">
+            <h3>Recompensas</h3>
+            <pre><code>{
+  "draws": 3,
+  "table": [
+    { "type": "coins", "amount": 100, "weight": 10 },
+    { "type": "item", "itemKey": "iron_ore", "qty": 2, "weight": 5 }
+  ]
+}</code></pre>
+            <p>Define múltiples extracciones de la tabla con pesos personalizados.</p>
+          </div>
+        </div>
+        <div class="card__sub">
+          <h3>Mobs y ventana</h3>
+          <pre><code>{
+  "mobPool": {
+    "draws": 2,
+    "table": [
+      { "mobKey": "goblin", "weight": 10 },
+      { "mobKey": "troll", "weight": 3 }
+    ]
+  }
+}</code></pre>
+          <pre><code>{
+  "window": {
+    "from": "2025-01-01T00:00:00Z",
+    "to": "2025-01-31T23:59:59Z"
+  }
+}</code></pre>
+        </div>
+      </section>
+
+      <section id="offers" class="card">
+        <h2>Ofertas de tienda (ShopOffer)</h2>
+        <p>
+          Usa <code>!offer-crear</code> para lanzar nuevas ofertas con stock limitado,
+          precios compuestos y ventanas temporales.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Precio (JSON)</h3>
+            <pre><code>{
+  "coins": 100,
+  "items": [
+    { "itemKey": "iron_ore", "qty": 5 },
+    { "itemKey": "wood", "qty": 10 }
+  ]
+}</code></pre>
+          </div>
+          <div class="card__sub">
+            <h3>Límites y ventana</h3>
+            <ul>
+              <li><strong>Límite por usuario:</strong> Máximo por jugador.</li>
+              <li><strong>Stock global:</strong> Total disponible.</li>
+              <li><strong>Ventana:</strong> Fechas ISO de inicio y fin.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="achievements" class="card">
+        <h2>Logros</h2>
+        <p>
+          Motiva a los jugadores con hitos permanentes. Crea logros con
+          <code>!logro-crear</code> y configúralos usando el editor DisplayComponents.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Requisitos comunes</h3>
+            <ul>
+              <li><code>collect_items</code>: Recolectar items específicos.</li>
+              <li><code>complete_missions</code>: Completar misiones listadas.</li>
+              <li><code>reach_level</code>: Alcanzar cierto nivel o racha.</li>
+              <li><code>stat_value</code>: Llegar a un valor en estadísticas.</li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Recompensas posibles</h3>
+            <ul>
+              <li>Monedas</li>
+              <li>Items entregados automáticamente</li>
+              <li>Roles (usa ID de Discord)</li>
+              <li>Puntos de logro</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout success">
+          <strong>Nota:</strong> Usa <code>!logros-lista</code> para auditar logros y
+          <code>!logro-ver &lt;key&gt;</code> para validar estructura antes de publicarlos.
+        </div>
+      </section>
+
+      <section id="missions" class="card">
+        <h2>Misiones</h2>
+        <p>
+          Las misiones permiten objetivos diarios, semanales o repetibles. Adminístralas con
+          <code>!mision-crear</code> y <code>!misiones-lista</code>.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Tipos de misión</h3>
+            <ul>
+              <li><strong>daily:</strong> Reinicia cada día.</li>
+              <li><strong>weekly:</strong> Reinicia cada semana.</li>
+              <li><strong>one_time:</strong> Se completa una vez.</li>
+              <li><strong>repeatable:</strong> Puede repetirse sin límite.</li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Requisitos combinables</h3>
+            <ul>
+              <li>Consumir items o recursos.</li>
+              <li>Completar minijuegos específicos.</li>
+              <li>Derrotar mobs concretos.</li>
+              <li>Lograr cantidades de monedas.</li>
+            </ul>
+          </div>
+        </div>
+        <div class="callout info">
+          <strong>Tip:</strong> Aprovecha la ventana de disponibilidad para crear eventos
+          temáticos limitados.
+        </div>
+      </section>
+
+      <section id="chests" class="card">
+        <h2>Cofres y recompensas</h2>
+        <p>
+          Configura cofres usando props <code>chest</code> en los items y define tablas de
+          recompensas con pesos. Ideal para loot boxes, recompensas diarias o drops raros.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Recompensas soportadas</h3>
+            <ul>
+              <li>Monedas (<code>coins</code>)</li>
+              <li>Items (usa <code>itemKey</code> y <code>qty</code>)</li>
+              <li>Roles de Discord (<code>roleId</code>)</li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Consejos</h3>
+            <ul>
+              <li>Usa <code>consumeOnOpen</code> para cofres desechables.</li>
+              <li>Combina cofres con logros y eventos para mejores recompensas.</li>
+              <li>Define varias entradas con pesos distintos para crear rarezas.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="crafting" class="card">
+        <h2>Crafteos</h2>
+        <p>
+          Gestiona recetas desde la base de datos o crea comandos personalizados. El servicio
+          de economía incluye <code>craftByProductKey</code> para validar materiales y
+          entregar productos.
+        </p>
+        <ul>
+          <li>Define recetas en Prisma con entradas y productos.</li>
+          <li>
+            Usa misiones o eventos para desbloquear recetas temporales combinando props y
+            tags.
+          </li>
+          <li>
+            Considera usar <code>craftingOnly: true</code> en items que no se consiguen por
+            drops.
+          </li>
+        </ul>
+      </section>
+
+      <section id="mutations" class="card">
+        <h2>Mutaciones</h2>
+        <p>
+          Las mutaciones permiten modificar items existentes con efectos adicionales (ej.
+          reforjar armas). Usa <code>findMutationByKey</code> y
+          <code>applyMutationToInventory</code> desde el servicio de economía.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Políticas</h3>
+            <pre><code>{
+  "mutationPolicy": {
+    "allowedKeys": ["fire_upgrade", "ice_upgrade"],
+    "deniedKeys": ["cursed_upgrade"]
+  }
+}</code></pre>
+          </div>
+          <div class="card__sub">
+            <h3>Sugerencias</h3>
+            <ul>
+              <li>Crea mutaciones exclusivas por eventos.</li>
+              <li>Combínalas con logros o misiones épicas.</li>
+              <li>Controla conflictos usando <code>deniedKeys</code>.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="potions" class="card">
+        <h2>Pociones y consumibles</h2>
+        <p>
+          Usa props <code>food</code> para crear pociones curativas, boosters temporales o
+          consumibles con cooldown. Complementa con misiones diarias o drops específicos.
+        </p>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Ejemplo de poción</h3>
+            <pre><code>{
+  "food": {
+    "healHp": 75,
+    "healPercent": 15,
+    "cooldownKey": "healing_potion",
+    "cooldownSeconds": 45
+  }
+}</code></pre>
+          </div>
+          <div class="card__sub">
+            <h3>Buenas prácticas</h3>
+            <ul>
+              <li>Usa <code>cooldownKey</code> para compartir cooldown entre pociones similares.</li>
+              <li>Balancea <code>healHp</code> y <code>healPercent</code> para distintos niveles de jugador.</li>
+              <li>Combina con logros para recompensar uso estratégico.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="tools" class="card">
+        <h2>Herramientas y durabilidad</h2>
+        <p>
+          La durabilidad se administra a través de la combinación de props <code>tool</code>
+          y <code>breakable</code>. Para que un item pierda durabilidad, debe ser
+          <strong>no apilable</strong> (<code>stackable=false</code> en el modal Base).
+        </p>
+        <ul>
+          <li>La función <code>reduceToolDurability</code> descuenta
+            <code>durabilityPerUse</code> tras cada minijuego.</li>
+          <li>Cuando la durabilidad llega a 0, el item se elimina del inventario.</li>
+          <li>Si <code>breakable.enabled</code> es <code>false</code>, la herramienta es indestructible.</li>
+          <li>
+            Usa tiers para bloquear áreas avanzadas. Ejemplo: Un área puede requerir una
+            herramienta <code>pickaxe</code> con <code>tier &gt;= 2</code>.
+          </li>
+        </ul>
+        <div class="callout warning">
+          <strong>Importante:</strong> Después de cambiar items apilables a no apilables,
+          recrea el item en los inventarios existentes para evitar stacks rotos.
+        </div>
+      </section>
+
+      <section id="services" class="card">
+        <h2>Servicios del sistema</h2>
+        <div class="grid two">
+          <div class="card__sub">
+            <h3>Economy Service</h3>
+            <ul>
+              <li><code>findItemByKey</code> y <code>addItemByKey</code></li>
+              <li><code>consumeItemByKey</code> y <code>getInventoryEntry</code></li>
+              <li><code>craftByProductKey</code> y <code>buyFromOffer</code></li>
+              <li><code>findMutationByKey</code> y <code>applyMutationToInventory</code></li>
+            </ul>
+          </div>
+          <div class="card__sub">
+            <h3>Minigames Service</h3>
+            <ul>
+              <li><code>runMinigame</code> para ejecutar cualquier actividad.</li>
+              <li><code>runMining</code> y <code>runFishing</code> como atajos.</li>
+              <li>Valida cooldowns, requisitos de herramientas y entrega recompensas.</li>
+              <li>Reduce durabilidad automáticamente cuando corresponde.</li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" class="card">
+        <h2>Preguntas frecuentes</h2>
+        <details>
+          <summary>¿Qué pasa si olvido definir <code>stackable</code>?</summary>
+          <p>Por defecto los items son apilables. Si tu herramienta pierde durabilidad, asegúrate de marcarla como <em>no apilable</em> en el modal Base.</p>
+        </details>
+        <details>
+          <summary>¿Cómo pruebo mis configuraciones?</summary>
+          <p>Usa comandos de prueba en un servidor privado con el bot y confirma con <code>!player</code>, <code>!stats</code> y <code>!inventario</code>.</p>
+        </details>
+        <details>
+          <summary>¿Puedo clonar contenido entre servidores?</summary>
+          <p>Sí. Los items globales están disponibles en todos los servidores; los locales se limitan a su guild. Usa las herramientas de exportación de Prisma si necesitas migraciones masivas.</p>
+        </details>
+        <details>
+          <summary>¿Cómo despliego esta documentación?</summary>
+          <p>Consulta las instrucciones en <code>server/README.md</code> para publicar en Heroku como app independiente.</p>
+        </details>
+      </section>
+      </main>
+    </div>
+
+    <footer class="footer">
+      <p>Amayo © 2025 — Documentación no oficial para administradores de comunidad.</p>
+      <a href="#overview">Volver arriba</a>
+    </footer>
+
+    <script src="./assets/js/main.js" type="module"></script>
+  </body>
+</html>

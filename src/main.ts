@@ -11,6 +11,7 @@ import { startReminderPoller } from "./core/api/reminders";
 import { ensureRemindersSchema } from "./core/api/remindersSchema";
 import logger from "./core/lib/logger";
 import { applyModalSubmitInteractionPatch } from "./core/patches/discordModalPatch";
+import { server } from "./server/server";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || '0', 10);
@@ -163,7 +164,9 @@ process.on('SIGTERM', gracefulShutdown);
 
 async function bootstrap() {
     logger.info("🚀 Iniciando bot...");
-
+   await server.listen(process.env.PORT || 3000, () => {
+        logger.info(`📘 Amayo Docs disponible en http://localhost:${process.env.PORT || 3000}`);
+    });
     // Cargar recursos locales (no deberían tirar el proceso si fallan)
     try { loadCommands(); } catch (e) { logger.error({ err: e }, 'Error cargando comandos'); }
     try { loadComponents(); } catch (e) { logger.error({ err: e }, 'Error cargando componentes'); }
