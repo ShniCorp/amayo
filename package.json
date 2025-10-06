@@ -1,6 +1,6 @@
 {
   "name": "amayo",
-  "version": "0.11.20",
+  "version": "2.0.1",
   "description": "",
   "main": "src/main.ts",
   "scripts": {
