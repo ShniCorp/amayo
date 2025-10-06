@@ -367,22 +367,29 @@ export async function promptKeySelection<T>(
             return;
           }
 
-          await select.update({
-            components: [
-              {
-                type: 17,
-                accent_color: accentColor,
-                components: [
-                  {
-                    type: 10,
-                    content: `⏳ Cargando **${selected.option.label}**…`,
-                  },
-                ],
-              },
-            ],
-          });
-          collector.stop('selected');
+          try {
+            await select.update({
+              components: [
+                {
+                  type: 17,
+                  accent_color: accentColor,
+                  components: [
+                    {
+                      type: 10,
+                      content: `⏳ Cargando **${selected.option.label}**…`,
+                    },
+                  ],
+                },
+              ],
+            });
+          } catch {
+            if (!select.deferred && !select.replied) {
+              try { await select.deferUpdate(); } catch {}
+            }
+          }
+
           finish(selected.entry, 'selected');
+          collector.stop('selected');
           return;
         }
 
@@ -406,19 +413,26 @@ export async function promptKeySelection<T>(
         }
 
         if (interaction.customId === `${config.customIdPrefix}_cancel` && interaction.isButton()) {
-          await interaction.update({
-            components: [
-              {
-                type: 17,
-                accent_color: 0xFF0000,
-                components: [
-                  { type: 10, content: '❌ Selección cancelada.' },
-                ],
-              },
-            ],
-          });
-          collector.stop('cancelled');
+          try {
+            await interaction.update({
+              components: [
+                {
+                  type: 17,
+                  accent_color: 0xFF0000,
+                  components: [
+                    { type: 10, content: '❌ Selección cancelada.' },
+                  ],
+                },
+              ],
+            });
+          } catch {
+            if (!interaction.deferred && !interaction.replied) {
+              try { await interaction.deferUpdate(); } catch {}
+            }
+          }
+
           finish(null, 'cancelled');
+          collector.stop('cancelled');
           return;
         }
 
@@ -474,17 +488,24 @@ export async function promptKeySelection<T>(
     collector.on('end', async (_collected, reason) => {
       if (resolved) return;
       resolved = true;
-      const expiredPanel = {
-        type: 17,
-        accent_color: 0xFFA500,
-        components: [
-          { type: 10, content: '⏰ Selección expirada.' },
-        ],
-      };
-      try {
-        await panelMessage.edit({ components: [expiredPanel] });
-      } catch {}
-      const mappedReason: 'selected' | 'cancelled' | 'timeout' = reason === 'cancelled' ? 'cancelled' : 'timeout';
+      if (reason !== 'selected' && reason !== 'cancelled') {
+        const expiredPanel = {
+          type: 17,
+          accent_color: 0xFFA500,
+          components: [
+            { type: 10, content: '⏰ Selección expirada.' },
+          ],
+        };
+        try {
+          await panelMessage.edit({ components: [expiredPanel] });
+        } catch {}
+      }
+
+      let mappedReason: 'selected' | 'cancelled' | 'timeout';
+      if (reason === 'selected') mappedReason = 'selected';
+      else if (reason === 'cancelled') mappedReason = 'cancelled';
+      else mappedReason = 'timeout';
+
       resolve({ entry: null, panelMessage, reason: mappedReason });
     });
   });
