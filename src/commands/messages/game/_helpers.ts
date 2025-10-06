@@ -1,4 +1,5 @@
 import { prisma } from '../../../core/database/prisma';
+import type { GameArea } from '@prisma/client';
 import type { ItemProps } from '../../../game/economy/types';
 
 export function parseItemProps(json: unknown): ItemProps {
@@ -9,6 +10,25 @@ export function parseItemProps(json: unknown): ItemProps {
 export async function resolveArea(guildId: string, areaKey: string) {
   const area = await prisma.gameArea.findFirst({ where: { key: areaKey, OR: [{ guildId }, { guildId: null }] }, orderBy: [{ guildId: 'desc' }] });
   return area;
+}
+
+export interface ResolvedAreaInfo {
+  area: GameArea | null;
+  source: 'guild' | 'global' | 'none';
+}
+
+export async function resolveGuildAreaWithFallback(guildId: string, areaKey: string): Promise<ResolvedAreaInfo> {
+  const guildArea = await prisma.gameArea.findFirst({ where: { key: areaKey, guildId } });
+  if (guildArea) {
+    return { area: guildArea, source: 'guild' };
+  }
+
+  const globalArea = await prisma.gameArea.findFirst({ where: { key: areaKey, guildId: null } });
+  if (globalArea) {
+    return { area: globalArea, source: 'global' };
+  }
+
+  return { area: null, source: 'none' };
 }
 
 export async function getDefaultLevel(userId: string, guildId: string, areaId: string): Promise<number> {
