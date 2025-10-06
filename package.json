@@ -13,7 +13,8 @@
     "start:prod": "NODE_ENV=production NODE_OPTIONS=--max-old-space-size=384 npx tsx src/main.ts",
     "start:prod-optimized": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx src/main.ts",
     "typecheck": "tsc --noEmit",
-    "seed:minigames": "tsx src/game/minigames/seed.ts"
+    "seed:minigames": "tsx src/game/minigames/seed.ts",
+    "start:optimize-relic": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NEW_RELIC_APP_NAME=amayo NEW_RELIC_LICENSE_KEY=85ef833e676ed6ea726e23b3e373397dFFFFNRAL NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx --experimental-loader=newrelic/esm-loader.mjs src/main.ts"
   },
   "keywords": [],
   "author": "",
@@ -27,6 +28,7 @@
     "chrono-node": "2.9.0",
     "discord-api-types": "0.38.26",
     "discord.js": "15.0.0-dev.1759363313-f510b5ffa",
+    "newrelic": "13.4.0",
     "node-appwrite": "19.1.0",
     "pino": "9.13.0",
     "prisma": "6.16.2",
