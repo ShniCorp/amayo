@@ -16,6 +16,12 @@ interface ItemEditorState {
   maxPerInventory?: number | null;
   tags: string[];
   props?: any;
+  // Nueva propiedad para receta de crafteo
+  recipe?: {
+    enabled: boolean;
+    ingredients: Array<{ itemKey: string; quantity: number }>;
+    productQuantity: number;
+  };
 }
 
 export const command: CommandMessage = {
@@ -74,6 +80,20 @@ export const command: CommandMessage = {
 
     const existing = selection.entry;
 
+    // Cargar receta si existe
+    let existingRecipe: { 
+      ingredients: Array<{ item: { key: string }; quantity: number }>; 
+      productQuantity: number;
+    } | null = null;
+    try {
+      existingRecipe = await client.prisma.itemRecipe.findUnique({
+        where: { productItemId: existing.id },
+        include: { ingredients: { include: { item: true } } }
+      });
+    } catch (e) {
+      logger.warn({ err: e }, 'Error cargando receta existente');
+    }
+
     const state: ItemEditorState = {
       key: existing.key,
       name: existing.name,
@@ -84,6 +104,18 @@ export const command: CommandMessage = {
       maxPerInventory: existing.maxPerInventory ?? null,
       tags: Array.isArray(existing.tags) ? existing.tags : [],
       props: existing.props || {},
+      recipe: existingRecipe ? {
+        enabled: true,
+        ingredients: existingRecipe.ingredients.map(ing => ({
+          itemKey: ing.item.key,
+          quantity: ing.quantity
+        })),
+        productQuantity: existingRecipe.productQuantity
+      } : {
+        enabled: false,
+        ingredients: [],
+        productQuantity: 1
+      }
     };
 
     const buildEditorDisplay = () => {
@@ -98,6 +130,9 @@ export const command: CommandMessage = {
 
       const tagsInfo = `**Tags:** ${state.tags.length > 0 ? state.tags.join(', ') : '*Ninguno*'}`;
       const propsJson = JSON.stringify(state.props ?? {}, null, 2);
+      const recipeInfo = state.recipe?.enabled 
+        ? `**Receta:** Habilitada (${state.recipe.ingredients.length} ingredientes → ${state.recipe.productQuantity} unidades)`
+        : `**Receta:** Deshabilitada`;
 
       return {
         type: 17,
@@ -120,6 +155,11 @@ export const command: CommandMessage = {
           { type: 14, divider: true },
           {
             type: 10,
+            content: recipeInfo
+          },
+          { type: 14, divider: true },
+          {
+            type: 10,
             content: `**Props (JSON):**\n\`\`\`json\n${propsJson}\n\`\`\``
           }
         ]
@@ -133,7 +173,13 @@ export const command: CommandMessage = {
         components: [
           { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'it_base' },
           { type: 2, style: ButtonStyle.Secondary, label: 'Tags', custom_id: 'it_tags' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Receta', custom_id: 'it_recipe' },
           { type: 2, style: ButtonStyle.Secondary, label: 'Props (JSON)', custom_id: 'it_props' },
+        ]
+      },
+      {
+        type: 1,
+        components: [
           { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'it_save' },
           { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'it_cancel' },
         ]
@@ -177,6 +223,10 @@ export const command: CommandMessage = {
           await showTagsModal(i as ButtonInteraction, state, editorMsg, buildEditorComponents);
           return;
         }
+        if (i.customId === 'it_recipe') {
+          await showRecipeModal(i as ButtonInteraction, state, editorMsg, buildEditorComponents, client, guildId, existing.id);
+          return;
+        }
         if (i.customId === 'it_props') {
           await showPropsModal(i as ButtonInteraction, state, editorMsg, buildEditorComponents);
           return;
@@ -201,6 +251,76 @@ export const command: CommandMessage = {
               props: state.props ?? {},
             },
           });
+          
+          // Actualizar/crear/eliminar receta
+          try {
+            const existingRecipeCheck = await client.prisma.itemRecipe.findUnique({
+              where: { productItemId: existing.id },
+              include: { ingredients: true }
+            });
+            
+            if (state.recipe?.enabled && state.recipe.ingredients.length > 0) {
+              // Resolver itemIds de los ingredientes
+              const ingredientsData: Array<{ itemId: string; quantity: number }> = [];
+              for (const ing of state.recipe.ingredients) {
+                const item = await client.prisma.economyItem.findFirst({
+                  where: {
+                    key: ing.itemKey,
+                    OR: [{ guildId }, { guildId: null }]
+                  },
+                  orderBy: [{ guildId: 'desc' }]
+                });
+                if (!item) {
+                  throw new Error(`Ingrediente no encontrado: ${ing.itemKey}`);
+                }
+                ingredientsData.push({
+                  itemId: item.id,
+                  quantity: ing.quantity
+                });
+              }
+              
+              if (existingRecipeCheck) {
+                // Actualizar receta existente
+                // Primero eliminar ingredientes viejos
+                await client.prisma.recipeIngredient.deleteMany({
+                  where: { recipeId: existingRecipeCheck.id }
+                });
+                // Luego actualizar la receta con los nuevos ingredientes
+                await client.prisma.itemRecipe.update({
+                  where: { id: existingRecipeCheck.id },
+                  data: {
+                    productQuantity: state.recipe.productQuantity,
+                    ingredients: {
+                      create: ingredientsData
+                    }
+                  }
+                });
+              } else {
+                // Crear nueva receta
+                await client.prisma.itemRecipe.create({
+                  data: {
+                    productItemId: existing.id,
+                    productQuantity: state.recipe.productQuantity,
+                    ingredients: {
+                      create: ingredientsData
+                    }
+                  }
+                });
+              }
+            } else if (existingRecipeCheck && !state.recipe?.enabled) {
+              // Eliminar receta si está deshabilitada
+              await client.prisma.recipeIngredient.deleteMany({
+                where: { recipeId: existingRecipeCheck.id }
+              });
+              await client.prisma.itemRecipe.delete({
+                where: { id: existingRecipeCheck.id }
+              });
+            }
+          } catch (err: any) {
+            logger.warn({ err }, 'Error actualizando receta');
+            await i.followUp({ content: `⚠️ Item actualizado pero falló la receta: ${err.message}`, flags: MessageFlags.Ephemeral });
+          }
+          
           await i.reply({ content: '✅ Item actualizado!', flags: MessageFlags.Ephemeral });
           await editorMsg.edit({ 
             content: null,
@@ -356,5 +476,86 @@ async function showPropsModal(i: ButtonInteraction, state: ItemEditorState, edit
         });
       } catch {}
     }
+  } catch {}
+}
+
+async function showRecipeModal(i: ButtonInteraction, state: ItemEditorState, editorMsg: Message, buildComponents: () => any[], client: Amayo, guildId: string, itemId: string) {
+  const currentRecipe = state.recipe || { enabled: false, ingredients: [], productQuantity: 1 };
+  const ingredientsStr = currentRecipe.ingredients.map(ing => `${ing.itemKey}:${ing.quantity}`).join(', ');
+  
+  const modal = {
+    title: 'Receta de Crafteo',
+    customId: 'it_recipe_modal',
+    components: [
+      { 
+        type: ComponentType.Label, 
+        label: 'Habilitar receta? (true/false)', 
+        component: { 
+          type: ComponentType.TextInput, 
+          customId: 'enabled', 
+          style: TextInputStyle.Short, 
+          required: false, 
+          value: String(currentRecipe.enabled),
+          placeholder: 'true o false'
+        } 
+      },
+      { 
+        type: ComponentType.Label, 
+        label: 'Cantidad que produce', 
+        component: { 
+          type: ComponentType.TextInput, 
+          customId: 'quantity', 
+          style: TextInputStyle.Short, 
+          required: false, 
+          value: String(currentRecipe.productQuantity),
+          placeholder: '1'
+        } 
+      },
+      { 
+        type: ComponentType.Label, 
+        label: 'Ingredientes (itemKey:qty, ...)', 
+        component: { 
+          type: ComponentType.TextInput, 
+          customId: 'ingredients', 
+          style: TextInputStyle.Paragraph, 
+          required: false, 
+          value: ingredientsStr,
+          placeholder: 'iron_ingot:3, wood_plank:1'
+        } 
+      },
+    ],
+  } as const;
+  
+  await i.showModal(modal);
+  try {
+    const sub = await i.awaitModalSubmit({ time: 300_000 });
+    const enabledStr = sub.components.getTextInputValue('enabled').trim().toLowerCase();
+    const quantityStr = sub.components.getTextInputValue('quantity').trim();
+    const ingredientsInput = sub.components.getTextInputValue('ingredients').trim();
+
+    const enabled = enabledStr === 'true';
+    const productQuantity = parseInt(quantityStr, 10) || 1;
+    
+    // Parsear ingredientes
+    const ingredients: Array<{ itemKey: string; quantity: number }> = [];
+    if (ingredientsInput && enabled) {
+      const parts = ingredientsInput.split(',').map(p => p.trim()).filter(Boolean);
+      for (const part of parts) {
+        const [itemKey, qtyStr] = part.split(':').map(s => s.trim());
+        const qty = parseInt(qtyStr, 10);
+        if (itemKey && qty > 0) {
+          ingredients.push({ itemKey, quantity: qty });
+        }
+      }
+    }
+    
+    state.recipe = { enabled, ingredients, productQuantity };
+
+    await sub.deferUpdate();
+    await editorMsg.edit({
+      content: null,
+      flags: 32768,
+      components: buildComponents()
+    });
   } catch {}
 }
