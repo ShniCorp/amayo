@@ -5,6 +5,7 @@ import { getOrCreateWallet } from '../../../game/economy/service';
 import { getEquipment, getEffectiveStats } from '../../../game/combat/equipmentService';
 import { getPlayerStatsFormatted } from '../../../game/stats/service';
 import type { TextBasedChannel } from 'discord.js';
+import { formatItemLabel } from './_helpers';
 
 export const command: CommandMessage = {
   name: 'player',
@@ -49,6 +50,16 @@ export const command: CommandMessage = {
       take: 3,
     });
 
+    const weaponLine = weapon
+      ? `⚔️ Arma: ${formatItemLabel(weapon, { fallbackIcon: '🗡️', bold: true })}`
+      : '⚔️ Arma: *Ninguna*';
+    const armorLine = armor
+      ? `🛡️ Armadura: ${formatItemLabel(armor, { fallbackIcon: '🛡️', bold: true })}`
+      : '🛡️ Armadura: *Ninguna*';
+    const capeLine = cape
+      ? `🧥 Capa: ${formatItemLabel(cape, { fallbackIcon: '🧥', bold: true })}`
+      : '🧥 Capa: *Ninguna*';
+
     // Crear DisplayComponent
     const display = {
       type: 17,
@@ -71,9 +82,9 @@ export const command: CommandMessage = {
         {
           type: 10,
           content: `**⚔️ EQUIPO**\n` +
-                   (weapon ? `🗡️ Arma: **${weapon.name || weapon.key}**\n` : '🗡️ Arma: *Ninguna*\n') +
-                   (armor ? `🛡️ Armadura: **${armor.name || armor.key}**\n` : '🛡️ Armadura: *Ninguna*\n') +
-                   (cape ? `🧥 Capa: **${cape.name || cape.key}**` : '🧥 Capa: *Ninguna*')
+                   `${weaponLine}\n` +
+                   `${armorLine}\n` +
+                   `${capeLine}`
         },
         { type: 14, divider: true },
         {

@@ -4,6 +4,7 @@ import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import { prisma } from '../../../core/database/prisma';
 import { Message, MessageComponentInteraction, MessageFlags, ButtonInteraction, TextBasedChannel } from 'discord.js';
 import { ComponentType, TextInputStyle, ButtonStyle } from 'discord-api-types/v10';
+import { promptKeySelection } from './_helpers';
 
 interface AreaState {
   key: string;
@@ -74,7 +75,7 @@ export const command: CommandMessage = {
   aliases: ['editar-area','areaedit'],
   cooldown: 10,
   description: 'Edita una GameArea de este servidor con un editor interactivo.',
-  usage: 'area-editar <key-única>',
+  usage: 'area-editar',
   run: async (message, args, _client: Amayo) => {
     const channel = message.channel as TextBasedChannel & { send: Function };
     const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, prisma);
@@ -95,50 +96,35 @@ export const command: CommandMessage = {
       return;
     }
 
-    const key = args[0]?.trim();
-    if (!key) {
-      await (channel.send as any)({
-        content: null,
-        flags: 32768,
-        components: [{
-          type: 17,
-          accent_color: 0xFFA500,
-          components: [{
-            type: 10,
-            content: '⚠️ **Uso Incorrecto**\n└ Uso: `!area-editar <key-única>`'
-          }]
-        }],
-        reply: { messageReference: message.id }
-      });
-      return;
-    }
-
     const guildId = message.guild!.id;
-    const area = await prisma.gameArea.findFirst({ where: { key, guildId } });
-    if (!area) {
-      await (channel.send as any)({
-        content: null,
-        flags: 32768,
-        components: [{
-          type: 17,
-          accent_color: 0xFF0000,
-          components: [{
-            type: 10,
-            content: '❌ **Área No Encontrada**\n└ No existe un área con esa key en este servidor.'
-          }]
-        }],
-        reply: { messageReference: message.id }
-      });
+    const areas = await prisma.gameArea.findMany({ where: { guildId }, orderBy: [{ key: 'asc' }] });
+    const selection = await promptKeySelection(message, {
+      entries: areas,
+      customIdPrefix: 'area_edit',
+      title: 'Selecciona un área para editar',
+      emptyText: '⚠️ **No hay áreas configuradas.** Usa `!area-crear` para crear una nueva.',
+      placeholder: 'Elige un área…',
+      filterHint: 'Puedes filtrar por nombre, key o tipo.',
+      getOption: (area) => ({
+        value: area.id,
+        label: `${area.name ?? area.key} (${area.type})`,
+        description: area.key,
+        keywords: [area.key, area.name ?? '', area.type ?? ''],
+      }),
+    });
+
+    if (!selection.entry || !selection.panelMessage) {
       return;
     }
 
-    const state: AreaState = { key, name: area.name, type: area.type, config: area.config ?? {}, metadata: area.metadata ?? {} };
+    const area = selection.entry;
+    const state: AreaState = { key: area.key, name: area.name, type: area.type, config: area.config ?? {}, metadata: area.metadata ?? {} };
 
-    const editorMsg = await (channel.send as any)({
+    const editorMsg = selection.panelMessage;
+    await editorMsg.edit({
       content: null,
       flags: 32768,
       components: buildEditorComponents(state, true),
-      reply: { messageReference: message.id }
     });
 
     const collector = editorMsg.createMessageComponentCollector({ time: 30*60_000, filter: (i)=> i.user.id === message.author.id });

@@ -2,6 +2,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { claimQuestReward, getPlayerQuests } from '../../../game/quests/service';
 import { EmbedBuilder } from 'discord.js';
+import { fetchItemBasics, formatItemLabel } from './_helpers';
 
 export const command: CommandMessage = {
   name: 'mision-reclamar',
@@ -41,6 +42,21 @@ export const command: CommandMessage = {
       // Reclamar recompensa
       const { quest, rewards } = await claimQuestReward(userId, guildId, selected.quest.id);
 
+      const rewardData = (quest.rewards as any) ?? {};
+      const formattedRewards: string[] = [];
+      if (rewardData.coins) formattedRewards.push(`💰 **${rewardData.coins.toLocaleString()}** monedas`);
+      if (rewardData.items && Array.isArray(rewardData.items) && rewardData.items.length) {
+        const basics = await fetchItemBasics(guildId, rewardData.items.map((item: any) => item.key));
+        for (const item of rewardData.items) {
+          const info = basics.get(item.key) ?? { key: item.key, name: null, icon: null };
+          const label = formatItemLabel(info, { bold: true });
+          formattedRewards.push(`${label} ×${item.quantity}`);
+        }
+      }
+      if (rewardData.xp) formattedRewards.push(`⭐ **${rewardData.xp}** XP`);
+      if (rewardData.title) formattedRewards.push(`🏆 Título: **${rewardData.title}**`);
+      const rewardsDisplay = formattedRewards.length > 0 ? formattedRewards : rewards;
+
       const embed = new EmbedBuilder()
         .setColor(0x00FF00)
         .setTitle('🎉 ¡Misión Completada!')
@@ -48,10 +64,10 @@ export const command: CommandMessage = {
         .setThumbnail(message.author.displayAvatarURL({ size: 128 }));
 
       // Mostrar recompensas
-      if (rewards.length > 0) {
+      if (rewardsDisplay.length > 0) {
         embed.addFields({ 
           name: '🎁 Recompensas Recibidas', 
-          value: rewards.join('\n'), 
+          value: rewardsDisplay.join('\n'), 
           inline: false 
         });
       }

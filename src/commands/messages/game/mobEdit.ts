@@ -4,6 +4,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import logger from '../../../core/lib/logger';
 import type Amayo from '../../../core/client';
+import { promptKeySelection } from './_helpers';
 
 interface MobEditorState {
   key: string;
@@ -64,94 +65,158 @@ export const command: CommandMessage = {
   cooldown: 10,
   description: 'Edita un Mob (enemigo) de este servidor con editor interactivo.',
   category: 'Minijuegos',
-  usage: 'mob-editar <key-única>',
-  run: async (message: Message, args: string[], client: Amayo) => {
+  usage: 'mob-editar',
+  run: async (message: Message, _args: string[], client: Amayo) => {
+    const channel = message.channel as TextBasedChannel & { send: Function };
     const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, client.prisma);
-    if (!allowed) { await message.reply('❌ No tienes permisos de ManageGuild ni rol de staff.'); return; }
-    const key = args[0]?.trim();
-    if (!key) { await message.reply('Uso: `!mob-editar <key-única>`'); return; }
-    const guildId = message.guild!.id;
+    if (!allowed) {
+      await (channel.send as any)({
+        content: null,
+        flags: 32768,
+        components: [{
+          type: 17,
+          accent_color: 0xFF0000,
+          components: [{
+            type: 10,
+            content: '❌ **Error de Permisos**\n└ No tienes permisos de ManageGuild ni rol de staff.'
+          }]
+        }],
+        reply: { messageReference: message.id }
+      });
+      return;
+    }
 
-    const mob = await client.prisma.mob.findFirst({ where: { key, guildId } });
-    if (!mob) { await message.reply('❌ No existe un mob con esa key en este servidor.'); return; }
+    const guildId = message.guild!.id;
+    const mobs = await client.prisma.mob.findMany({ where: { guildId }, orderBy: [{ key: 'asc' }] });
+    const selection = await promptKeySelection(message, {
+      entries: mobs,
+      customIdPrefix: 'mob_edit',
+      title: 'Selecciona un mob para editar',
+      emptyText: '⚠️ **No hay mobs configurados.** Usa `!mob-crear` primero.',
+      placeholder: 'Elige un mob…',
+      filterHint: 'Filtra por nombre, key o categoría.',
+      getOption: (mob) => ({
+        value: mob.id,
+        label: mob.name ?? mob.key,
+        description: [mob.category ?? 'Sin categoría', mob.key].filter(Boolean).join(' • '),
+        keywords: [mob.key, mob.name ?? '', mob.category ?? ''],
+      }),
+    });
+
+    if (!selection.entry || !selection.panelMessage) {
+      return;
+    }
+
+    const mob = selection.entry;
 
     const state: MobEditorState = {
-      key,
+      key: mob.key,
       name: mob.name,
       category: mob.category ?? undefined,
       stats: mob.stats ?? {},
       drops: mob.drops ?? {},
     };
 
-    const channel = message.channel as TextBasedChannel & { send: Function };
-    const editorMsg = await channel.send({
-      content: `👾 Editor de Mob (editar): \`${key}\``,
-      components: [ { type: 1, components: [
-        { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'mb_base' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Stats (JSON)', custom_id: 'mb_stats' },
-        { type: 2, style: ButtonStyle.Secondary, label: 'Drops (JSON)', custom_id: 'mb_drops' },
-        { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'mb_save' },
-        { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'mb_cancel' },
-      ] } ],
+    const buildEditorComponents = () => [
+      createMobDisplay(state, true),
+      {
+        type: 1,
+        components: [
+          { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'mb_base' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Stats (JSON)', custom_id: 'mb_stats' },
+          { type: 2, style: ButtonStyle.Secondary, label: 'Drops (JSON)', custom_id: 'mb_drops' },
+          { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'mb_save' },
+          { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'mb_cancel' },
+        ]
+      }
+    ];
+
+    const editorMsg = selection.panelMessage;
+    await editorMsg.edit({
+      content: null,
+      flags: 32768,
+      components: buildEditorComponents(),
     });
 
-    const collector = editorMsg.createMessageComponentCollector({ time: 30*60_000, filter: (i)=> i.user.id === message.author.id });
+    const collector = editorMsg.createMessageComponentCollector({ time: 30 * 60_000, filter: (i) => i.user.id === message.author.id });
     collector.on('collect', async (i: MessageComponentInteraction) => {
       try {
         if (!i.isButton()) return;
-        if (i.customId === 'mb_cancel') {
-          await i.deferUpdate();
-          await editorMsg.edit({
-            flags: 32768,
-            components: [{
-              type: 17,
-              accent_color: 0xFF0000,
+        switch (i.customId) {
+          case 'mb_cancel':
+            await i.deferUpdate();
+            await editorMsg.edit({
+              content: null,
+              flags: 32768,
               components: [{
-                type: 9,
+                type: 17,
+                accent_color: 0xFF0000,
                 components: [{
                   type: 10,
                   content: '**❌ Editor cancelado.**'
                 }]
               }]
-            }]
-          });
-          collector.stop('cancel');
-          return;
-        }
-        if (i.customId === 'mb_base') { await showBaseModal(i as ButtonInteraction, state, editorMsg, true); return; }
-        if (i.customId === 'mb_stats') { await showJsonModal(i as ButtonInteraction, state, 'stats', 'Stats del Mob (JSON)', editorMsg, true); return; }
-        if (i.customId === 'mb_drops') { await showJsonModal(i as ButtonInteraction, state, 'drops', 'Drops del Mob (JSON)', editorMsg, true); return; }
-        if (i.customId === 'mb_save') {
-          if (!state.name) { await i.reply({ content: '❌ Falta el nombre del mob.', flags: MessageFlags.Ephemeral }); return; }
-          await client.prisma.mob.update({ where: { id: mob.id }, data: { name: state.name!, category: state.category ?? null, stats: state.stats ?? {}, drops: state.drops ?? {} } });
-          await i.reply({ content: '✅ Mob actualizado!', flags: MessageFlags.Ephemeral });
-          await editorMsg.edit({
-            flags: 32768,
-            components: [{
-              type: 17,
-              accent_color: 0x00FF00,
+            });
+            collector.stop('cancel');
+            return;
+          case 'mb_base':
+            await showBaseModal(i as ButtonInteraction, state, editorMsg, buildEditorComponents);
+            return;
+          case 'mb_stats':
+            await showJsonModal(i as ButtonInteraction, state, 'stats', 'Stats del Mob (JSON)', editorMsg, buildEditorComponents);
+            return;
+          case 'mb_drops':
+            await showJsonModal(i as ButtonInteraction, state, 'drops', 'Drops del Mob (JSON)', editorMsg, buildEditorComponents);
+            return;
+          case 'mb_save':
+            if (!state.name) {
+              await i.reply({ content: '❌ Falta el nombre del mob.', flags: MessageFlags.Ephemeral });
+              return;
+            }
+            await client.prisma.mob.update({ where: { id: mob.id }, data: { name: state.name!, category: state.category ?? null, stats: state.stats ?? {}, drops: state.drops ?? {} } });
+            await i.reply({ content: '✅ Mob actualizado!', flags: MessageFlags.Ephemeral });
+            await editorMsg.edit({
+              content: null,
+              flags: 32768,
               components: [{
-                type: 9,
+                type: 17,
+                accent_color: 0x00FF00,
                 components: [{
                   type: 10,
                   content: `**✅ Mob \`${state.key}\` actualizado exitosamente.**`
                 }]
               }]
-            }]
-          });
-          collector.stop('saved');
-          return;
+            });
+            collector.stop('saved');
+            return;
         }
       } catch (err) {
-        logger.error({err}, 'mob-editar');
+        logger.error({ err }, 'mob-editar');
         if (!i.deferred && !i.replied) await i.reply({ content: '❌ Error procesando la acción.', flags: MessageFlags.Ephemeral });
       }
     });
-    collector.on('end', async (_c,r)=> { if (r==='time') { try { await editorMsg.edit({ content:'⏰ Editor expirado.', components: [] }); } catch {} } });
+    collector.on('end', async (_c, reason) => {
+      if (reason === 'time') {
+        try {
+          await editorMsg.edit({
+            content: null,
+            flags: 32768,
+            components: [{
+              type: 17,
+              accent_color: 0xFFA500,
+              components: [{
+                type: 10,
+                content: '**⏰ Editor expirado.**'
+              }]
+            }]
+          });
+        } catch {}
+      }
+    });
   },
 };
 
-async function showBaseModal(i: ButtonInteraction, state: MobEditorState, editorMsg: Message, editing: boolean) {
+async function showBaseModal(i: ButtonInteraction, state: MobEditorState, editorMsg: Message, buildComponents: () => any[]) {
   const modal = { title: 'Base del Mob', customId: 'mb_base_modal', components: [
     { type: ComponentType.Label, label: 'Nombre', component: { type: ComponentType.TextInput, customId: 'name', style: TextInputStyle.Short, required: true, value: state.name ?? '' } },
     { type: ComponentType.Label, label: 'Categoría (opcional)', component: { type: ComponentType.TextInput, customId: 'category', style: TextInputStyle.Short, required: false, value: state.category ?? '' } },
@@ -162,30 +227,16 @@ async function showBaseModal(i: ButtonInteraction, state: MobEditorState, editor
     state.name = sub.components.getTextInputValue('name').trim();
     const cat = sub.components.getTextInputValue('category')?.trim();
     state.category = cat || undefined;
-    await sub.reply({ content: '✅ Base actualizada.', flags: MessageFlags.Ephemeral });
-    
-    // Refresh display
-    const newDisplay = createMobDisplay(state, editing);
+    await sub.deferUpdate();
     await editorMsg.edit({
+      content: null,
       flags: 32768,
-      components: [
-        newDisplay,
-        {
-          type: 1,
-          components: [
-            { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'mb_base' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Stats (JSON)', custom_id: 'mb_stats' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Drops (JSON)', custom_id: 'mb_drops' },
-            { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'mb_save' },
-            { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'mb_cancel' },
-          ]
-        }
-      ]
+      components: buildComponents()
     });
   } catch {}
 }
 
-async function showJsonModal(i: ButtonInteraction, state: MobEditorState, field: 'stats'|'drops', title: string, editorMsg: Message, editing: boolean) {
+async function showJsonModal(i: ButtonInteraction, state: MobEditorState, field: 'stats'|'drops', title: string, editorMsg: Message, buildComponents: () => any[]) {
   const current = JSON.stringify(state[field] ?? {});
   const modal = { title, customId: `mb_json_${field}`, components: [
     { type: ComponentType.Label, label: 'JSON', component: { type: ComponentType.TextInput, customId: 'json', style: TextInputStyle.Paragraph, required: false, value: current.slice(0,4000) } },
@@ -197,33 +248,19 @@ async function showJsonModal(i: ButtonInteraction, state: MobEditorState, field:
     if (raw) {
       try {
         state[field] = JSON.parse(raw);
-        await sub.reply({ content: '✅ Guardado.', flags: MessageFlags.Ephemeral });
+        await sub.deferUpdate();
       } catch {
         await sub.reply({ content: '❌ JSON inválido.', flags: MessageFlags.Ephemeral });
         return;
       }
     } else {
       state[field] = {};
-      await sub.reply({ content: 'ℹ️ Limpio.', flags: MessageFlags.Ephemeral });
+      await sub.deferUpdate();
     }
-    
-    // Refresh display
-    const newDisplay = createMobDisplay(state, editing);
     await editorMsg.edit({
+      content: null,
       flags: 32768,
-      components: [
-        newDisplay,
-        {
-          type: 1,
-          components: [
-            { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'mb_base' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Stats (JSON)', custom_id: 'mb_stats' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Drops (JSON)', custom_id: 'mb_drops' },
-            { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'mb_save' },
-            { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'mb_cancel' },
-          ]
-        }
-      ]
+      components: buildComponents()
     });
   } catch {}
 }

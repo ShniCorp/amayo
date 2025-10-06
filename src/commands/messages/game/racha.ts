@@ -2,6 +2,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { getStreakInfo, updateStreak } from '../../../game/streaks/service';
 import type { TextBasedChannel } from 'discord.js';
+import { fetchItemBasics, formatItemLabel } from './_helpers';
 
 export const command: CommandMessage = {
   name: 'racha',
@@ -62,9 +63,12 @@ export const command: CommandMessage = {
         if (rewards) {
           let rewardsText = '**🎁 RECOMPENSA DEL DÍA**\n';
           if (rewards.coins) rewardsText += `💰 **${rewards.coins.toLocaleString()}** monedas\n`;
-          if (rewards.items) {
+          if (rewards.items && rewards.items.length) {
+            const basics = await fetchItemBasics(guildId, rewards.items.map((item) => item.key));
             rewards.items.forEach(item => {
-              rewardsText += `📦 **${item.quantity}x** ${item.key}\n`;
+              const info = basics.get(item.key) ?? { key: item.key, name: null, icon: null };
+              const label = formatItemLabel(info, { bold: true });
+              rewardsText += `${label} ×${item.quantity}\n`;
             });
           }
           

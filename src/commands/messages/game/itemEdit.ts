@@ -4,6 +4,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import logger from '../../../core/lib/logger';
 import type Amayo from '../../../core/client';
+import { promptKeySelection, resolveItemIcon } from './_helpers';
 
 interface ItemEditorState {
   key: string;
@@ -24,8 +25,8 @@ export const command: CommandMessage = {
   cooldown: 10,
   description: 'Edita un EconomyItem existente del servidor con un pequeño editor interactivo.',
   category: 'Economía',
-  usage: 'item-editar <key-única>',
-  run: async (message: Message, args: string[], client: Amayo) => {
+  usage: 'item-editar',
+  run: async (message: Message, _args: string[], client: Amayo) => {
     const channel = message.channel as TextBasedChannel & { send: Function };
     const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, client.prisma);
     if (!allowed) {
@@ -45,53 +46,43 @@ export const command: CommandMessage = {
       return;
     }
 
-    const key = args[0]?.trim();
-    if (!key) {
-      await (channel.send as any)({
-        content: null,
-        flags: 32768,
-        components: [{
-          type: 17,
-          accent_color: 0xFFA500,
-          components: [{
-            type: 10,
-            content: '⚠️ **Uso Incorrecto**\n└ Uso: `!item-editar <key-única>`'
-          }]
-        }],
-        reply: { messageReference: message.id }
-      });
-      return;
-    }
-
     const guildId = message.guild!.id;
+    const items = await client.prisma.economyItem.findMany({ where: { guildId }, orderBy: [{ key: 'asc' }] });
+    const selection = await promptKeySelection(message, {
+      entries: items,
+      customIdPrefix: 'item_edit',
+      title: 'Selecciona un ítem para editar',
+      emptyText: '⚠️ **No hay ítems locales configurados.** Usa `!item-crear` primero.',
+      placeholder: 'Elige un ítem…',
+      filterHint: 'Filtra por nombre, key, categoría o tag.',
+      getOption: (item) => {
+        const icon = resolveItemIcon(item.icon);
+        const label = `${icon} ${(item.name ?? item.key)}`.trim();
+        const tags = Array.isArray(item.tags) ? item.tags : [];
+        return {
+          value: item.id,
+          label: label.slice(0, 100),
+          description: item.key,
+          keywords: [item.key, item.name ?? '', item.category ?? '', ...tags],
+        };
+      },
+    });
 
-    const existing = await client.prisma.economyItem.findFirst({ where: { key, guildId } });
-    if (!existing) {
-      await (channel.send as any)({
-        content: null,
-        flags: 32768,
-        components: [{
-          type: 17,
-          accent_color: 0xFF0000,
-          components: [{
-            type: 10,
-            content: '❌ **Item No Encontrado**\n└ No existe un item con esa key en este servidor.'
-          }]
-        }],
-        reply: { messageReference: message.id }
-      });
+    if (!selection.entry || !selection.panelMessage) {
       return;
     }
+
+    const existing = selection.entry;
 
     const state: ItemEditorState = {
-      key,
+      key: existing.key,
       name: existing.name,
       description: existing.description || undefined,
       category: existing.category || undefined,
       icon: existing.icon || undefined,
       stackable: existing.stackable ?? true,
-      maxPerInventory: existing.maxPerInventory || null,
-      tags: existing.tags || [],
+      maxPerInventory: existing.maxPerInventory ?? null,
+      tags: Array.isArray(existing.tags) ? existing.tags : [],
       props: existing.props || {},
     };
 
@@ -114,7 +105,7 @@ export const command: CommandMessage = {
         components: [
           {
             type: 10,
-            content: `# 🛠️ Editando Item: \`${key}\``
+            content: `# 🛠️ Editando Item: \`${state.key}\``
           },
           { type: 14, divider: true },
           {
@@ -149,11 +140,11 @@ export const command: CommandMessage = {
       }
     ];
 
-    const editorMsg = await (channel.send as any)({
+    const editorMsg = selection.panelMessage;
+    await editorMsg.edit({
       content: null,
       flags: 32768,
       components: buildEditorComponents(),
-      reply: { messageReference: message.id }
     });
 
     const collector = editorMsg.createMessageComponentCollector({ time: 30 * 60_000, filter: (i) => i.user.id === message.author.id });

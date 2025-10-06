@@ -13,6 +13,7 @@ import { prisma } from '../../../core/database/prisma';
 import { getOrCreateWallet, buyFromOffer } from '../../../game/economy/service';
 import type { DisplayComponentContainer } from '../../../core/types/displayComponents';
 import type { ItemProps } from '../../../game/economy/types';
+import { formatItemLabel, resolveItemIcon } from './_helpers';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -196,9 +197,9 @@ async function buildShopPanel(
 
   // Si hay una oferta seleccionada, mostrar detalles
   if (selectedOffer) {
-    const item = selectedOffer.item;
-    const props = parseItemProps(item.props);
-    const icon = getItemIcon(props, item.category);
+  const item = selectedOffer.item;
+  const props = parseItemProps(item.props);
+  const label = formatItemLabel(item, { fallbackIcon: getItemIcon(props, item.category), bold: true });
     const price = formatPrice(selectedOffer.price);
 
     // Stock info
@@ -225,7 +226,7 @@ async function buildShopPanel(
 
     container.components.push({
       type: 10,
-      content: `${icon} **${item.name || item.key}**\n\n${item.description || 'Sin descripción'}${statsInfo}\n\n💰 Precio: ${price}${stockInfo}`
+      content: `${label}\n\n${item.description || 'Sin descripción'}${statsInfo}\n\n💰 Precio: ${price}${stockInfo}`
     });
 
     container.components.push({
@@ -244,7 +245,7 @@ async function buildShopPanel(
   for (const offer of pageOffers) {
     const item = offer.item;
     const props = parseItemProps(item.props);
-    const icon = getItemIcon(props, item.category);
+  const label = formatItemLabel(item, { fallbackIcon: getItemIcon(props, item.category), bold: true });
     const price = formatPrice(offer.price);
     const isSelected = selectedOfferId === offer.id;
 
@@ -255,7 +256,7 @@ async function buildShopPanel(
       type: 9,
       components: [{
         type: 10,
-        content: `${icon} **${item.name || item.key}**${selectedMark}\n💰 ${price}${stockText}`
+  content: `${label}${selectedMark}\n💰 ${price}${stockText}`
       }],
       accessory: {
         type: 2,
@@ -370,8 +371,9 @@ async function handleButtonInteraction(
       const result = await buyFromOffer(userId, guildId, selectedOfferId, qty);
       const wallet = await getOrCreateWallet(userId, guildId);
 
+      const purchaseLabel = formatItemLabel(result.item, { fallbackIcon: resolveItemIcon(result.item.icon) });
       await interaction.followUp({
-        content: `✅ **Compra exitosa!**\n🛒 ${result.item.name || result.item.key} x${result.qty}\n💰 Te quedan: ${wallet.coins} monedas`,
+        content: `✅ **Compra exitosa!**\n🛒 ${purchaseLabel} x${result.qty}\n💰 Te quedan: ${wallet.coins} monedas`,
         flags: MessageFlags.Ephemeral
       });
 
