@@ -1,7 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { runMinigame } from '../../../game/minigames/service';
-import { getDefaultLevel, findBestToolKey, parseGameArgs, resolveGuildAreaWithFallback } from './_helpers';
+import { getDefaultLevel, findBestToolKey, parseGameArgs, resolveGuildAreaWithFallback, resolveAreaByType } from './_helpers';
 import { updateStats } from '../../../game/stats/service';
 import { updateQuestProgress } from '../../../game/quests/service';
 import { checkAchievements } from '../../../game/achievements/service';
@@ -16,15 +16,24 @@ export const command: CommandMessage = {
   run: async (message, args, _client: Amayo) => {
     const userId = message.author.id;
     const guildId = message.guild!.id;
-    const { areaKey, levelArg, providedTool } = parseGameArgs(args, 'lagoon.shore');
+    const { levelArg, providedTool, areaOverride } = parseGameArgs(args);
 
-    const { area, source } = await resolveGuildAreaWithFallback(guildId, areaKey);
-    if (!area) {
-      await message.reply(`⚠️ Área de laguna no configurada. Crea \`gameArea\` con key \`${areaKey}\` en este servidor.`);
+    const areaInfo = areaOverride
+      ? await resolveGuildAreaWithFallback(guildId, areaOverride)
+      : await resolveAreaByType(guildId, 'LAGOON');
+
+    if (!areaInfo.area) {
+      if (areaOverride) {
+        await message.reply(`⚠️ No existe un área con key \`${areaOverride}\` para este servidor.`);
+      } else {
+        await message.reply('⚠️ No hay un área de tipo **LAGOON** configurada. Crea una con `!area-crear` o especifica `area:<key>`.');
+      }
       return;
     }
+
+    const { area, source } = areaInfo;
     const globalNotice = source === 'global'
-      ? `ℹ️ Usando configuración global para \`${areaKey}\`. Puedes crear \`gameArea\` para personalizarla en este servidor.`
+      ? `ℹ️ Usando configuración global para \`${area.key}\`. Puedes crear \`gameArea\` tipo **LAGOON** para personalizarla en este servidor.`
       : null;
 
     const level = levelArg ?? await getDefaultLevel(userId, guildId, area.id);

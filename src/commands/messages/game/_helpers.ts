@@ -31,6 +31,20 @@ export async function resolveGuildAreaWithFallback(guildId: string, areaKey: str
   return { area: null, source: 'none' };
 }
 
+export async function resolveAreaByType(guildId: string, type: string): Promise<ResolvedAreaInfo> {
+  const guildArea = await prisma.gameArea.findFirst({ where: { type, guildId }, orderBy: [{ createdAt: 'asc' }] });
+  if (guildArea) {
+    return { area: guildArea, source: 'guild' };
+  }
+
+  const globalArea = await prisma.gameArea.findFirst({ where: { type, guildId: null }, orderBy: [{ createdAt: 'asc' }] });
+  if (globalArea) {
+    return { area: globalArea, source: 'global' };
+  }
+
+  return { area: null, source: 'none' };
+}
+
 export async function getDefaultLevel(userId: string, guildId: string, areaId: string): Promise<number> {
   const prog = await prisma.playerProgress.findUnique({ where: { userId_guildId_areaId: { userId, guildId, areaId } } });
   return Math.max(1, prog?.highestLevel ?? 1);
@@ -51,24 +65,24 @@ export async function findBestToolKey(userId: string, guildId: string, toolType:
 }
 
 export interface ParsedGameArgs {
-  areaKey: string;
   levelArg: number | null;
   providedTool: string | null;
+  areaOverride: string | null;
 }
 
 const AREA_OVERRIDE_PREFIX = 'area:';
 
-export function parseGameArgs(args: string[], defaultAreaKey: string): ParsedGameArgs {
+export function parseGameArgs(args: string[]): ParsedGameArgs {
   const tokens = args.filter((arg): arg is string => typeof arg === 'string' && arg.trim().length > 0);
 
-  let areaKey = defaultAreaKey;
   let levelArg: number | null = null;
   let providedTool: string | null = null;
+  let areaOverride: string | null = null;
 
   for (const token of tokens) {
     if (token.startsWith(AREA_OVERRIDE_PREFIX)) {
       const override = token.slice(AREA_OVERRIDE_PREFIX.length).trim();
-      if (override) areaKey = override;
+      if (override) areaOverride = override;
       continue;
     }
 
@@ -82,6 +96,6 @@ export function parseGameArgs(args: string[], defaultAreaKey: string): ParsedGam
     }
   }
 
-  return { areaKey, levelArg, providedTool };
+  return { levelArg, providedTool, areaOverride };
 }
 
