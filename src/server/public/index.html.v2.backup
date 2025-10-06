@@ -1,123 +1,49 @@
 <!DOCTYPE html>
-<html lang="es" class="scroll-smooth">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Amayo Bot | Guía Completa para Usuarios de Discord</title>
-  <meta name="description" content="Guía completa de Amayo Bot: comandos, minijuegos, economía, misiones, logros, creación de contenido y más">
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          animation: {
-            'gradient': 'gradient 8s linear infinite',
-            'float': 'float 6s ease-in-out infinite',
-            'glow': 'glow 3s ease-in-out infinite',
-          },
-          keyframes: {
-            gradient: {
-              '0%, 100%': { backgroundPosition: '0% 50%' },
-              '50%': { backgroundPosition: '100% 50%' },
+<html lang="es">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Amayo Bot | Guía Completa para Usuarios</title>
+    <meta
+      name="description"
+      content="Guía completa de Amayo Bot para usuarios de Discord: comandos de juego, economía, misiones, logros y mucho más."
+    />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              sans: ['Inter', 'ui-sans-serif', 'system-ui', 'Segoe UI', 'sans-serif'],
+              mono: [
+                'JetBrains Mono',
+                'ui-monospace',
+                'SFMono-Regular',
+                'SFMono',
+                'Menlo',
+                'Monaco',
+                'Consolas',
+                'Liberation Mono',
+                'Courier New',
+                'monospace'
+              ]
             },
-            float: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-20px)' },
-            },
-            glow: {
-              '0%, 100%': { opacity: '0.4' },
-              '50%': { opacity: '0.8' },
-            },
-          },
-        },
-      },
-    };
-  </script>
-  <link rel="stylesheet" href="./assets/css/styles.css">
-</head>
-<body class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 antialiased">
-  
-  <!-- Animated Background Blobs -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl animate-float"></div>
-    <div class="absolute top-1/3 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
-    <div class="absolute bottom-0 left-1/3 w-96 h-96 bg-pink-500/15 rounded-full mix-blend-screen filter blur-3xl animate-float" style="animation-delay: 4s;"></div>
-  </div>
-
-  <div class="relative z-10">
-    <!-- Hero Ultra Moderno -->
-    <header class="relative overflow-hidden border-b border-white/5">
-      <div class="absolute inset-0 bg-gradient-to-b from-indigo-500/5 via-purple-500/5 to-transparent"></div>
-      
-      <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 relative">
-        <div class="max-w-5xl mx-auto text-center space-y-8">
-          <!-- Badge con Pulse -->
-          <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-500/30 backdrop-blur-sm">
-            <span class="relative flex h-2.5 w-2.5">
-              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-              <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-r from-indigo-400 to-purple-400"></span>
-            </span>
-            <span class="text-sm font-bold tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 to-purple-200">
-              Amayo Bot • v0.11.20
-            </span>
-          </div>
-
-          <!-- Título con Gradiente Animado -->
-          <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-tight">
-            <span class="block bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-purple-100">
-              Guía Completa
-            </span>
-            <span class="block bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
-              Amayo Bot
-            </span>
-          </h1>
-
-          <!-- Descripción -->
-          <p class="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-light">
-            Sistema completo de <span class="font-semibold text-indigo-300">economía</span>, <span class="font-semibold text-purple-300">minijuegos</span>, <span class="font-semibold text-pink-300">misiones</span> y <span class="font-semibold text-blue-300">IA</span> para Discord
-          </p>
-
-          <!-- CTA Buttons Modernos -->
-          <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-            <a href="#primeros-pasos" class="group relative px-10 py-4 text-lg font-bold text-white overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105">
-              <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 transition-transform duration-300 group-hover:scale-110"></div>
-              <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-              <span class="relative flex items-center gap-2">
-                Comenzar ahora
-                <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-                </svg>
-              </span>
-            </a>
-            
-            <button id="toggle-nav" class="group px-10 py-4 text-lg font-bold text-white backdrop-blur-xl bg-white/5 border-2 border-white/10 rounded-2xl hover:bg-white/10 hover:border-white/20 hover:scale-105 transition-all duration-300">
-              <span class="flex items-center gap-2">
-                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                </svg>
-                Ver índice
-              </span>
-            </button>
-          </div>
-
-          <!-- Meta Info Ultra Moderno -->
-          <div class="flex flex-wrap justify-center gap-3 pt-6">
-            <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
-              Discord.js 15.0-dev
-            </span>
-            <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
-              Enero 2025
-            </span>
-            <span class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 text-sm font-bold text-indigo-200 hover:from-indigo-500/20 hover:to-purple-500/20 transition-all">
-              23 Secciones • Creación de Contenido Incluida
-            </span>
-          </div>
-        </div>
-      </div>
-    </header>
-
-    <!-- Main Content -->
-    <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+            boxShadow: {
+              glow: '0 40px 120px -45px rgba(99, 102, 241, 0.45)'
+            }
+          }
+        }
+      };
+    </script>
+    <link rel="stylesheet" href="./assets/css/styles.css" />
+  </head>
   <body class="min-h-screen bg-gradient-to-b from-slate-950 via-slate-950 to-slate-900 text-slate-100 antialiased">
     <div class="flex min-h-screen flex-col">
       <header class="relative overflow-hidden">
@@ -203,8 +129,8 @@
           <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
             
             <!-- PRIMEROS PASOS -->
-            <section id="primeros-pasos" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🚀 Primeros Pasos</h2>
+            <section id="primeros-pasos" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🚀 Primeros Pasos</h2>
               <p class="text-slate-200">
                 ¡Bienvenido a <strong class="text-white">Amayo Bot</strong>! Este bot transforma tu servidor de Discord en una experiencia de juego completa con economía, minijuegos, misiones y mucho más.
               </p>
@@ -244,8 +170,8 @@
             </section>
 
             <!-- COMANDOS BÁSICOS -->
-            <section id="comandos-basicos" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">⚡ Comandos Básicos</h2>
+            <section id="comandos-basicos" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">⚡ Comandos Básicos</h2>
               <p class="text-slate-200">
                 Estos son los comandos esenciales que necesitas conocer para empezar.
               </p>
@@ -272,8 +198,8 @@
             </section>
 
             <!-- SISTEMA DE JUEGO -->
-            <section id="sistema-juego" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🎮 Sistema de Juego</h2>
+            <section id="sistema-juego" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🎮 Sistema de Juego</h2>
               <p class="text-slate-200">
                 El sistema de juego de Amayo incluye <strong class="text-white">HP (puntos de vida)</strong>, <strong class="text-white">estadísticas de combate</strong>, <strong class="text-white">niveles de progresión</strong> y más.
               </p>
@@ -310,8 +236,8 @@
             </section>
 
             <!-- MINIJUEGOS -->
-            <section id="minijuegos" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🎯 Minijuegos y Actividades</h2>
+            <section id="minijuegos" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🎯 Minijuegos y Actividades</h2>
               <p class="text-slate-200">
                 Los minijuegos son la forma principal de ganar recursos, monedas y experiencia. Cada uno tiene su propio estilo y recompensas.
               </p>
@@ -405,8 +331,8 @@
             </section>
 
             <!-- INVENTARIO Y EQUIPO -->
-            <section id="inventario-equipo" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🎒 Inventario y Equipo</h2>
+            <section id="inventario-equipo" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🎒 Inventario y Equipo</h2>
               <p class="text-slate-200">
                 Gestiona todos tus items y equipa armas, armaduras y capas para mejorar tus estadísticas.
               </p>
@@ -469,8 +395,8 @@
             </section>
 
             <!-- ECONOMÍA -->
-            <section id="economia" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">💰 Sistema de Economía</h2>
+            <section id="economia" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">💰 Sistema de Economía</h2>
               <p class="text-slate-200">
                 Gana y gestiona monedas para comprar items, participar en eventos y mejorar tu progreso.
               </p>
@@ -504,8 +430,8 @@
             </section>
 
             <!-- TIENDA -->
-            <section id="tienda" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🛒 Tienda y Compras</h2>
+            <section id="tienda" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🛒 Tienda y Compras</h2>
               <p class="text-slate-200">
                 La tienda ofrece items especiales, herramientas, consumibles y más. Compra con tus monedas ganadas.
               </p>
@@ -550,8 +476,8 @@
             </section>
 
             <!-- CRAFTEO -->
-            <section id="crafteo" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🔨 Crafteo y Creación</h2>
+            <section id="crafteo" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🔨 Crafteo y Creación</h2>
               <p class="text-slate-200">
                 Transforma materiales crudos en items útiles usando el sistema de crafteo.
               </p>
@@ -591,8 +517,8 @@
             </section>
 
             <!-- LOGROS -->
-            <section id="logros" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🏆 Logros</h2>
+            <section id="logros" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🏆 Logros</h2>
               <p class="text-slate-200">
                 Desbloquea logros completando objetivos y recibe recompensas especiales. Los logros son permanentes y demuestran tus hazañas.
               </p>
@@ -639,8 +565,8 @@
             </section>
 
             <!-- MISIONES -->
-            <section id="misiones" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">📜 Misiones</h2>
+            <section id="misiones" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">📜 Misiones</h2>
               <p class="text-slate-200">
                 Completa misiones para obtener grandes recompensas. Las misiones se renuevan periódicamente y ofrecen objetivos variados.
               </p>
@@ -697,8 +623,8 @@
             </section>
 
             <!-- RACHA DIARIA -->
-            <section id="racha-diaria" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🔥 Racha Diaria</h2>
+            <section id="racha-diaria" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🔥 Racha Diaria</h2>
               <p class="text-slate-200">
                 Mantén tu racha diaria activa para recibir recompensas progresivas cada día. ¡Cuanto más larga sea tu racha, mejores serán las recompensas!
               </p>
@@ -750,8 +676,8 @@
             </section>
 
             <!-- CONSUMIBLES Y POCIONES -->
-            <section id="consumibles" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🍖 Consumibles y Pociones</h2>
+            <section id="consumibles" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🍖 Consumibles y Pociones</h2>
               <p class="text-slate-200">
                 Usa pociones y comida para recuperar HP durante tus aventuras. Los consumibles tienen cooldowns individuales.
               </p>
@@ -794,8 +720,8 @@
             </section>
 
             <!-- COFRES -->
-            <section id="cofres" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🎁 Cofres y Recompensas</h2>
+            <section id="cofres" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🎁 Cofres y Recompensas</h2>
               <p class="text-slate-200">
                 Los cofres contienen recompensas aleatorias que pueden incluir items raros, monedas y hasta roles especiales de Discord.
               </p>
@@ -841,8 +767,8 @@
             </section>
 
             <!-- ENCANTAMIENTOS -->
-            <section id="encantamientos" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">✨ Encantamientos y Mutaciones</h2>
+            <section id="encantamientos" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">✨ Encantamientos y Mutaciones</h2>
               <p class="text-slate-200">
                 Mejora tus items aplicándoles encantamientos o mutaciones especiales que les otorgan poderes adicionales.
               </p>
@@ -889,8 +815,8 @@
             </section>
 
             <!-- FUNDICIÓN -->
-            <section id="fundicion" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🔥 Sistema de Fundición</h2>
+            <section id="fundicion" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🔥 Sistema de Fundición</h2>
               <p class="text-slate-200">
                 La fundición te permite transformar materiales en lingotes y otros items, pero toma tiempo. Programa tus fundiciones y reclama cuando estén listas.
               </p>
@@ -942,8 +868,8 @@
             </section>
 
             <!-- INTELIGENCIA ARTIFICIAL -->
-            <section id="ia" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🤖 Inteligencia Artificial</h2>
+            <section id="ia" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🤖 Inteligencia Artificial</h2>
               <p class="text-slate-200">
                 Chatea con Gemini AI directamente desde Discord. Haz preguntas, pide ayuda o simplemente conversa.
               </p>
@@ -985,8 +911,8 @@
             </section>
 
             <!-- RECORDATORIOS -->
-            <section id="recordatorios" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">⏰ Sistema de Recordatorios</h2>
+            <section id="recordatorios" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">⏰ Sistema de Recordatorios</h2>
               <p class="text-slate-200">
                 Programa recordatorios para que el bot te avise en el futuro. Perfecto para no olvidar eventos, tareas o actividades.
               </p>
@@ -1038,8 +964,8 @@
             </section>
 
             <!-- SISTEMA DE ALIANZAS -->
-            <section id="alianzas" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🤝 Sistema de Alianzas</h2>
+            <section id="alianzas" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🤝 Sistema de Alianzas</h2>
               <p class="text-slate-200">
                 El sistema de alianzas permite a los servidores compartir enlaces de invitación y ganar puntos. <strong class="text-amber-300">Requiere permisos de Administrador.</strong>
               </p>
@@ -1087,7 +1013,7 @@
             <!-- ADMINISTRACIÓN -->
             <section id="admin" class="space-y-6 rounded-3xl border border-red-500/20 bg-slate-900/80 p-8 shadow-2xl shadow-red-500/10 backdrop-blur">
               <div class="flex items-center gap-3 mb-4">
-                <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">⚙️ Panel de Administración</h2>
+                <h2 class="text-3xl font-semibold text-white">⚙️ Panel de Administración</h2>
                 <span class="rounded-full bg-red-500/20 px-3 py-1 text-xs font-semibold text-red-200">ADMIN ONLY</span>
               </div>
               <p class="text-slate-200">
@@ -1162,292 +1088,9 @@
               </div>
             </section>
 
-            <!-- SECCIÓN EXPANDIDA: CREACIÓN DE CONTENIDO -->
-            <section id="creacion-contenido" class="group">
-              <div class="rounded-3xl bg-gradient-to-br from-red-900/20 to-orange-900/20 backdrop-blur-xl border border-red-500/30 p-8 shadow-2xl">
-                <div class="mb-8">
-                  <div class="inline-flex items-center gap-3 mb-4">
-                    <h2 class="text-4xl sm:text-5xl font-black bg-clip-text text-transparent bg-gradient-to-r from-red-200 to-orange-200">
-                      🎨 Creación de Contenido
-                    </h2>
-                    <span class="px-3 py-1 rounded-full bg-red-500/20 text-red-200 text-xs font-bold uppercase border border-red-500/30">
-                      Admin/Usuarios Avanzados
-                    </span>
-                  </div>
-                  <div class="h-1 w-32 bg-gradient-to-r from-red-500 via-orange-500 to-yellow-500 rounded-full"></div>
-                </div>
-
-                <p class="text-lg text-slate-300 mb-10 leading-relaxed">
-                  Esta sección está diseñada tanto para <strong class="text-white">administradores</strong> que crean contenido como para <strong class="text-white">usuarios que quieren entender</strong> cómo funciona el sistema completo del bot.
-                </p>
-
-                <!-- Tabla de Contenidos Interna -->
-                <div class="rounded-2xl bg-gradient-to-br from-slate-800/60 to-slate-900/60 border border-white/10 p-6 mb-10">
-                  <h3 class="text-xl font-bold text-white mb-4">📑 En esta Sección</h3>
-                  <div class="grid md:grid-cols-2 gap-3">
-                    <a href="#crear-items" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-indigo-500/10 text-slate-300 hover:text-white transition-all">
-                      <span>📦</span> Crear Items
-                    </a>
-                    <a href="#crear-mobs" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-indigo-500/10 text-slate-300 hover:text-white transition-all">
-                      <span>👾</span> Crear Enemigos
-                    </a>
-                    <a href="#crear-areas" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-indigo-500/10 text-slate-300 hover:text-white transition-all">
-                      <span>🗺️</span> Crear Áreas
-                    </a>
-                    <a href="#crear-niveles" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-indigo-500/10 text-slate-300 hover:text-white transition-all">
-                      <span>📊</span> Configurar Niveles
-                    </a>
-                    <a href="#crear-ofertas" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-indigo-500/10 text-slate-300 hover:text-white transition-all">
-                      <span>🏪</span> Crear Ofertas
-                    </a>
-                    <a href="#sistema-pesos" class="flex items-center gap-2 px-4 py-2 rounded-lg bg-slate-800/50 hover:bg-indigo-500/10 text-slate-300 hover:text-white transition-all">
-                      <span>⚖️</span> Sistema de Pesos
-                    </a>
-                  </div>
-                </div>
-
-                <!-- Crear Items -->
-                <div id="crear-items" class="mb-12">
-                  <div class="rounded-2xl bg-gradient-to-br from-blue-500/10 to-cyan-500/10 border border-blue-500/30 p-8">
-                    <h3 class="text-2xl font-bold text-blue-200 mb-6 flex items-center gap-3">
-                      <span class="text-3xl">📦</span>
-                      Crear Items (EconomyItem)
-                    </h3>
-
-                    <div class="space-y-6">
-                      <!-- Comando Principal -->
-                      <div>
-                        <h4 class="text-lg font-semibold text-white mb-3">Comando Principal</h4>
-                        <div class="bg-slate-900/50 border border-blue-500/30 rounded-xl p-4">
-                          <code class="text-blue-200 font-mono">!item-crear &lt;key-única&gt;</code>
-                          <p class="text-sm text-slate-400 mt-2">Ejemplo: <code class="text-xs bg-slate-800 px-2 py-1 rounded">!item-crear iron_sword</code></p>
-                        </div>
-                      </div>
-
-                      <!-- Editor Interactivo -->
-                      <div>
-                        <h4 class="text-lg font-semibold text-white mb-3">🎛️ Editor Interactivo</h4>
-                        <p class="text-slate-300 mb-4">El comando abre un editor con botones interactivos:</p>
-                        <div class="grid md:grid-cols-2 gap-3">
-                          <div class="bg-slate-900/30 border border-slate-700 rounded-lg p-4">
-                            <h5 class="font-bold text-white mb-2">📝 Base</h5>
-                            <p class="text-sm text-slate-400">Configuración básica: nombre, descripción, categoría, stackable</p>
-                          </div>
-                          <div class="bg-slate-900/30 border border-slate-700 rounded-lg p-4">
-                            <h5 class="font-bold text-white mb-2">🏷️ Tags</h5>
-                            <p class="text-sm text-slate-400">Etiquetas separadas por coma (weapon, rare, crafteable)</p>
-                          </div>
-                          <div class="bg-slate-900/30 border border-slate-700 rounded-lg p-4">
-                            <h5 class="font-bold text-white mb-2">⚙️ Props (JSON)</h5>
-                            <p class="text-sm text-slate-400">Propiedades avanzadas en formato JSON</p>
-                          </div>
-                          <div class="bg-slate-900/30 border border-slate-700 rounded-lg p-4">
-                            <h5 class="font-bold text-white mb-2">💾 Guardar/Cancelar</h5>
-                            <p class="text-sm text-slate-400">Confirma o cancela la creación</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Modal Base -->
-                      <div>
-                        <h4 class="text-lg font-semibold text-white mb-3">📋 Modal "Base"</h4>
-                        <div class="space-y-2 text-sm">
-                          <div class="flex gap-3 items-start">
-                            <span class="text-blue-400">•</span>
-                            <div>
-                              <strong class="text-white">Nombre:</strong>
-                              <span class="text-slate-300"> (requerido) Nombre visible del item</span>
-                            </div>
-                          </div>
-                          <div class="flex gap-3 items-start">
-                            <span class="text-blue-400">•</span>
-                            <div>
-                              <strong class="text-white">Descripción:</strong>
-                              <span class="text-slate-300"> Texto descriptivo del item</span>
-                            </div>
-                          </div>
-                          <div class="flex gap-3 items-start">
-                            <span class="text-blue-400">•</span>
-                            <div>
-                              <strong class="text-white">Categoría:</strong>
-                              <span class="text-slate-300"> Agrupa items (weapons, tools, consumables, etc.)</span>
-                            </div>
-                          </div>
-                          <div class="flex gap-3 items-start">
-                            <span class="text-blue-400">•</span>
-                            <div>
-                              <strong class="text-white">Icon URL:</strong>
-                              <span class="text-slate-300"> URL de imagen (opcional)</span>
-                            </div>
-                          </div>
-                          <div class="flex gap-3 items-start">
-                            <span class="text-blue-400">•</span>
-                            <div>
-                              <strong class="text-white">Stackable y Máx:</strong>
-                              <span class="text-slate-300"> Formato: <code class="bg-slate-800 px-1.5 py-0.5 rounded text-xs">true,10</code> o <code class="bg-slate-800 px-1.5 py-0.5 rounded text-xs">false,1</code></span>
-                              <ul class="ml-4 mt-2 space-y-1 text-xs text-slate-400">
-                                <li>• <code>true,10</code> = Apilable hasta 10 unidades</li>
-                                <li>• <code>false,1</code> = Solo 1 unidad (armas/herramientas)</li>
-                                <li>• <code>true,</code> = Apilable sin límite</li>
-                              </ul>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-
-                      <!-- Props Disponibles -->
-                      <div>
-                        <h4 class="text-lg font-semibold text-white mb-4">⚙️ Props (JSON) Disponibles</h4>
-                        
-                        <div class="space-y-4">
-                          <!-- Tool -->
-                          <details class="group/details bg-slate-900/30 border border-slate-700 rounded-lg overflow-hidden">
-                            <summary class="cursor-pointer px-4 py-3 font-semibold text-white hover:bg-slate-800/50 transition-all flex items-center gap-2">
-                              <span class="text-xl">🔧</span>
-                              <span>tool - Herramientas</span>
-                            </summary>
-                            <div class="px-4 py-3 border-t border-slate-700 space-y-2">
-                              <p class="text-sm text-slate-300 mb-3">Define el tipo de actividad que habilita tu item.</p>
-                              <pre class="bg-slate-900 border border-slate-700 rounded-lg p-4 text-xs text-cyan-200 overflow-x-auto"><code>{
-  "tool": {
-    "type": "pickaxe|rod|sword|bow|halberd|net",
-    "tier": 1
-  }
-}</code></pre>
-                              <ul class="text-sm text-slate-400 space-y-1 mt-3">
-                                <li>• <code class="text-xs">type</code>: Tipo de herramienta (determina en qué minijuego se usa)</li>
-                                <li>• <code class="text-xs">tier</code>: Nivel/calidad (usado en requisitos de niveles)</li>
-                              </ul>
-                            </div>
-                          </details>
-
-                          <!-- Breakable -->
-                          <details class="bg-slate-900/30 border border-slate-700 rounded-lg overflow-hidden">
-                            <summary class="cursor-pointer px-4 py-3 font-semibold text-white hover:bg-slate-800/50 transition-all flex items-center gap-2">
-                              <span class="text-xl">💥</span>
-                              <span>breakable - Durabilidad</span>
-                            </summary>
-                            <div class="px-4 py-3 border-t border-slate-700 space-y-2">
-                              <p class="text-sm text-slate-300 mb-3">Para items no apilables que se desgastan con el uso.</p>
-                              <pre class="bg-slate-900 border border-slate-700 rounded-lg p-4 text-xs text-cyan-200 overflow-x-auto"><code>{
-  "breakable": {
-    "enabled": true,
-    "maxDurability": 100,
-    "durabilityPerUse": 1
-  }
-}</code></pre>
-                            </div>
-                          </details>
-
-                          <!-- Chest -->
-                          <details class="bg-slate-900/30 border border-slate-700 rounded-lg overflow-hidden">
-                            <summary class="cursor-pointer px-4 py-3 font-semibold text-white hover:bg-slate-800/50 transition-all flex items-center gap-2">
-                              <span class="text-xl">📦</span>
-                              <span>chest - Cofres</span>
-                            </summary>
-                            <div class="px-4 py-3 border-t border-slate-700 space-y-2">
-                              <p class="text-sm text-slate-300 mb-3">Permite definir loot tables, recompensas de monedas, items o roles.</p>
-                              <pre class="bg-slate-900 border border-slate-700 rounded-lg p-4 text-xs text-cyan-200 overflow-x-auto"><code>{
-  "chest": {
-    "enabled": true,
-    "rewards": [
-      { "type": "coins", "amount": 100 },
-      { "type": "item", "itemKey": "iron_ore", "qty": 5 },
-      { "type": "role", "roleId": "1234567890" }
-    ],
-    "consumeOnOpen": true
-  }
-}</code></pre>
-                            </div>
-                          </details>
-
-                          <!-- Food -->
-                          <details class="bg-slate-900/30 border border-slate-700 rounded-lg overflow-hidden">
-                            <summary class="cursor-pointer px-4 py-3 font-semibold text-white hover:bg-slate-800/50 transition-all flex items-center gap-2">
-                              <span class="text-xl">🍖</span>
-                              <span>food - Comida/Pociones</span>
-                            </summary>
-                            <div class="px-4 py-3 border-t border-slate-700 space-y-2">
-                              <pre class="bg-slate-900 border border-slate-700 rounded-lg p-4 text-xs text-cyan-200 overflow-x-auto"><code>{
-  "food": {
-    "healHp": 50,
-    "healPercent": 25,
-    "cooldownKey": "healing_potion",
-    "cooldownSeconds": 60
-  }
-}</code></pre>
-                            </div>
-                          </details>
-
-                          <!-- Combat Stats -->
-                          <details class="bg-slate-900/30 border border-slate-700 rounded-lg overflow-hidden">
-                            <summary class="cursor-pointer px-4 py-3 font-semibold text-white hover:bg-slate-800/50 transition-all flex items-center gap-2">
-                              <span class="text-xl">⚔️</span>
-                              <span>Stats de Combate</span>
-                            </summary>
-                            <div class="px-4 py-3 border-t border-slate-700 space-y-2">
-                              <pre class="bg-slate-900 border border-slate-700 rounded-lg p-4 text-xs text-cyan-200 overflow-x-auto"><code>{
-  "damage": 10,
-  "defense": 5,
-  "maxHpBonus": 20
-}</code></pre>
-                            </div>
-                          </details>
-                        </div>
-                      </div>
-
-                      <!-- Ejemplo Completo -->
-                      <div>
-                        <h4 class="text-lg font-semibold text-white mb-3">�� Ejemplo Completo: Pico de Hierro</h4>
-                        <div class="bg-emerald-500/10 border border-emerald-500/30 rounded-lg p-4">
-                          <p class="text-sm text-emerald-200 mb-3"><strong>Comando:</strong> <code>!item-crear iron_pickaxe</code></p>
-                          <div class="space-y-3 text-sm">
-                            <div>
-                              <p class="text-white font-semibold mb-1">Modal Base:</p>
-                              <ul class="text-slate-300 space-y-1 ml-4">
-                                <li>• Nombre: <code>Pico de Hierro</code></li>
-                                <li>• Descripción: <code>Un pico resistente para minar minerales</code></li>
-                                <li>• Categoría: <code>tools</code></li>
-                                <li>• Stackable: <code>false,1</code></li>
-                              </ul>
-                            </div>
-                            <div>
-                              <p class="text-white font-semibold mb-1">Props (JSON):</p>
-                              <pre class="bg-slate-900 rounded p-2 text-xs text-cyan-200"><code>{
-  "tool": { "type": "pickaxe", "tier": 2 },
-  "breakable": { 
-    "enabled": true, 
-    "maxDurability": 150, 
-    "durabilityPerUse": 1 
-  }
-}</code></pre>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <!-- Más secciones continuarán... -->
-                <div class="rounded-2xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 p-6 text-center">
-                  <p class="text-lg font-semibold text-indigo-200 mb-2">📚 Documentación Completa</p>
-                  <p class="text-sm text-slate-300">
-                    Para información detallada sobre la creación de Mobs, Áreas, Niveles, Ofertas, Logros y Misiones, 
-                    consulta el archivo <code class="bg-slate-800 px-2 py-1 rounded text-xs">CREACION_DE_CONTENIDO.md</code> 
-                    en el repositorio del bot.
-                  </p>
-                  <p class="text-xs text-slate-400 mt-3">
-                    Esta sección te da una introducción. El archivo MD contiene ejemplos completos, 
-                    todas las propiedades disponibles y guías paso a paso.
-                  </p>
-                </div>
-              </div>
-            </section>
-
             <!-- CONFIGURACIÓN -->
-            <section id="configuracion" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🔧 Configuración del Servidor</h2>
+            <section id="configuracion" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">🔧 Configuración del Servidor</h2>
               <p class="text-slate-200">
                 Los administradores pueden personalizar el comportamiento del bot en su servidor.
               </p>
@@ -1478,8 +1121,8 @@
             </section>
 
             <!-- ESTADÍSTICAS -->
-            <section id="estadisticas" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">📊 Estadísticas y Progreso</h2>
+            <section id="estadisticas" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">📊 Estadísticas y Progreso</h2>
               <p class="text-slate-200">
                 Revisa tus estadísticas detalladas y cooldowns activos para planificar tu progreso.
               </p>
@@ -1522,8 +1165,8 @@
             </section>
 
             <!-- TIPS Y TRUCOS -->
-            <section id="tips" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">💡 Tips y Trucos</h2>
+            <section id="tips" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">💡 Tips y Trucos</h2>
               <p class="text-slate-200">
                 Consejos para aprovechar al máximo Amayo Bot y progresar más rápido.
               </p>
@@ -1572,8 +1215,8 @@
             </section>
 
             <!-- FAQ -->
-            <section id="faq" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
-              <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">❓ Preguntas Frecuentes</h2>
+            <section id="faq" class="space-y-6 rounded-3xl border border-white/5 bg-slate-900/80 p-8 shadow-2xl shadow-indigo-500/10 backdrop-blur">
+              <h2 class="text-3xl font-semibold text-white">❓ Preguntas Frecuentes</h2>
               
               <div class="space-y-4">
                 <details class="rounded-2xl border border-white/5 bg-slate-900/60 p-4 text-slate-200">
