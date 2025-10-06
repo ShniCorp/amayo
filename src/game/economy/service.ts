@@ -33,7 +33,7 @@ export async function getOrCreateWallet(userId: string, guildId: string) {
   return prisma.economyWallet.upsert({
     where: { userId_guildId: { userId, guildId } },
     update: {},
-    create: { userId, guildId },
+    create: { userId, guildId, coins: 25 },
   });
 }
 
