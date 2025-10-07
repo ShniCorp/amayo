@@ -85,7 +85,13 @@ const renderTemplate = async (
   } | Guía Completa`;
   const html = await ejs.renderFile(
     layoutFile,
-    { ...locals, title: locals.title ?? defaultTitle, body },
+    {
+      head: null,
+      scripts: null,
+      ...locals,
+      title: locals.title ?? defaultTitle,
+      body,
+    },
     { async: true }
   );
   res.writeHead(statusCode, {

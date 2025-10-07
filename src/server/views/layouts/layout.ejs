@@ -39,7 +39,7 @@
     };
   </script>
   <link rel="stylesheet" href="/assets/css/styles.css">
-  <% if (head) { %>
+  <% if (typeof head !== 'undefined' && head) { %>
     <%= head %>
   <% } %>
 </head>
@@ -92,7 +92,7 @@
   </footer>
 
   <script src="/assets/js/main.js" type="module"></script>
-  <% if (scripts) { %>
+  <% if (typeof scripts !== 'undefined' && scripts) { %>
     <%= scripts %>
   <% } %>
 </body>
