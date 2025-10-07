@@ -3,6 +3,11 @@ import type Amayo from "../../../core/client";
 import { getStreakInfo, updateStreak } from "../../../game/streaks/service";
 import type { TextBasedChannel } from "discord.js";
 import { fetchItemBasics, formatItemLabel, sendDisplayReply } from "./_helpers";
+import {
+  buildDisplay,
+  textBlock,
+  dividerBlock,
+} from "../../../core/lib/componentsV2";
 
 export const command: CommandMessage = {
   name: "racha",
@@ -22,51 +27,33 @@ export const command: CommandMessage = {
         guildId
       );
 
-      // Construir componentes
-      const components: any[] = [
-        {
-          type: 10,
-          content: `# 🔥 Racha Diaria de ${message.author.username}`,
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content:
-                `**📊 ESTADÍSTICAS**\n` +
-                `🔥 Racha Actual: **${streak.currentStreak}** días\n` +
-                `⭐ Mejor Racha: **${streak.longestStreak}** días\n` +
-                `📅 Días Activos: **${streak.totalDaysActive}** días`,
-            },
-          ],
-        },
-        { type: 14, spacing: 1 },
+      // Construir bloques de display (evitando type:9 sin accessory)
+      const blocks: any[] = [
+        textBlock(`# 🔥 Racha Diaria de ${message.author.username}`),
+        dividerBlock(),
+        textBlock(
+          `**📊 ESTADÍSTICAS**\n` +
+            `🔥 Racha Actual: **${streak.currentStreak}** días\n` +
+            `⭐ Mejor Racha: **${streak.longestStreak}** días\n` +
+            `📅 Días Activos: **${streak.totalDaysActive}** días`
+        ),
+        dividerBlock({ spacing: 1 }),
       ];
 
       // Mensaje de estado
       if (newDay) {
         if (daysIncreased) {
-          components.push({
-            type: 9,
-            components: [
-              {
-                type: 10,
-                content: `**✅ ¡RACHA INCREMENTADA!**\nHas mantenido tu racha por **${streak.currentStreak}** días seguidos.`,
-              },
-            ],
-          });
+          blocks.push(
+            textBlock(
+              `**✅ ¡RACHA INCREMENTADA!**\nHas mantenido tu racha por **${streak.currentStreak}** días seguidos.`
+            )
+          );
         } else {
-          components.push({
-            type: 9,
-            components: [
-              {
-                type: 10,
-                content: `**⚠️ RACHA REINICIADA**\nPasó más de un día sin actividad. Tu racha se ha reiniciado.`,
-              },
-            ],
-          });
+          blocks.push(
+            textBlock(
+              `**⚠️ RACHA REINICIADA**\nPasó más de un día sin actividad. Tu racha se ha reiniciado.`
+            )
+          );
         }
 
         // Mostrar recompensas
@@ -90,27 +77,15 @@ export const command: CommandMessage = {
             });
           }
 
-          components.push({ type: 14, spacing: 1 });
-          components.push({
-            type: 9,
-            components: [
-              {
-                type: 10,
-                content: rewardsText,
-              },
-            ],
-          });
+          blocks.push(dividerBlock({ spacing: 1 }));
+          blocks.push(textBlock(rewardsText));
         }
       } else {
-        components.push({
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**ℹ️ YA RECLAMASTE HOY**\nYa has reclamado tu recompensa diaria. Vuelve mañana para continuar tu racha.`,
-            },
-          ],
-        });
+        blocks.push(
+          textBlock(
+            `**ℹ️ YA RECLAMASTE HOY**\nYa has reclamado tu recompensa diaria. Vuelve mañana para continuar tu racha.`
+          )
+        );
       }
 
       // Próximos hitos
@@ -119,23 +94,15 @@ export const command: CommandMessage = {
 
       if (nextMilestone) {
         const remaining = nextMilestone - streak.currentStreak;
-        components.push({ type: 14, spacing: 1 });
-        components.push({
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**🎯 PRÓXIMO HITO**\nFaltan **${remaining}** días para alcanzar el día **${nextMilestone}**`,
-            },
-          ],
-        });
+        blocks.push(dividerBlock({ spacing: 1 }));
+        blocks.push(
+          textBlock(
+            `**🎯 PRÓXIMO HITO**\nFaltan **${remaining}** días para alcanzar el día **${nextMilestone}**`
+          )
+        );
       }
 
-      const display = {
-        type: 17,
-        accent_color: daysIncreased ? 0x00ff00 : 0xffa500,
-        components,
-      };
+      const display = buildDisplay(daysIncreased ? 0x00ff00 : 0xffa500, blocks);
 
       await sendDisplayReply(message, display);
     } catch (error) {
