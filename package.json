@@ -5,6 +5,7 @@
   "main": "src/main.ts",
   "scripts": {
     "start": "npx tsx watch src/main.ts",
+    "script:guild": "node scripts/setupGuildCacheCollection.js",
     "dev": "npx tsx watch src/main.ts",
     "dev:light": "CACHE_MESSAGES_LIMIT=25 CACHE_MEMBERS_LIMIT=50 SWEEP_MESSAGES_LIFETIME_SECONDS=600 SWEEP_MESSAGES_INTERVAL_SECONDS=240 npx tsx watch --clear-screen=false src/main.ts",
     "dev:mem": "MEMORY_LOG_INTERVAL_SECONDS=120 npx tsx watch src/main.ts",
