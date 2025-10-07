@@ -54,16 +54,18 @@
   </div>
 </header>
 
-<div class="mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 max-w-[90rem]">
+<div class="mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 max-w-[120rem]">
   <div class="flex min-h-screen flex-col">
 
-    <div class="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-10 px-0 md:px-6 pb-16 lg:flex-row lg:px-10">
+  <div class="mx-auto flex w-full max-w-[120rem] flex-1 flex-col gap-10 px-0 md:px-6 pb-16 lg:flex-row lg:px-10">
       <%- await include('../partials/toc') %>
 
-  <main class="flex-1 min-w-0 lg:max-w-[60rem] xl:max-w-[72rem]">
+  <main class="flex-1 min-w-0 lg:max-w-none xl:max-w-none 2xl:max-w-none">
         <div class="mx-auto flex w-full flex-col gap-8">
           <%- await include('../partials/sections/primeros-pasos') %>
           <%- await include('../partials/sections/comandos-basicos') %>
+          <%- await include('../partials/sections/ejemplos-basicos') %>
+          <%- await include('../partials/sections/ejemplos-avanzados') %>
           <%- await include('../partials/sections/sistema-juego') %>
           <%- await include('../partials/sections/minijuegos') %>
           <%- await include('../partials/sections/inventario-equipo') %>
