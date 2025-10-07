@@ -80,9 +80,12 @@ const renderTemplate = async (
   const pageFile = path.join(viewsDir, "pages", `${template}.ejs`);
   const layoutFile = path.join(viewsDir, "layouts", "layout.ejs");
   const body = await ejs.renderFile(pageFile, locals, { async: true });
+  const defaultTitle = `${
+    locals.appName ?? pkg.name ?? "Amayo Bot"
+  } | Guía Completa`;
   const html = await ejs.renderFile(
     layoutFile,
-    { ...locals, body },
+    { ...locals, title: locals.title ?? defaultTitle, body },
     { async: true }
   );
   res.writeHead(statusCode, {
