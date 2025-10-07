@@ -1,67 +1,103 @@
-import { prisma } from '../../../core/database/prisma';
-import type { GameArea } from '@prisma/client';
-import type { ItemProps } from '../../../game/economy/types';
+import { prisma } from "../../../core/database/prisma";
+import type { GameArea } from "@prisma/client";
+import type { ItemProps } from "../../../game/economy/types";
 import type {
   Message,
   TextBasedChannel,
   MessageComponentInteraction,
   StringSelectMenuInteraction,
   ButtonInteraction,
-  ModalSubmitInteraction
-} from 'discord.js';
-import { MessageFlags } from 'discord.js';
-import { ButtonStyle, ComponentType, TextInputStyle } from 'discord-api-types/v10';
+  ModalSubmitInteraction,
+} from "discord.js";
+import { MessageFlags } from "discord.js";
+import {
+  ButtonStyle,
+  ComponentType,
+  TextInputStyle,
+} from "discord-api-types/v10";
 
 export function parseItemProps(json: unknown): ItemProps {
-  if (!json || typeof json !== 'object') return {};
+  if (!json || typeof json !== "object") return {};
   return json as ItemProps;
 }
 
 export async function resolveArea(guildId: string, areaKey: string) {
-  const area = await prisma.gameArea.findFirst({ where: { key: areaKey, OR: [{ guildId }, { guildId: null }] }, orderBy: [{ guildId: 'desc' }] });
+  const area = await prisma.gameArea.findFirst({
+    where: { key: areaKey, OR: [{ guildId }, { guildId: null }] },
+    orderBy: [{ guildId: "desc" }],
+  });
   return area;
 }
 
 export interface ResolvedAreaInfo {
   area: GameArea | null;
-  source: 'guild' | 'global' | 'none';
+  source: "guild" | "global" | "none";
 }
 
-export async function resolveGuildAreaWithFallback(guildId: string, areaKey: string): Promise<ResolvedAreaInfo> {
-  const guildArea = await prisma.gameArea.findFirst({ where: { key: areaKey, guildId } });
+export async function resolveGuildAreaWithFallback(
+  guildId: string,
+  areaKey: string
+): Promise<ResolvedAreaInfo> {
+  const guildArea = await prisma.gameArea.findFirst({
+    where: { key: areaKey, guildId },
+  });
   if (guildArea) {
-    return { area: guildArea, source: 'guild' };
+    return { area: guildArea, source: "guild" };
   }
 
-  const globalArea = await prisma.gameArea.findFirst({ where: { key: areaKey, guildId: null } });
+  const globalArea = await prisma.gameArea.findFirst({
+    where: { key: areaKey, guildId: null },
+  });
   if (globalArea) {
-    return { area: globalArea, source: 'global' };
+    return { area: globalArea, source: "global" };
   }
 
-  return { area: null, source: 'none' };
+  return { area: null, source: "none" };
 }
 
-export async function resolveAreaByType(guildId: string, type: string): Promise<ResolvedAreaInfo> {
-  const guildArea = await prisma.gameArea.findFirst({ where: { type, guildId }, orderBy: [{ createdAt: 'asc' }] });
+export async function resolveAreaByType(
+  guildId: string,
+  type: string
+): Promise<ResolvedAreaInfo> {
+  const guildArea = await prisma.gameArea.findFirst({
+    where: { type, guildId },
+    orderBy: [{ createdAt: "asc" }],
+  });
   if (guildArea) {
-    return { area: guildArea, source: 'guild' };
+    return { area: guildArea, source: "guild" };
   }
 
-  const globalArea = await prisma.gameArea.findFirst({ where: { type, guildId: null }, orderBy: [{ createdAt: 'asc' }] });
+  const globalArea = await prisma.gameArea.findFirst({
+    where: { type, guildId: null },
+    orderBy: [{ createdAt: "asc" }],
+  });
   if (globalArea) {
-    return { area: globalArea, source: 'global' };
+    return { area: globalArea, source: "global" };
   }
 
-  return { area: null, source: 'none' };
+  return { area: null, source: "none" };
 }
 
-export async function getDefaultLevel(userId: string, guildId: string, areaId: string): Promise<number> {
-  const prog = await prisma.playerProgress.findUnique({ where: { userId_guildId_areaId: { userId, guildId, areaId } } });
+export async function getDefaultLevel(
+  userId: string,
+  guildId: string,
+  areaId: string
+): Promise<number> {
+  const prog = await prisma.playerProgress.findUnique({
+    where: { userId_guildId_areaId: { userId, guildId, areaId } },
+  });
   return Math.max(1, prog?.highestLevel ?? 1);
 }
 
-export async function findBestToolKey(userId: string, guildId: string, toolType: string): Promise<string | null> {
-  const inv = await prisma.inventoryEntry.findMany({ where: { userId, guildId, quantity: { gt: 0 } }, include: { item: true } });
+export async function findBestToolKey(
+  userId: string,
+  guildId: string,
+  toolType: string
+): Promise<string | null> {
+  const inv = await prisma.inventoryEntry.findMany({
+    where: { userId, guildId, quantity: { gt: 0 } },
+    include: { item: true },
+  });
   let best: { key: string; tier: number } | null = null;
   for (const e of inv) {
     const it = e.item;
@@ -80,10 +116,12 @@ export interface ParsedGameArgs {
   areaOverride: string | null;
 }
 
-const AREA_OVERRIDE_PREFIX = 'area:';
+const AREA_OVERRIDE_PREFIX = "area:";
 
 export function parseGameArgs(args: string[]): ParsedGameArgs {
-  const tokens = args.filter((arg): arg is string => typeof arg === 'string' && arg.trim().length > 0);
+  const tokens = args.filter(
+    (arg): arg is string => typeof arg === "string" && arg.trim().length > 0
+  );
 
   let levelArg: number | null = null;
   let providedTool: string | null = null;
@@ -109,9 +147,12 @@ export function parseGameArgs(args: string[]): ParsedGameArgs {
   return { levelArg, providedTool, areaOverride };
 }
 
-const DEFAULT_ITEM_ICON = '📦';
+const DEFAULT_ITEM_ICON = "📦";
 
-export function resolveItemIcon(icon?: string | null, fallback = DEFAULT_ITEM_ICON) {
+export function resolveItemIcon(
+  icon?: string | null,
+  fallback = DEFAULT_ITEM_ICON
+) {
   const trimmed = icon?.trim();
   return trimmed && trimmed.length > 0 ? trimmed : fallback;
 }
@@ -122,15 +163,24 @@ export function formatItemLabel(
 ): string {
   const fallbackIcon = options.fallbackIcon ?? DEFAULT_ITEM_ICON;
   const icon = resolveItemIcon(item.icon, fallbackIcon);
-  const label = (item.name ?? '').trim() || item.key;
-  const content = `${icon ? `${icon} ` : ''}${label}`.trim();
+  const label = (item.name ?? "").trim() || item.key;
+  const content = `${icon ? `${icon} ` : ""}${label}`.trim();
   return options.bold ? `**${content}**` : content;
 }
 
-export type ItemBasicInfo = { key: string; name: string | null; icon: string | null };
+export type ItemBasicInfo = {
+  key: string;
+  name: string | null;
+  icon: string | null;
+};
 
-export async function fetchItemBasics(guildId: string, keys: string[]): Promise<Map<string, ItemBasicInfo>> {
-  const uniqueKeys = Array.from(new Set(keys.filter((key): key is string => Boolean(key && key.trim()))));
+export async function fetchItemBasics(
+  guildId: string,
+  keys: string[]
+): Promise<Map<string, ItemBasicInfo>> {
+  const uniqueKeys = Array.from(
+    new Set(keys.filter((key): key is string => Boolean(key && key.trim())))
+  );
   if (uniqueKeys.length === 0) return new Map();
 
   const rows = await prisma.economyItem.findMany({
@@ -138,7 +188,7 @@ export async function fetchItemBasics(guildId: string, keys: string[]): Promise<
       key: { in: uniqueKeys },
       OR: [{ guildId }, { guildId: null }],
     },
-    orderBy: [{ key: 'asc' }, { guildId: 'desc' }],
+    orderBy: [{ key: "asc" }, { guildId: "desc" }],
     select: { key: true, name: true, icon: true, guildId: true },
   });
 
@@ -181,7 +231,7 @@ export interface KeyPickerConfig<T> {
 export interface KeyPickerResult<T> {
   entry: T | null;
   panelMessage: Message | null;
-  reason: 'selected' | 'empty' | 'cancelled' | 'timeout';
+  reason: "selected" | "empty" | "cancelled" | "timeout";
 }
 
 export async function promptKeySelection<T>(
@@ -193,9 +243,14 @@ export async function promptKeySelection<T>(
 
   const baseOptions = config.entries.map((entry) => {
     const option = config.getOption(entry);
-    const searchText = [option.label, option.description, option.value, ...(option.keywords ?? [])]
+    const searchText = [
+      option.label,
+      option.description,
+      option.value,
+      ...(option.keywords ?? []),
+    ]
       .filter(Boolean)
-      .join(' ')
+      .join(" ")
       .toLowerCase();
     return { entry, option, searchText };
   });
@@ -203,7 +258,7 @@ export async function promptKeySelection<T>(
   if (baseOptions.length === 0) {
     const emptyPanel = {
       type: 17,
-      accent_color: 0xFFA500,
+      accent_color: 0xffa500,
       components: [
         {
           type: 10,
@@ -217,14 +272,14 @@ export async function promptKeySelection<T>(
       reply: { messageReference: message.id },
       components: [emptyPanel],
     });
-    return { entry: null, panelMessage: null, reason: 'empty' };
+    return { entry: null, panelMessage: null, reason: "empty" };
   }
 
-  let filter = '';
+  let filter = "";
   let page = 0;
   const pageSize = 25;
-  const accentColor = config.accentColor ?? 0x5865F2;
-  const placeholder = config.placeholder ?? 'Selecciona una opción…';
+  const accentColor = config.accentColor ?? 0x5865f2;
+  const placeholder = config.placeholder ?? "Selecciona una opción…";
 
   const buildComponents = () => {
     const normalizedFilter = filter.trim().toLowerCase();
@@ -238,10 +293,12 @@ export async function promptKeySelection<T>(
     const start = safePage * pageSize;
     const slice = filtered.slice(start, start + pageSize);
 
-    const pageLabel = `Página ${totalFiltered === 0 ? 0 : safePage + 1}/${totalPages}`;
+    const pageLabel = `Página ${
+      totalFiltered === 0 ? 0 : safePage + 1
+    }/${totalPages}`;
     const statsLine = `Total: **${baseOptions.length}** • Coincidencias: **${totalFiltered}**\n${pageLabel}`;
-    const filterLine = filter ? `\nFiltro activo: \`${filter}\`` : '';
-    const hintLine = config.filterHint ? `\n${config.filterHint}` : '';
+    const filterLine = filter ? `\nFiltro activo: \`${filter}\`` : "";
+    const hintLine = config.filterHint ? `\n${config.filterHint}` : "";
 
     const display = {
       type: 17,
@@ -256,9 +313,10 @@ export async function promptKeySelection<T>(
         { type: 14, divider: true },
         {
           type: 10,
-          content: totalFiltered === 0
-            ? 'No hay resultados para el filtro actual. Ajusta el filtro o limpia la búsqueda.'
-            : 'Selecciona una opción del menú desplegable para continuar.',
+          content:
+            totalFiltered === 0
+              ? "No hay resultados para el filtro actual. Ajusta el filtro o limpia la búsqueda."
+              : "Selecciona una opción del menú desplegable para continuar.",
         },
       ],
     };
@@ -273,9 +331,9 @@ export async function promptKeySelection<T>(
     if (selectDisabled) {
       options = [
         {
-          label: 'Sin resultados',
+          label: "Sin resultados",
           value: `${config.customIdPrefix}_empty`,
-          description: 'Ajusta el filtro para ver opciones.',
+          description: "Ajusta el filtro para ver opciones.",
         },
       ];
     }
@@ -299,34 +357,34 @@ export async function promptKeySelection<T>(
         {
           type: 2,
           style: ButtonStyle.Secondary,
-          label: '◀️',
+          label: "◀️",
           custom_id: `${config.customIdPrefix}_prev`,
           disabled: safePage <= 0 || totalFiltered === 0,
         },
         {
           type: 2,
           style: ButtonStyle.Secondary,
-          label: '▶️',
+          label: "▶️",
           custom_id: `${config.customIdPrefix}_next`,
           disabled: safePage >= totalPages - 1 || totalFiltered === 0,
         },
         {
           type: 2,
           style: ButtonStyle.Primary,
-          label: '🔎 Filtro',
+          label: "🔎 Filtro",
           custom_id: `${config.customIdPrefix}_filter`,
         },
         {
           type: 2,
           style: ButtonStyle.Secondary,
-          label: 'Limpiar',
+          label: "Limpiar",
           custom_id: `${config.customIdPrefix}_clear`,
           disabled: filter.length === 0,
         },
         {
           type: 2,
           style: ButtonStyle.Danger,
-          label: 'Cancelar',
+          label: "Cancelar",
           custom_id: `${config.customIdPrefix}_cancel`,
         },
       ],
@@ -345,7 +403,10 @@ export async function promptKeySelection<T>(
   let resolved = false;
 
   const result = await new Promise<KeyPickerResult<T>>((resolve) => {
-    const finish = (entry: T | null, reason: 'selected' | 'cancelled' | 'timeout') => {
+    const finish = (
+      entry: T | null,
+      reason: "selected" | "cancelled" | "timeout"
+    ) => {
       if (resolved) return;
       resolved = true;
       resolve({ entry, panelMessage, reason });
@@ -353,158 +414,193 @@ export async function promptKeySelection<T>(
 
     const collector = panelMessage.createMessageComponentCollector({
       time: 5 * 60_000,
-      filter: (i: MessageComponentInteraction) => i.user.id === userId && i.customId.startsWith(config.customIdPrefix),
+      filter: (i: MessageComponentInteraction) =>
+        i.user.id === userId && i.customId.startsWith(config.customIdPrefix),
     });
 
-    collector.on('collect', async (interaction: MessageComponentInteraction) => {
-      try {
-        if (interaction.customId === `${config.customIdPrefix}_select` && interaction.isStringSelectMenu()) {
-          const select = interaction as StringSelectMenuInteraction;
-          const value = select.values?.[0];
-          const selected = baseOptions.find((opt) => opt.option.value === value);
-          if (!selected) {
-            await select.reply({ content: '❌ Opción no válida.', flags: MessageFlags.Ephemeral });
+    collector.on(
+      "collect",
+      async (interaction: MessageComponentInteraction) => {
+        try {
+          if (
+            interaction.customId === `${config.customIdPrefix}_select` &&
+            interaction.isStringSelectMenu()
+          ) {
+            const select = interaction as StringSelectMenuInteraction;
+            const value = select.values?.[0];
+            const selected = baseOptions.find(
+              (opt) => opt.option.value === value
+            );
+            if (!selected) {
+              await select.reply({
+                content: "❌ Opción no válida.",
+                flags: MessageFlags.Ephemeral,
+              });
+              return;
+            }
+
+            try {
+              await select.update({
+                components: [
+                  {
+                    type: 17,
+                    accent_color: accentColor,
+                    components: [
+                      {
+                        type: 10,
+                        content: `⏳ Cargando **${selected.option.label}**…`,
+                      },
+                    ],
+                  },
+                ],
+              });
+            } catch {
+              if (!select.deferred && !select.replied) {
+                try {
+                  await select.deferUpdate();
+                } catch {}
+              }
+            }
+
+            finish(selected.entry, "selected");
+            collector.stop("selected");
             return;
           }
 
-          try {
-            await select.update({
-              components: [
-                {
-                  type: 17,
-                  accent_color: accentColor,
-                  components: [
-                    {
-                      type: 10,
-                      content: `⏳ Cargando **${selected.option.label}**…`,
-                    },
-                  ],
-                },
-              ],
-            });
-          } catch {
-            if (!select.deferred && !select.replied) {
-              try { await select.deferUpdate(); } catch {}
-            }
-          }
-
-          finish(selected.entry, 'selected');
-          collector.stop('selected');
-          return;
-        }
-
-        if (interaction.customId === `${config.customIdPrefix}_prev` && interaction.isButton()) {
-          if (page > 0) page -= 1;
-          await interaction.update({ components: buildComponents() });
-          return;
-        }
-
-        if (interaction.customId === `${config.customIdPrefix}_next` && interaction.isButton()) {
-          page += 1;
-          await interaction.update({ components: buildComponents() });
-          return;
-        }
-
-        if (interaction.customId === `${config.customIdPrefix}_clear` && interaction.isButton()) {
-          filter = '';
-          page = 0;
-          await interaction.update({ components: buildComponents() });
-          return;
-        }
-
-        if (interaction.customId === `${config.customIdPrefix}_cancel` && interaction.isButton()) {
-          try {
-            await interaction.update({
-              components: [
-                {
-                  type: 17,
-                  accent_color: 0xFF0000,
-                  components: [
-                    { type: 10, content: '❌ Selección cancelada.' },
-                  ],
-                },
-              ],
-            });
-          } catch {
-            if (!interaction.deferred && !interaction.replied) {
-              try { await interaction.deferUpdate(); } catch {}
-            }
-          }
-
-          finish(null, 'cancelled');
-          collector.stop('cancelled');
-          return;
-        }
-
-        if (interaction.customId === `${config.customIdPrefix}_filter` && interaction.isButton()) {
-          const modal = {
-            title: 'Filtrar lista',
-            customId: `${config.customIdPrefix}_filter_modal`,
-            components: [
-              {
-                type: ComponentType.Label,
-                label: 'Texto a buscar',
-                component: {
-                  type: ComponentType.TextInput,
-                  customId: 'query',
-                  style: TextInputStyle.Short,
-                  required: false,
-                  value: filter,
-                  placeholder: 'Nombre, key, categoría…',
-                },
-              },
-            ],
-          } as const;
-
-          await (interaction as ButtonInteraction).showModal(modal);
-          let submitted: ModalSubmitInteraction | undefined;
-          try {
-            submitted = await interaction.awaitModalSubmit({
-              time: 120_000,
-              filter: (sub) => sub.user.id === userId && sub.customId === `${config.customIdPrefix}_filter_modal`,
-            });
-          } catch {
+          if (
+            interaction.customId === `${config.customIdPrefix}_prev` &&
+            interaction.isButton()
+          ) {
+            if (page > 0) page -= 1;
+            await interaction.update({ components: buildComponents() });
             return;
           }
 
-          try {
-            const value = submitted.components.getTextInputValue('query')?.trim() ?? '';
-            filter = value;
+          if (
+            interaction.customId === `${config.customIdPrefix}_next` &&
+            interaction.isButton()
+          ) {
+            page += 1;
+            await interaction.update({ components: buildComponents() });
+            return;
+          }
+
+          if (
+            interaction.customId === `${config.customIdPrefix}_clear` &&
+            interaction.isButton()
+          ) {
+            filter = "";
             page = 0;
-            await submitted.deferUpdate();
-            await panelMessage.edit({ components: buildComponents() });
-          } catch {
-            // ignore errors updating filter
+            await interaction.update({ components: buildComponents() });
+            return;
           }
-          return;
-        }
-      } catch (err) {
-        if (!interaction.deferred && !interaction.replied) {
-          await interaction.reply({ content: '❌ Error procesando la selección.', flags: MessageFlags.Ephemeral });
+
+          if (
+            interaction.customId === `${config.customIdPrefix}_cancel` &&
+            interaction.isButton()
+          ) {
+            try {
+              await interaction.update({
+                components: [
+                  {
+                    type: 17,
+                    accent_color: 0xff0000,
+                    components: [
+                      { type: 10, content: "❌ Selección cancelada." },
+                    ],
+                  },
+                ],
+              });
+            } catch {
+              if (!interaction.deferred && !interaction.replied) {
+                try {
+                  await interaction.deferUpdate();
+                } catch {}
+              }
+            }
+
+            finish(null, "cancelled");
+            collector.stop("cancelled");
+            return;
+          }
+
+          if (
+            interaction.customId === `${config.customIdPrefix}_filter` &&
+            interaction.isButton()
+          ) {
+            const modal = {
+              title: "Filtrar lista",
+              customId: `${config.customIdPrefix}_filter_modal`,
+              components: [
+                {
+                  type: ComponentType.Label,
+                  label: "Texto a buscar",
+                  component: {
+                    type: ComponentType.TextInput,
+                    customId: "query",
+                    style: TextInputStyle.Short,
+                    required: false,
+                    value: filter,
+                    placeholder: "Nombre, key, categoría…",
+                  },
+                },
+              ],
+            } as const;
+
+            await (interaction as ButtonInteraction).showModal(modal);
+            let submitted: ModalSubmitInteraction | undefined;
+            try {
+              submitted = await interaction.awaitModalSubmit({
+                time: 120_000,
+                filter: (sub) =>
+                  sub.user.id === userId &&
+                  sub.customId === `${config.customIdPrefix}_filter_modal`,
+              });
+            } catch {
+              return;
+            }
+
+            try {
+              const value =
+                submitted.components.getTextInputValue("query")?.trim() ?? "";
+              filter = value;
+              page = 0;
+              await submitted.deferUpdate();
+              await panelMessage.edit({ components: buildComponents() });
+            } catch {
+              // ignore errors updating filter
+            }
+            return;
+          }
+        } catch (err) {
+          if (!interaction.deferred && !interaction.replied) {
+            await interaction.reply({
+              content: "❌ Error procesando la selección.",
+              flags: MessageFlags.Ephemeral,
+            });
+          }
         }
       }
-    });
+    );
 
-    collector.on('end', async (_collected, reason) => {
+    collector.on("end", async (_collected, reason) => {
       if (resolved) return;
       resolved = true;
-      if (reason !== 'selected' && reason !== 'cancelled') {
+      if (reason !== "selected" && reason !== "cancelled") {
         const expiredPanel = {
           type: 17,
-          accent_color: 0xFFA500,
-          components: [
-            { type: 10, content: '⏰ Selección expirada.' },
-          ],
+          accent_color: 0xffa500,
+          components: [{ type: 10, content: "⏰ Selección expirada." }],
         };
         try {
           await panelMessage.edit({ components: [expiredPanel] });
         } catch {}
       }
 
-      let mappedReason: 'selected' | 'cancelled' | 'timeout';
-      if (reason === 'selected') mappedReason = 'selected';
-      else if (reason === 'cancelled') mappedReason = 'cancelled';
-      else mappedReason = 'timeout';
+      let mappedReason: "selected" | "cancelled" | "timeout";
+      if (reason === "selected") mappedReason = "selected";
+      else if (reason === "cancelled") mappedReason = "cancelled";
+      else mappedReason = "timeout";
 
       resolve({ entry: null, panelMessage, reason: mappedReason });
     });
@@ -513,7 +609,11 @@ export async function promptKeySelection<T>(
   return result;
 }
 
-export function sendDisplayReply(message: Message, display: any, extraComponents: any[] = []) {
+export function sendDisplayReply(
+  message: Message,
+  display: any,
+  extraComponents: any[] = []
+) {
   const channel = message.channel as TextBasedChannel & { send: Function };
   return (channel.send as any)({
     flags: 32768,
@@ -521,4 +621,3 @@ export function sendDisplayReply(message: Message, display: any, extraComponents
     components: [display, ...extraComponents],
   });
 }
-
