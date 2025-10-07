@@ -63,14 +63,14 @@
   </div>
 </header>
 
-<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+<div class="mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 max-w-[90rem]">
   <div class="flex min-h-screen flex-col">
 
-    <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 pb-16 lg:flex-row lg:px-10">
+    <div class="mx-auto flex w-full max-w-[90rem] flex-1 flex-col gap-10 px-0 md:px-6 pb-16 lg:flex-row lg:px-10">
       <%- await include('../partials/toc') %>
 
-      <main class="flex-1 min-w-0">
-        <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
+      <main class="flex-1 min-w-0 lg:max-w-4xl xl:max-w-5xl">
+        <div class="mx-auto flex w-full flex-col gap-8">
           <%- await include('../partials/sections/primeros-pasos') %>
           <%- await include('../partials/sections/comandos-basicos') %>
           <%- await include('../partials/sections/sistema-juego') %>
@@ -98,7 +98,7 @@
         </div>
       </main>
 
-      <aside class="w-full lg:w-80 xl:w-96 lg:sticky lg:top-24 lg:h-fit lg:self-start">
+      <aside class="w-full lg:w-80 xl:w-96 2xl:w-[28rem] lg:sticky lg:top-24 lg:h-fit lg:self-start">
         <%- await include('../partials/rightSidebar') %>
       </aside>
     </div>
