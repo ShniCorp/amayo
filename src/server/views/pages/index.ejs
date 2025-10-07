@@ -1,0 +1,102 @@
+<header class="relative overflow-hidden ">
+  <div class="absolute inset-0 bg-gradient-to-b from-indigo-500/5 via-purple-500/5 to-transparent"></div>
+  
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 relative">
+    <div class="max-w-5xl mx-auto text-center space-y-8">
+      <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-500/30 backdrop-blur-sm">
+        <span class="relative flex h-2.5 w-2.5">
+          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-r from-indigo-400 to-purple-400"></span>
+        </span>
+        <span class="text-sm font-bold tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 to-purple-200">
+          <%= appName %> • v<%= version %>
+        </span>
+      </div>
+
+      <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-tight">
+        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-purple-100">
+          Guía Completa
+        </span>
+        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+          <%= appName %>
+        </span>
+      </h1>
+
+      <p class="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-light">
+        Sistema completo de <span class="font-semibold text-indigo-300">economía</span>, <span class="font-semibold text-purple-300">minijuegos</span>, <span class="font-semibold text-pink-300">misiones</span> y <span class="font-semibold text-blue-300">IA</span> para Discord
+      </p>
+
+      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
+        <a href="#primeros-pasos" class="group relative px-10 py-4 text-lg font-bold text-white overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105">
+          <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 transition-transform duration-300 group-hover:scale-110"></div>
+          <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+          <span class="relative flex items-center gap-2">
+            Comenzar ahora
+            <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
+            </svg>
+          </span>
+        </a>
+        
+        <button id="toggle-nav" class="group px-10 py-4 text-lg font-bold text-white backdrop-blur-xl bg-white/5 border-2 border-white/10 rounded-2xl hover:bg-white/10 hover:border-white/20 hover:scale-105 transition-all duration-300">
+          <span class="flex items-center gap-2">
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            </svg>
+            Ver índice
+          </span>
+        </button>
+      </div>
+
+      <div class="flex flex-wrap justify-center gap-3 pt-6">
+        <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
+          Discord.js <%= djsVersion %>
+        </span>
+        <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
+          <%= currentDateHuman %>
+        </span>
+        <span class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 text-sm font-bold text-indigo-200 hover:from-indigo-500/20 hover:to-purple-500/20 transition-all">
+          23 Secciones • Creación de Contenido Incluida
+        </span>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+  <div class="flex min-h-screen flex-col">
+
+    <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 pb-16 lg:flex-row lg:px-10">
+      <%- include('../partials/toc') %>
+
+      <main class="flex-1">
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
+          <%- include('../partials/sections/primeros-pasos') %>
+          <%- include('../partials/sections/comandos-basicos') %>
+          <%- include('../partials/sections/sistema-juego') %>
+          <%- include('../partials/sections/minijuegos') %>
+          <%- include('../partials/sections/inventario-equipo') %>
+          <%- include('../partials/sections/economia') %>
+          <%- include('../partials/sections/tienda') %>
+          <%- include('../partials/sections/crafteo') %>
+          <%- include('../partials/sections/logros') %>
+          <%- include('../partials/sections/misiones') %>
+          <%- include('../partials/sections/racha') %>
+          <%- include('../partials/sections/consumibles') %>
+          <%- include('../partials/sections/cofres') %>
+          <%- include('../partials/sections/encantamientos') %>
+          <%- include('../partials/sections/fundicion') %>
+          <%- include('../partials/sections/ia') %>
+          <%- include('../partials/sections/recordatorios') %>
+          <%- include('../partials/sections/alianzas') %>
+          <%- include('../partials/sections/admin') %>
+          <%- include('../partials/sections/creacion-contenido') %>
+          <%- include('../partials/sections/configuracion') %>
+          <%- include('../partials/sections/estadisticas') %>
+          <%- include('../partials/sections/tips') %>
+          <%- include('../partials/sections/faq') %>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
