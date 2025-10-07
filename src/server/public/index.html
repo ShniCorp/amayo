@@ -6,7 +6,7 @@
   <title>Amayo Bot | Guía Completa para Usuarios de Discord</title>
   <meta name="description" content="Guía completa de Amayo Bot: comandos, minijuegos, economía, misiones, logros, creación de contenido y más">
   <script src="https://cdn.tailwindcss.com"></script>
-  <script>
+ <script>
     tailwind.config = {
       theme: {
         extend: {
@@ -14,6 +14,7 @@
             'gradient': 'gradient 8s linear infinite',
             'float': 'float 6s ease-in-out infinite',
             'glow': 'glow 3s ease-in-out infinite',
+            'slide-in': 'slideIn 0.5s ease-out',
           },
           keyframes: {
             gradient: {
@@ -27,6 +28,10 @@
             glow: {
               '0%, 100%': { opacity: '0.4' },
               '50%': { opacity: '0.8' },
+            },
+            slideIn: {
+              '0%': { transform: 'translateY(20px)', opacity: '0' },
+              '100%': { transform: 'translateY(0)', opacity: '1' },
             },
           },
         },
@@ -43,6 +48,7 @@
     <div class="absolute top-1/3 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
     <div class="absolute bottom-0 left-1/3 w-96 h-96 bg-pink-500/15 rounded-full mix-blend-screen filter blur-3xl animate-float" style="animation-delay: 4s;"></div>
   </div>
+
 
   <div class="relative z-10">
     <!-- Hero Ultra Moderno -->
