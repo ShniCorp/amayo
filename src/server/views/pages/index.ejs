@@ -60,7 +60,7 @@
   <div class="mx-auto flex w-full max-w-[120rem] flex-1 flex-col gap-10 px-0 md:px-6 pb-16 lg:flex-row lg:px-10">
       <%- await include('../partials/toc') %>
 
-  <main class="flex-1 min-w-0 lg:max-w-none xl:max-w-none 2xl:max-w-none">
+  <main class="w-full flex-1 min-w-0 lg:max-w-none xl:max-w-none 2xl:max-w-none">
         <div class="mx-auto flex w-full flex-col gap-8">
           <%- await include('../partials/sections/primeros-pasos') %>
           <%- await include('../partials/sections/comandos-basicos') %>
@@ -91,7 +91,7 @@
         </div>
       </main>
 
-      <aside class="w-full lg:w-80 xl:w-96 2xl:w-[28rem] lg:sticky lg:top-24 lg:h-fit lg:self-start">
+      <aside class="hidden lg:block lg:w-80 xl:w-96 2xl:w-[28rem] lg:sticky lg:top-24 lg:h-fit lg:self-start">
         <%- await include('../partials/rightSidebar') %>
       </aside>
     </div>
