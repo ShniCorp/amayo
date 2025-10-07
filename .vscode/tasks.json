@@ -1,0 +1,17 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Typecheck: tsc --noEmit",
+			"type": "shell",
+			"command": "npm",
+			"args": [
+				"run",
+				"-s",
+				"tsc",
+				"--",
+				"--noEmit"
+			]
+		}
+	]
+}

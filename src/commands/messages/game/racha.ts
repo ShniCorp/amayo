@@ -3,7 +3,11 @@ import type Amayo from "../../../core/client";
 import { getStreakInfo, updateStreak } from "../../../game/streaks/service";
 import type { TextBasedChannel } from "discord.js";
 import { fetchItemBasics, formatItemLabel, sendDisplayReply } from "./_helpers";
-import { buildDisplay, textBlock, dividerBlock } from "../../../core/lib/componentsV2";
+import {
+  buildDisplay,
+  textBlock,
+  dividerBlock,
+} from "../../../core/lib/componentsV2";
 
 export const command: CommandMessage = {
   name: "racha",
@@ -98,10 +102,7 @@ export const command: CommandMessage = {
         );
       }
 
-      const display = buildDisplay(
-        daysIncreased ? 0x00ff00 : 0xffa500,
-        blocks
-      );
+      const display = buildDisplay(daysIncreased ? 0x00ff00 : 0xffa500, blocks);
 
       await sendDisplayReply(message, display);
     } catch (error) {
