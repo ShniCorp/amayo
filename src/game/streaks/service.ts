@@ -1,11 +1,15 @@
 import { prisma } from '../../core/database/prisma';
 import { giveRewards, type Reward } from '../rewards/service';
 import logger from '../../core/lib/logger';
+import { ensureUserAndGuildExist } from '../core/userService';
 
 /**
  * Obtener o crear racha del jugador
  */
 export async function getOrCreateStreak(userId: string, guildId: string) {
+  // Asegurar que User y Guild existan antes de crear/buscar streak
+  await ensureUserAndGuildExist(userId, guildId);
+  
   let streak = await prisma.playerStreak.findUnique({
     where: { userId_guildId: { userId, guildId } }
   });

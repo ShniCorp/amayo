@@ -3,6 +3,7 @@ import type Amayo from '../../../core/client';
 import { prisma } from '../../../core/database/prisma';
 import { ComponentType, ButtonStyle } from 'discord-api-types/v10';
 import type { MessageComponentInteraction, TextBasedChannel } from 'discord.js';
+import { buildDisplay, dividerBlock, textBlock } from '../../../core/lib/componentsV2';
 
 export const command: CommandMessage = {
   name: 'items-lista',
@@ -34,32 +35,28 @@ export const command: CommandMessage = {
 
     const totalPages = Math.ceil(total / perPage);
 
-    const display = {
-      type: 17,
-      accent_color: 0x00D9FF,
-      components: [
-        {
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**🛠️ Lista de Items**\nPágina ${page}/${totalPages} • Total: ${total}`
-          }]
-        },
-        { type: 14, divider: true },
-        ...items.map(item => ({
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**${item.name || item.key}**\n` +
-                     `└ Key: \`${item.key}\`\n` +
-                     `└ Categoría: ${item.category || '*Sin categoría*'}\n` +
-                     `└ ${item.stackable ? '📚 Apilable' : '🔒 No apilable'}` +
-                     (item.maxPerInventory ? ` (Máx: ${item.maxPerInventory})` : '') +
-                     (item.guildId === guildId ? ' • 📍 Local' : ' • 🌐 Global')
-          }]
-        }))
-      ]
-    };
+    const displayBlocks = [
+      textBlock(`# 🛠️ Lista de Items`),
+      dividerBlock(),
+      textBlock(`Página ${page}/${totalPages} • Total: ${total}`),
+      dividerBlock({ divider: false, spacing: 2 }),
+      ...items.flatMap((item, index) => {
+        const lines = [
+          `**${item.name || item.key}**`,
+          `└ Key: \`${item.key}\``,
+          `└ Categoría: ${item.category || '*Sin categoría*'}`,
+          `└ ${item.stackable ? '📚 Apilable' : '🔒 No apilable'}${item.maxPerInventory ? ` (Máx: ${item.maxPerInventory})` : ''}${item.guildId === guildId ? ' • 📍 Local' : ' • 🌐 Global'}`,
+        ].join('\n');
+
+        const blocks = [textBlock(lines)];
+        if (index < items.length - 1) {
+          blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+        }
+        return blocks;
+      })
+    ];
+
+    const display = buildDisplay(0x00D9FF, displayBlocks);
 
     const buttons: any[] = [];
     
@@ -90,7 +87,9 @@ export const command: CommandMessage = {
 
     const channel = message.channel as TextBasedChannel & { send: Function };
     const msg = await (channel.send as any)({
+      content: null,
       flags: 32768,
+      reply: { messageReference: message.id },
       components: [
         display,
         ...(buttons.length > 0 ? [{

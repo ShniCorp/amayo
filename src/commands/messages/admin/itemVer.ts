@@ -2,6 +2,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { prisma } from '../../../core/database/prisma';
 import type { TextBasedChannel } from 'discord.js';
+import { buildDisplay, dividerBlock, textBlock } from '../../../core/lib/componentsV2';
 
 export const command: CommandMessage = {
   name: 'item-ver',
@@ -34,70 +35,42 @@ export const command: CommandMessage = {
     const props = item.props as any || {};
     const tags = item.tags || [];
 
-    const display = {
-      type: 17,
-      accent_color: 0x00D9FF,
-      components: [
-        {
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**🛠️ ${item.name || item.key}**`
-          }]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**Key:** \`${item.key}\`\n` +
-                     `**Nombre:** ${item.name || '*Sin nombre*'}\n` +
-                     `**Descripción:** ${item.description || '*Sin descripción*'}\n` +
-                     `**Categoría:** ${item.category || '*Sin categoría*'}\n` +
-                     `**Stackable:** ${item.stackable ? 'Sí' : 'No'}\n` +
-                     `**Máx. Inventario:** ${item.maxPerInventory || 'Ilimitado'}\n` +
-                     `**Ámbito:** ${item.guildId ? '📍 Local del servidor' : '🌐 Global'}`
-          }]
-        }
-      ]
-    };
+    const blocks = [
+      textBlock(`# 🛠️ ${item.name || item.key}`),
+      dividerBlock(),
+      textBlock([
+        `**Key:** \`${item.key}\``,
+        `**Nombre:** ${item.name || '*Sin nombre*'}`,
+        `**Descripción:** ${item.description || '*Sin descripción*'}`,
+        `**Categoría:** ${item.category || '*Sin categoría*'}`,
+        `**Stackable:** ${item.stackable ? 'Sí' : 'No'}`,
+        `**Máx. Inventario:** ${item.maxPerInventory ?? 'Ilimitado'}`,
+        `**Ámbito:** ${item.guildId ? '📍 Local del servidor' : '🌐 Global'}`,
+      ].join('\n')),
+    ];
 
     if (tags.length > 0) {
-      display.components.push({ type: 14, divider: true });
-      display.components.push({
-        type: 9,
-        components: [{
-          type: 10,
-          content: `**Tags:** ${tags.join(', ')}`
-        }]
-      });
+      blocks.push(dividerBlock());
+      blocks.push(textBlock(`**Tags:** ${tags.join(', ')}`));
     }
 
     if (item.icon) {
-      display.components.push({ type: 14, divider: true });
-      display.components.push({
-        type: 9,
-        components: [{
-          type: 10,
-          content: `**Icon URL:** ${item.icon}`
-        }]
-      });
+      blocks.push(dividerBlock());
+      blocks.push(textBlock(`**Icon URL:** ${item.icon}`));
     }
 
     if (Object.keys(props).length > 0) {
-      display.components.push({ type: 14, divider: true });
-      display.components.push({
-        type: 9,
-        components: [{
-          type: 10,
-          content: `**Props (JSON):**\n\`\`\`json\n${JSON.stringify(props, null, 2)}\n\`\`\``
-        }]
-      });
+      blocks.push(dividerBlock());
+      blocks.push(textBlock(`**Props (JSON):**\n\`\`\`json\n${JSON.stringify(props, null, 2)}\n\`\`\``));
     }
+
+    const display = buildDisplay(0x00D9FF, blocks);
 
     const channel = message.channel as TextBasedChannel & { send: Function };
     await (channel.send as any)({
-      display,
+      content: null,
+      flags: 32768,
+      components: [display],
       reply: { messageReference: message.id }
     });
   }

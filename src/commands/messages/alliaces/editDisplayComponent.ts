@@ -3,6 +3,8 @@ import { MessageFlags } from "discord.js";
 import { ComponentType, ButtonStyle, TextInputStyle } from "discord-api-types/v10";
 import { replaceVars, isValidUrlOrVariable, listVariables } from "../../../core/lib/vars";
 import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
+import logger from "../../../core/lib/logger";
+import { DESCRIPTION_PLACEHOLDER, ensureDescriptionTextComponent, normalizeDisplayContent, syncDescriptionComponent } from "../../../core/types/displayComponentEditor";
 
 // Botones de edición (máx 5 por fila)
 const btns = (disabled = false) => ([
@@ -144,6 +146,24 @@ const updateEditor = async (msg: any, data: any) => {
     await msg.edit(payload);
 };
 
+const stripLegacyDescriptionComponent = (blockState: any, match?: string | null) => {
+    if (!Array.isArray(blockState?.components) || blockState.components.length === 0) return;
+
+    const normalize = (value: string | undefined | null) => value?.replace(/\s+/g, " ").trim() ?? "";
+    const target = normalize(match ?? blockState.description ?? undefined);
+    if (!target) return;
+
+    const index = blockState.components.findIndex((component: any) => {
+        if (!component || component.type !== 10) return false;
+        if (component.thumbnail || component.linkButton) return false;
+        return normalize(component.content) === target;
+    });
+
+    if (index >= 0) {
+        blockState.components.splice(index, 1);
+    }
+};
+
 export const command: CommandMessage = {
     name: "editar-embed",
     type: "message",
@@ -187,11 +207,13 @@ export const command: CommandMessage = {
         };
 
         if (!blockState.description || typeof blockState.description !== 'string' || blockState.description.trim().length === 0) {
-            const firstText = Array.isArray(blockState.components)
-                ? blockState.components.find((c: any) => c?.type === 10 && typeof c.content === 'string')
-                : null;
-            if (firstText) {
-                blockState.description = firstText.content;
+            if (Array.isArray(blockState.components)) {
+                const firstTextIndex = blockState.components.findIndex((c: any) => c?.type === 10 && typeof c.content === 'string' && !c.thumbnail && !c.linkButton);
+                if (firstTextIndex >= 0) {
+                    const firstText = blockState.components[firstTextIndex];
+                    blockState.description = firstText.content;
+                    blockState.components.splice(firstTextIndex, 1);
+                }
             }
         }
 
@@ -229,6 +251,7 @@ export const command: CommandMessage = {
                     case "save_block": {
                         try { await i.deferUpdate(); } catch {}
                         try {
+                            stripLegacyDescriptionComponent(blockState);
                             await client.prisma.blockV2Config.update({
                                 where: { guildId_name: { guildId: message.guildId!, name: blockName } },
                                 //@ts-ignore
@@ -643,23 +666,73 @@ export const command: CommandMessage = {
                         break;
                     }
                     case "edit_thumbnail": {
-                        const textDisplays = blockState.components.map((c: any, idx: number) => ({ c, idx })).filter(({ c }: any) => c.type === 10);
+                        ensureDescriptionTextComponent(blockState, { placeholder: DESCRIPTION_PLACEHOLDER });
+
+                        const descriptionNormalized = normalizeDisplayContent(blockState.description);
+                        const textDisplays = blockState.components
+                            .map((c: any, idx: number) => ({ c, idx }))
+                            .filter(({ c }: any) => c?.type === 10);
+
                         if (textDisplays.length === 0) {
-                            await i.deferReply({ flags: 64 });
+                            await i.deferReply({ flags: 64 }).catch(() => {});
                             // @ts-ignore
-                            await i.editReply({ content: '❌ No hay bloques de texto para editar thumbnail.' });
+                            await i.editReply({ content: '❌ No hay bloques de texto para editar thumbnail.' }).catch(() => {});
                             break;
                         }
-                        const options = textDisplays.map(({ c, idx }: any) => ({ label: `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`, value: String(idx), description: c.thumbnail ? 'Con thumbnail' : c.linkButton ? 'Con botón link' : 'Sin accesorio' }));
+
+                        const options = textDisplays.map(({ c, idx }: any) => ({
+                            label: descriptionNormalized && normalizeDisplayContent(c.content) === descriptionNormalized
+                                ? 'Descripción principal'
+                                : `Texto #${idx + 1}: ${c.content?.slice(0, 30) || '...'}`,
+                            value: String(idx),
+                            description: c.thumbnail ? 'Con thumbnail' : c.linkButton ? 'Con botón link' : 'Sin accesorio'
+                        }));
+
                         // @ts-ignore
-                        const reply = await i.reply({ flags: 64, content: 'Elige el TextDisplay a editar su thumbnail:', components: [{ type: 1, components: [ { type: 3, custom_id: 'choose_text_for_thumbnail', placeholder: 'Selecciona un bloque de texto', options } ] }] });
+                        await i.reply({
+                            flags: 64,
+                            content: 'Elige el bloque de texto para gestionar su thumbnail:',
+                            components: [
+                                {
+                                    type: 1,
+                                    components: [
+                                        {
+                                            type: 3,
+                                            custom_id: 'choose_text_for_thumbnail',
+                                            placeholder: 'Selecciona un bloque de texto',
+                                            options
+                                        }
+                                    ]
+                                }
+                            ]
+                        });
+
                         // @ts-ignore
                         const replyMsg = await i.fetchReply();
                         // @ts-ignore
                         const selCollector = replyMsg.createMessageComponentCollector({ componentType: ComponentType.StringSelect, max: 1, time: 60000, filter: (it: any) => it.user.id === message.author.id });
                         selCollector.on('collect', async (sel: any) => {
-                            const idx = parseInt(sel.values[0]);
+                            selCollector.stop('selected');
+                            const idx = parseInt(sel.values[0], 10);
+                            if (Number.isNaN(idx)) {
+                                try {
+                                    if (!sel.replied && !sel.deferred) {
+                                        await sel.reply({ content: '❌ Selección inválida.', flags: 64 });
+                                    }
+                                } catch {}
+                                return;
+                            }
+
                             const textComp = blockState.components[idx];
+                            if (!textComp || textComp.type !== 10) {
+                                try {
+                                    if (!sel.replied && !sel.deferred) {
+                                        await sel.reply({ content: '❌ El bloque seleccionado ya no existe.', flags: 64 });
+                                    }
+                                } catch {}
+                                return;
+                            }
+
                             const modal = {
                                 title: '📎 Editar Thumbnail',
                                 customId: `edit_thumbnail_modal_${idx}`,
@@ -677,7 +750,19 @@ export const command: CommandMessage = {
                                     }
                                 }]
                             } as const;
-                            await sel.showModal(modal);
+
+                            try {
+                                await sel.showModal(modal);
+                            } catch (error) {
+                                logger.error({ err: error }, 'No se pudo mostrar el modal de thumbnail en editDisplay');
+                            }
+                        });
+
+                        selCollector.on('end', async () => {
+                            try {
+                                // @ts-ignore
+                                await replyMsg.edit({ components: [] });
+                            } catch {}
                         });
                         break;
                     }
@@ -824,69 +909,128 @@ export const command: CommandMessage = {
             if (!interaction.isModalSubmit()) return;
             if (interaction.user.id !== message.author.id) return;
             if (!modalHandlerActive) return;
+            const sendResponse = async (content: string) => {
+                try {
+                    if (!interaction.deferred && !interaction.replied) {
+                        await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+                    }
+
+                    if (interaction.deferred) {
+                        await interaction.editReply({ content });
+                    } else {
+                        await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+                    }
+                } catch (err) {
+                    logger.error({ err }, 'Fallo al enviar respuesta del modal en editar-embed');
+                }
+            };
+
             try {
                 const id = interaction.customId as string;
+
                 if (id === 'edit_title_modal') {
-                    blockState.title = interaction.fields.getTextInputValue('title_input');
-                    await interaction.reply({ content: '✅ Título actualizado.', flags: 64 });
+                    const newTitle = interaction.components.getTextInputValue('title_input').trim();
+                    blockState.title = newTitle.length > 0 ? newTitle : blockState.title;
+                    logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Título actualizado mediante modal.');
+                    await sendResponse('✅ Título actualizado.');
                 } else if (id === 'edit_description_modal') {
-                    const newDescription = interaction.fields.getTextInputValue('description_input').trim();
-                    blockState.description = newDescription.length > 0 ? newDescription : undefined;
-                    await interaction.reply({ content: '✅ Descripción actualizada.', flags: 64 });
+                    const previousDescription = typeof blockState.description === 'string' ? blockState.description : null;
+                    const rawDescription = interaction.components.getTextInputValue('description_input');
+                    syncDescriptionComponent(blockState, rawDescription, {
+                        previousDescription,
+                        placeholder: DESCRIPTION_PLACEHOLDER
+                    });
+                    stripLegacyDescriptionComponent(blockState, previousDescription);
+                    logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Descripción actualizada mediante modal.');
+                    await sendResponse('✅ Descripción actualizada.');
                 } else if (id === 'edit_color_modal') {
-                    const colorInput = interaction.fields.getTextInputValue('color_input');
-                    if (colorInput.trim() === '') blockState.color = null; else {
+                    const colorInput = interaction.components.getTextInputValue('color_input').trim();
+                    if (colorInput === '') {
+                        blockState.color = null;
+                        await sendResponse('✅ Color eliminado.');
+                    } else {
                         const hexColor = colorInput.replace('#', '');
-                        if (/^[0-9A-F]{6}$/i.test(hexColor)) blockState.color = parseInt(hexColor, 16); else {
-                            await interaction.reply({ content: '❌ Color inválido. Usa formato HEX (#FF5733)', flags: 64 });
+                        if (/^[0-9A-F]{6}$/i.test(hexColor)) {
+                            blockState.color = parseInt(hexColor, 16);
+                            logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id, color: blockState.color }, 'Color actualizado mediante modal.');
+                            await sendResponse('✅ Color actualizado.');
+                        } else {
+                            await sendResponse('❌ Color inválido. Usa formato HEX (#FF5733)');
                             return;
                         }
                     }
-                    await interaction.reply({ content: '✅ Color actualizado.', flags: 64 });
                 } else if (id === 'add_content_modal') {
-                    const newContent = interaction.fields.getTextInputValue('content_input');
+                    const newContent = interaction.components.getTextInputValue('content_input').trim();
+                    if (!newContent) {
+                        await sendResponse('❌ Debes ingresar contenido para añadir.');
+                        return;
+                    }
                     blockState.components.push({ type: 10, content: newContent, thumbnail: null });
-                    await interaction.reply({ content: '✅ Contenido añadido.', flags: 64 });
+                    logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Contenido añadido mediante modal.');
+                    await sendResponse('✅ Contenido añadido.');
                 } else if (id === 'add_image_modal') {
-                    const imageUrl = interaction.fields.getTextInputValue('image_url_input');
-                    if (isValidUrl(imageUrl)) { blockState.components.push({ type: 12, url: imageUrl }); await interaction.reply({ content: '✅ Imagen añadida.', flags: 64 }); }
-                    else { await interaction.reply({ content: '❌ URL de imagen inválida.', flags: 64 }); return; }
+                    const imageUrl = interaction.components.getTextInputValue('image_url_input').trim();
+                    if (!isValidUrl(imageUrl)) {
+                        await sendResponse('❌ URL de imagen inválida.');
+                        return;
+                    }
+                    blockState.components.push({ type: 12, url: imageUrl });
+                    logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Imagen añadida mediante modal.');
+                    await sendResponse('✅ Imagen añadida.');
                 } else if (id === 'add_cover_modal' || id === 'edit_cover_modal') {
-                    const coverUrl = interaction.fields.getTextInputValue('cover_input');
-                    if (isValidUrl(coverUrl)) { blockState.coverImage = coverUrl; await interaction.reply({ content: '✅ Imagen de portada actualizada.', flags: 64 }); }
-                    else { await interaction.reply({ content: '❌ URL de portada inválida.', flags: 64 }); return; }
+                    const coverUrl = interaction.components.getTextInputValue('cover_input').trim();
+                    if (!isValidUrl(coverUrl)) {
+                        await sendResponse('❌ URL de portada inválida.');
+                        return;
+                    }
+                    blockState.coverImage = coverUrl;
+                    logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Portada actualizada mediante modal.');
+                    await sendResponse('✅ Imagen de portada actualizada.');
                 } else if (id === 'add_separator_modal') {
-                    const visibleStr = interaction.fields.getTextInputValue('separator_visible').toLowerCase();
-                    const spacingStr = interaction.fields.getTextInputValue('separator_spacing') || '1';
+                    const visibleStr = interaction.components.getTextInputValue('separator_visible').toLowerCase();
+                    const spacingStr = interaction.components.getTextInputValue('separator_spacing') || '1';
                     const divider = visibleStr === 'true' || visibleStr === '1' || visibleStr === 'si' || visibleStr === 'sí';
                     const spacing = Math.min(3, Math.max(1, parseInt(spacingStr) || 1));
                     blockState.components.push({ type: 14, divider, spacing });
-                    await interaction.reply({ content: '✅ Separador añadido.', flags: 64 });
+                    logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id, divider, spacing }, 'Separador añadido mediante modal.');
+                    await sendResponse('✅ Separador añadido.');
                 } else if (id.startsWith('edit_thumbnail_modal_')) {
                     const idx = parseInt(id.replace('edit_thumbnail_modal_', ''));
                     const textComp = blockState.components[idx];
                     if (!textComp || textComp.type !== 10) return;
-                    const thumbnailUrl = interaction.fields.getTextInputValue('thumbnail_input');
-                    if (thumbnailUrl.trim() === '') { textComp.thumbnail = null; await interaction.reply({ content: '✅ Thumbnail eliminado.', flags: 64 }); }
-                    else if (!isValidUrl(thumbnailUrl)) { await interaction.reply({ content: '❌ URL de thumbnail inválida.', flags: 64 }); return; }
-                    else {
-                        if (textComp.linkButton) { await interaction.reply({ content: '❌ Este bloque ya tiene un botón link. Elimina el botón antes de añadir thumbnail.', flags: 64 }); return; }
-                        textComp.thumbnail = thumbnailUrl; await interaction.reply({ content: '✅ Thumbnail actualizado.', flags: 64 });
+                    const thumbnailUrl = interaction.components.getTextInputValue('thumbnail_input').trim();
+                    if (thumbnailUrl === '') {
+                        textComp.thumbnail = null;
+                        await sendResponse('✅ Thumbnail eliminado.');
+                    } else if (!isValidUrl(thumbnailUrl)) {
+                        await sendResponse('❌ URL de thumbnail inválida.');
+                        return;
+                    } else {
+                        if (textComp.linkButton) {
+                            await sendResponse('❌ Este bloque ya tiene un botón link. Elimínalo antes de añadir thumbnail.');
+                            return;
+                        }
+                        textComp.thumbnail = thumbnailUrl;
+                        logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Thumbnail actualizado mediante modal.');
+                        await sendResponse('✅ Thumbnail actualizado.');
                     }
                 } else if (id.startsWith('create_link_button_modal_') || id.startsWith('edit_link_button_modal_')) {
                     const idx = parseInt(id.replace('create_link_button_modal_', '').replace('edit_link_button_modal_', ''));
                     const textComp = blockState.components[idx];
                     if (!textComp || textComp.type !== 10) return;
-                    const url = interaction.fields.getTextInputValue('link_url_input');
-                    const label = (interaction.fields.getTextInputValue('link_label_input') || '').trim();
-                    const emojiStr = (interaction.fields.getTextInputValue('link_emoji_input') || '').trim();
-                    if (!isValidUrl(url)) { await interaction.reply({ content: '❌ URL inválida para el botón.', flags: 64 }); return; }
+                    const url = interaction.components.getTextInputValue('link_url_input').trim();
+                    const label = (interaction.components.getTextInputValue('link_label_input') || '').trim();
+                    const emojiStr = (interaction.components.getTextInputValue('link_emoji_input') || '').trim();
+                    if (!isValidUrl(url)) { await sendResponse('❌ URL inválida para el botón.'); return; }
                     const parsedEmoji = parseEmojiInput(emojiStr || undefined);
-                    if (!label && !parsedEmoji) { await interaction.reply({ content: '❌ Debes proporcionar al menos una etiqueta o un emoji.', flags: 64 }); return; }
-                    if (textComp.thumbnail) { await interaction.reply({ content: '❌ Este bloque tiene thumbnail. Elimínalo antes de añadir un botón link.', flags: 64 }); return; }
+                    if (!label && !parsedEmoji) { await sendResponse('❌ Debes proporcionar al menos una etiqueta o un emoji.'); return; }
+                    if (textComp.thumbnail) { await sendResponse('❌ Este bloque tiene thumbnail. Elimínalo antes de añadir un botón link.'); return; }
                     textComp.linkButton = { url, label: label || undefined, emoji: emojiStr || undefined };
-                    await interaction.reply({ content: '✅ Botón link actualizado.', flags: 64 });
-                } else { return; }
+                    logger.info({ modalId: id, guildId: message.guildId, userId: interaction.user.id }, 'Botón link actualizado mediante modal.');
+                    await sendResponse('✅ Botón link actualizado.');
+                } else {
+                    return;
+                }
 
                 setTimeout(async () => {
                     if (!modalHandlerActive) return;
@@ -897,9 +1041,20 @@ export const command: CommandMessage = {
                             display: await renderPreview(blockState, message.member, message.guild),
                             components: btns(false)
                         });
-                    } catch {}
+                    } catch (err) {
+                        logger.error({ err }, 'Error actualizando editor tras procesar modal.');
+                    }
                 }, 400);
-            } catch {}
+            } catch (error) {
+                logger.error({ err: error, userId: interaction.user.id, modalId: interaction.customId }, 'Error procesando modal en editar-embed');
+                if (!interaction.deferred && !interaction.replied) {
+                    try {
+                        await interaction.reply({ content: '❌ Error procesando el modal. Revisa los logs.', flags: MessageFlags.Ephemeral });
+                    } catch (err) {
+                        logger.error({ err }, 'Fallo al responder con error tras excepción en modal.');
+                    }
+                }
+            }
         };
 
         client.on('interactionCreate', modalHandler);

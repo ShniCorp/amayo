@@ -19,9 +19,14 @@ export const command: CommandMessage = {
       // Obtener estadísticas formateadas
       const stats = await getPlayerStatsFormatted(userId, guildId);
 
-      // Construir componentes de DisplayComponent
+      const formatValue = (value: unknown): string => {
+        if (typeof value === 'number') return value.toLocaleString();
+        if (typeof value === 'bigint') return value.toString();
+        if (typeof value === 'string') return value.trim() || '0';
+        return value == null ? '0' : String(value);
+      };
+
       const components: any[] = [
-        // Header
         {
           type: 10,
           content: `# 📊 Estadísticas de ${targetUser.username}`
@@ -29,78 +34,31 @@ export const command: CommandMessage = {
         { type: 14, divider: true }
       ];
 
-      // Actividades
-      if (stats.activities) {
-        const activitiesText = Object.entries(stats.activities)
-          .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
-          .join('\n');
+      const addSection = (title: string, data?: Record<string, unknown>) => {
+        if (!data || typeof data !== 'object') return;
+        const entries = Object.entries(data);
+        const lines = entries.map(([key, value]) => `${key}: **${formatValue(value)}**`);
+        const content = lines.length > 0 ? lines.join('\n') : 'Sin datos';
         components.push({
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**🎮 ACTIVIDADES**\n${activitiesText || 'Sin datos'}`
-          }]
+          type: 10,
+          content: `**${title}**\n${content}`
         });
-        components.push({ type: 14, spacing: 1 });
+        components.push({ type: 14, divider: false, spacing: 1 });
+      };
+
+      addSection('🎮 ACTIVIDADES', stats.activities as Record<string, unknown> | undefined);
+      addSection('⚔️ COMBATE', stats.combat as Record<string, unknown> | undefined);
+      addSection('💰 ECONOMÍA', stats.economy as Record<string, unknown> | undefined);
+      addSection('📦 ITEMS', stats.items as Record<string, unknown> | undefined);
+      addSection('🏆 RÉCORDS', stats.records as Record<string, unknown> | undefined);
+
+      // Remove trailing separator if present
+      if (components.length > 0 && components[components.length - 1]?.type === 14) {
+        components.pop();
       }
 
-      // Combate
-      if (stats.combat) {
-        const combatText = Object.entries(stats.combat)
-          .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
-          .join('\n');
-        components.push({
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**⚔️ COMBATE**\n${combatText || 'Sin datos'}`
-          }]
-        });
-        components.push({ type: 14, spacing: 1 });
-      }
-
-      // Economía
-      if (stats.economy) {
-        const economyText = Object.entries(stats.economy)
-          .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
-          .join('\n');
-        components.push({
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**💰 ECONOMÍA**\n${economyText || 'Sin datos'}`
-          }]
-        });
-        components.push({ type: 14, spacing: 1 });
-      }
-
-      // Items
-      if (stats.items) {
-        const itemsText = Object.entries(stats.items)
-          .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
-          .join('\n');
-        components.push({
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**📦 ITEMS**\n${itemsText || 'Sin datos'}`
-          }]
-        });
-        components.push({ type: 14, spacing: 1 });
-      }
-
-      // Récords
-      if (stats.records) {
-        const recordsText = Object.entries(stats.records)
-          .map(([key, value]) => `${key}: **${value.toLocaleString()}**`)
-          .join('\n');
-        components.push({
-          type: 9,
-          components: [{
-            type: 10,
-            content: `**🏆 RÉCORDS**\n${recordsText || 'Sin datos'}`
-          }]
-        });
+      if (components.length === 1) {
+        components.push({ type: 10, content: '*Sin estadísticas registradas.*' });
       }
 
       // Crear DisplayComponent
@@ -113,7 +71,8 @@ export const command: CommandMessage = {
       // Enviar con flags
       const channel = message.channel as TextBasedChannel & { send: Function };
       await (channel.send as any)({
-        display,
+        content: null,
+        components: [display],
         flags: 32768, // MessageFlags.IS_COMPONENTS_V2
         reply: { messageReference: message.id }
       });

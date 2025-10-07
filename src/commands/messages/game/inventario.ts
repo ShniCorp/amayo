@@ -4,6 +4,8 @@ import { prisma } from '../../../core/database/prisma';
 import { getOrCreateWallet } from '../../../game/economy/service';
 import { getEquipment, getEffectiveStats } from '../../../game/combat/equipmentService';
 import type { ItemProps } from '../../../game/economy/types';
+import { buildDisplay, dividerBlock, textBlock } from '../../../core/lib/componentsV2';
+import { sendDisplayReply, formatItemLabel } from './_helpers';
 
 const PAGE_SIZE = 15;
 
@@ -27,6 +29,8 @@ function fmtStats(props: ItemProps) {
   if (typeof props.maxHpBonus === 'number' && props.maxHpBonus > 0) parts.push(`hp+${props.maxHpBonus}`);
   return parts.length ? ` (${parts.join(' ')})` : '';
 }
+
+const INVENTORY_ACCENT = 0xFEE75C;
 
 export const command: CommandMessage = {
   name: 'inventario',
@@ -60,15 +64,23 @@ export const command: CommandMessage = {
         const tool = fmtTool(props);
         const st = fmtStats(props);
         const tags = (itemRow.tags || []).join(', ');
-        await message.reply([
-          `📦 ${itemRow.name || itemRow.key} — x${qty}`,
-          `Key: ${itemRow.key}`,
-          itemRow.category ? `Categoría: ${itemRow.category}` : '',
-          tags ? `Tags: ${tags}` : '',
-          tool ? `Herramienta: ${tool}` : '',
-          st ? `Bonos: ${st}` : '',
-          props.craftingOnly ? 'Solo crafteo' : '',
-        ].filter(Boolean).join('\n'));
+        const detailLines = [
+          `**Cantidad:** x${qty}`,
+          `**Key:** \`${itemRow.key}\``,
+          itemRow.category ? `**Categoría:** ${itemRow.category}` : '',
+          tags ? `**Tags:** ${tags}` : '',
+          tool ? `**Herramienta:** ${tool}` : '',
+          st ? `**Bonos:** ${st}` : '',
+          props.craftingOnly ? '⚠️ Solo crafteo' : '',
+        ].filter(Boolean).join('\n');
+
+        const display = buildDisplay(INVENTORY_ACCENT, [
+          textBlock(`# ${formatItemLabel(itemRow, { bold: true })}`),
+          dividerBlock(),
+          textBlock(detailLines || '*Sin información adicional.*'),
+        ]);
+
+        await sendDisplayReply(message, display);
         return;
       }
     }
@@ -88,37 +100,56 @@ export const command: CommandMessage = {
       .sort((a, b) => (b.quantity - a.quantity) || a.item.key.localeCompare(b.item.key))
       .slice(start, start + PAGE_SIZE);
 
-    const lines: string[] = [];
-    // header con saldo y equipo
-    lines.push(`💰 Monedas: ${wallet.coins}`);
-    const gear: string[] = [];
-    if (weapon) gear.push(`🗡️ ${weapon.key}`);
-    if (armor) gear.push(`🛡️ ${armor.key}`);
-    if (cape) gear.push(`🧥 ${cape.key}`);
-    if (gear.length) lines.push(`🧰 Equipo: ${gear.join(' · ')}`);
-    lines.push(`❤️ HP: ${stats.hp}/${stats.maxHp} · ⚔️ ATK: ${stats.damage} · 🛡️ DEF: ${stats.defense}`);
+  const gear: string[] = [];
+  if (weapon) gear.push(`🗡️ ${formatItemLabel(weapon, { fallbackIcon: '' })}`);
+  if (armor) gear.push(`🛡️ ${formatItemLabel(armor, { fallbackIcon: '' })}`);
+  if (cape) gear.push(`🧥 ${formatItemLabel(cape, { fallbackIcon: '' })}`);
+    const headerLines = [
+      `💰 Monedas: **${wallet.coins}**`,
+      gear.length ? `🧰 Equipo: ${gear.join(' · ')}` : '',
+      `❤️ HP: ${stats.hp}/${stats.maxHp} · ⚔️ ATK: ${stats.damage} · 🛡️ DEF: ${stats.defense}`,
+      filter ? `🔍 Filtro: ${filter}` : '',
+    ].filter(Boolean).join('\n');
+
+    const blocks = [
+      textBlock('# 📦 Inventario'),
+      dividerBlock(),
+      textBlock(headerLines),
+    ];
 
     if (!pageItems.length) {
-      lines.push(filter ? `No hay ítems que coincidan con "${filter}".` : 'No tienes ítems en tu inventario.');
-      await message.reply(lines.join('\n'));
+      blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+      blocks.push(textBlock(filter ? `No hay ítems que coincidan con "${filter}".` : 'No tienes ítems en tu inventario.'));
+      const display = buildDisplay(INVENTORY_ACCENT, blocks);
+      await sendDisplayReply(message, display);
       return;
     }
 
-    lines.push(`\n📦 Inventario (página ${page}/${totalPages}${filter ? `, filtro: ${filter}` : ''})`);
+    blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+    blocks.push(textBlock(`📦 Inventario (página ${page}/${totalPages}${filter ? `, filtro: ${filter}` : ''})`));
+    blocks.push(dividerBlock({ divider: false, spacing: 1 }));
 
-    for (const e of pageItems) {
-      const p = parseItemProps(e.item.props);
-      const tool = fmtTool(p);
-      const st = fmtStats(p);
-      const name = e.item.name || e.item.key;
-      lines.push(`• ${name} — x${e.quantity}${tool ? ` ${tool}` : ''}${st}`);
-    }
+    pageItems.forEach((entry, index) => {
+      const props = parseItemProps(entry.item.props);
+      const tool = fmtTool(props);
+      const st = fmtStats(props);
+  const label = formatItemLabel(entry.item);
+  blocks.push(textBlock(`• ${label} — x${entry.quantity}${tool ? ` ${tool}` : ''}${st}`));
+      if (index < pageItems.length - 1) {
+        blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+      }
+    });
 
     if (totalPages > 1) {
-      lines.push(`\nUsa: \`!inv ${filter ? `${page+1} ${filter}` : page+1}\` para la siguiente página.`);
+      const nextPage = Math.min(page + 1, totalPages);
+      const nextCommand = filter ? `!inv ${nextPage} ${filter}` : `!inv ${nextPage}`;
+      const backtick = '`';
+      blocks.push(dividerBlock({ divider: false, spacing: 2 }));
+      blocks.push(textBlock(`💡 Usa ${backtick}${nextCommand}${backtick} para la siguiente página.`));
     }
 
-    await message.reply(lines.join('\n'));
+    const display = buildDisplay(INVENTORY_ACCENT, blocks);
+    await sendDisplayReply(message, display);
   }
 };
 

@@ -4,6 +4,7 @@ import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import { prisma } from '../../../core/database/prisma';
 import { Message, MessageComponentInteraction, MessageFlags, ButtonInteraction, TextBasedChannel } from 'discord.js';
 import { ComponentType, TextInputStyle, ButtonStyle } from 'discord-api-types/v10';
+import { promptKeySelection } from './_helpers';
 
 interface AreaState {
   key: string;
@@ -13,47 +14,60 @@ interface AreaState {
   metadata?: any;
 }
 
-function createAreaDisplay(state: AreaState, editing: boolean = false) {
+function buildAreaDisplay(state: AreaState, editing: boolean = false) {
   const title = editing ? 'Editando Área' : 'Creando Área';
+  const statusText = [
+    '**📋 Estado Actual:**',
+    `**Nombre:** ${state.name || '❌ No configurado'}`,
+    `**Tipo:** ${state.type || '❌ No configurado'}`,
+    `**Config:** ${Object.keys(state.config || {}).length} campos`,
+    `**Metadata:** ${Object.keys(state.metadata || {}).length} campos`
+  ].join('\n');
+
+  const instructionsText = [
+    '**🎮 Instrucciones:**',
+    '• **Base**: Configura nombre y tipo',
+    '• **Config (JSON)**: Configuración técnica',
+    '• **Meta (JSON)**: Metadatos adicionales',
+    '• **Guardar**: Confirma los cambios',
+    '• **Cancelar**: Descarta los cambios'
+  ].join('\n');
+
   return {
     type: 17,
     accent_color: 0x00FF00,
     components: [
       {
-        type: 9,
-        components: [{
-          type: 10,
-          content: `🗺️ **${title}: \`${state.key}\`**`
-        }]
+        type: 10,
+        content: `# 🗺️ ${title}: \`${state.key}\``
       },
       { type: 14, divider: true },
       {
-        type: 9,
-        components: [{
-          type: 10,
-          content: `**📋 Estado Actual:**\n` +
-                   `**Nombre:** ${state.name || '❌ No configurado'}\n` +
-                   `**Tipo:** ${state.type || '❌ No configurado'}\n` +
-                   `**Config:** ${Object.keys(state.config || {}).length} campos\n` +
-                   `**Metadata:** ${Object.keys(state.metadata || {}).length} campos`
-        }]
+        type: 10,
+        content: statusText
       },
       { type: 14, divider: true },
       {
-        type: 9,
-        components: [{
-          type: 10,
-          content: `**🎮 Instrucciones:**\n` +
-                   `• **Base**: Configura nombre y tipo\n` +
-                   `• **Config (JSON)**: Configuración técnica\n` +
-                   `• **Meta (JSON)**: Metadatos adicionales\n` +
-                   `• **Guardar**: Confirma los cambios\n` +
-                   `• **Cancelar**: Descarta los cambios`
-        }]
+        type: 10,
+        content: instructionsText
       }
     ]
   };
 }
+
+const buildEditorComponents = (state: AreaState, editing: boolean = false) => [
+  buildAreaDisplay(state, editing),
+  {
+    type: 1,
+    components: [
+      { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'ga_base' },
+      { type: 2, style: ButtonStyle.Secondary, label: 'Config (JSON)', custom_id: 'ga_config' },
+      { type: 2, style: ButtonStyle.Secondary, label: 'Meta (JSON)', custom_id: 'ga_meta' },
+      { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'ga_save' },
+      { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'ga_cancel' },
+    ]
+  }
+];
 
 export const command: CommandMessage = {
   name: 'area-editar',
@@ -61,104 +75,56 @@ export const command: CommandMessage = {
   aliases: ['editar-area','areaedit'],
   cooldown: 10,
   description: 'Edita una GameArea de este servidor con un editor interactivo.',
-  usage: 'area-editar <key-única>',
+  usage: 'area-editar',
   run: async (message, args, _client: Amayo) => {
     const channel = message.channel as TextBasedChannel & { send: Function };
     const allowed = await hasManageGuildOrStaff(message.member, message.guild!.id, prisma);
     if (!allowed) {
       await (channel.send as any)({
+        content: null,
         flags: 32768,
         components: [{
           type: 17,
           accent_color: 0xFF0000,
           components: [{
-            type: 9,
-            components: [{
-              type: 10,
-              content: '❌ **Error de Permisos**\n└ No tienes permisos de ManageGuild ni rol de staff.'
-            }]
+            type: 10,
+            content: '❌ **Error de Permisos**\n└ No tienes permisos de ManageGuild ni rol de staff.'
           }]
         }],
-        message_reference: {
-          message_id: message.id,
-          channel_id: message.channel.id,
-          guild_id: message.guild!.id,
-          fail_if_not_exists: false
-        }
-      });
-      return;
-    }
-
-    const key = args[0]?.trim();
-    if (!key) {
-      await (channel.send as any)({
-        flags: 32768,
-        components: [{
-          type: 17,
-          accent_color: 0xFFA500,
-          components: [{
-            type: 9,
-            components: [{
-              type: 10,
-              content: '⚠️ **Uso Incorrecto**\n└ Uso: `!area-editar <key-única>`'
-            }]
-          }]
-        }],
-        message_reference: {
-          message_id: message.id,
-          channel_id: message.channel.id,
-          guild_id: message.guild!.id,
-          fail_if_not_exists: false
-        }
+        reply: { messageReference: message.id }
       });
       return;
     }
 
     const guildId = message.guild!.id;
-    const area = await prisma.gameArea.findFirst({ where: { key, guildId } });
-    if (!area) {
-      await (channel.send as any)({
-        flags: 32768,
-        components: [{
-          type: 17,
-          accent_color: 0xFF0000,
-          components: [{
-            type: 9,
-            components: [{
-              type: 10,
-              content: '❌ **Área No Encontrada**\n└ No existe un área con esa key en este servidor.'
-            }]
-          }]
-        }],
-        message_reference: {
-          message_id: message.id,
-          channel_id: message.channel.id,
-          guild_id: message.guild!.id,
-          fail_if_not_exists: false
-        }
-      });
+    const areas = await prisma.gameArea.findMany({ where: { guildId }, orderBy: [{ key: 'asc' }] });
+    const selection = await promptKeySelection(message, {
+      entries: areas,
+      customIdPrefix: 'area_edit',
+      title: 'Selecciona un área para editar',
+      emptyText: '⚠️ **No hay áreas configuradas.** Usa `!area-crear` para crear una nueva.',
+      placeholder: 'Elige un área…',
+      filterHint: 'Puedes filtrar por nombre, key o tipo.',
+      getOption: (area) => ({
+        value: area.id,
+        label: `${area.name ?? area.key} (${area.type})`,
+        description: area.key,
+        keywords: [area.key, area.name ?? '', area.type ?? ''],
+      }),
+    });
+
+    if (!selection.entry || !selection.panelMessage) {
       return;
     }
 
-    const state: AreaState = { key, name: area.name, type: area.type, config: area.config ?? {}, metadata: area.metadata ?? {} };
+    const area = selection.entry;
+    const state: AreaState = { key: area.key, name: area.name, type: area.type, config: area.config ?? {}, metadata: area.metadata ?? {} };
 
-    const display = createAreaDisplay(state, true);
-    
-    const editorMsg = await (channel.send as any)({
+    const editorMsg = selection.panelMessage;
+    await editorMsg.edit({
+      content: null,
       flags: 32768,
-      components: [
-        display,
-        {
-          type: 1,
-          components: [
-            { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'ga_base' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Config (JSON)', custom_id: 'ga_config' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Meta (JSON)', custom_id: 'ga_meta' },
-            { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'ga_save' },
-            { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'ga_cancel' },
-          ]
-        }
-      ]
+      components: buildEditorComponents(state, true),
     });
 
     const collector = editorMsg.createMessageComponentCollector({ time: 30*60_000, filter: (i)=> i.user.id === message.author.id });
@@ -169,16 +135,14 @@ export const command: CommandMessage = {
           case 'ga_cancel':
             await i.deferUpdate();
             await editorMsg.edit({
+              content: null,
               flags: 32768,
               components: [{
                 type: 17,
                 accent_color: 0xFF0000,
                 components: [{
-                  type: 9,
-                  components: [{
-                    type: 10,
-                    content: '**❌ Editor de Área cancelado.**'
-                  }]
+                  type: 10,
+                  content: '**❌ Editor de Área cancelado.**'
                 }]
               }]
             });
@@ -198,16 +162,14 @@ export const command: CommandMessage = {
             await prisma.gameArea.update({ where: { id: area.id }, data: { name: state.name!, type: state.type!, config: state.config ?? {}, metadata: state.metadata ?? {} } });
             await i.reply({ content: '✅ Área actualizada.', flags: MessageFlags.Ephemeral });
             await editorMsg.edit({
+              content: null,
               flags: 32768,
               components: [{
                 type: 17,
                 accent_color: 0x00FF00,
                 components: [{
-                  type: 9,
-                  components: [{
-                    type: 10,
-                    content: `**✅ Área \`${state.key}\` actualizada exitosamente.**`
-                  }]
+                  type: 10,
+                  content: `**✅ Área \`${state.key}\` actualizada exitosamente.**`
                 }]
               }]
             });
@@ -223,16 +185,14 @@ export const command: CommandMessage = {
       if (r==='time') {
         try {
           await editorMsg.edit({
+            content: null,
             flags: 32768,
             components: [{
               type: 17,
               accent_color: 0xFFA500,
               components: [{
-                type: 9,
-                components: [{
-                  type: 10,
-                  content: '**⏰ Editor expirado.**'
-                }]
+                type: 10,
+                content: '**⏰ Editor expirado.**'
               }]
             }]
           });
@@ -255,22 +215,10 @@ async function showBaseModal(i: ButtonInteraction, state: AreaState, editorMsg: 
     await sub.reply({ content: '✅ Base actualizada.', flags: MessageFlags.Ephemeral });
     
     // Actualizar display
-    const newDisplay = createAreaDisplay(state, editing);
     await editorMsg.edit({
+      content: null,
       flags: 32768,
-      components: [
-        newDisplay,
-        {
-          type: 1,
-          components: [
-            { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'ga_base' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Config (JSON)', custom_id: 'ga_config' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Meta (JSON)', custom_id: 'ga_meta' },
-            { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'ga_save' },
-            { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'ga_cancel' },
-          ]
-        }
-      ]
+      components: buildEditorComponents(state, editing)
     });
   } catch {}
 }
@@ -298,22 +246,10 @@ async function showJsonModal(i: ButtonInteraction, state: AreaState, field: 'con
     }
     
     // Actualizar display
-    const newDisplay = createAreaDisplay(state, editing);
     await editorMsg.edit({
+      content: null,
       flags: 32768,
-      components: [
-        newDisplay,
-        {
-          type: 1,
-          components: [
-            { type: 2, style: ButtonStyle.Primary, label: 'Base', custom_id: 'ga_base' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Config (JSON)', custom_id: 'ga_config' },
-            { type: 2, style: ButtonStyle.Secondary, label: 'Meta (JSON)', custom_id: 'ga_meta' },
-            { type: 2, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'ga_save' },
-            { type: 2, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'ga_cancel' },
-          ]
-        }
-      ]
+      components: buildEditorComponents(state, editing)
     });
   } catch {}
 }

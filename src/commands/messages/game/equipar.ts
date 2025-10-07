@@ -2,6 +2,7 @@ import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { setEquipmentSlot } from '../../../game/combat/equipmentService';
 import { prisma } from '../../../core/database/prisma';
+import { formatItemLabel } from './_helpers';
 
 export const command: CommandMessage = {
   name: 'equipar',
@@ -22,11 +23,12 @@ export const command: CommandMessage = {
 
     const item = await prisma.economyItem.findFirst({ where: { key: itemKey, OR: [{ guildId }, { guildId: null }] }, orderBy: [{ guildId: 'desc' }] });
     if (!item) { await message.reply('❌ Item no encontrado.'); return; }
+    const label = formatItemLabel(item, { bold: true });
     const inv = await prisma.inventoryEntry.findUnique({ where: { userId_guildId_itemId: { userId, guildId, itemId: item.id } } });
-    if (!inv || inv.quantity <= 0) { await message.reply('❌ No tienes este item en tu inventario.'); return; }
+    if (!inv || inv.quantity <= 0) { await message.reply(`❌ No tienes ${label} en tu inventario.`); return; }
 
     await setEquipmentSlot(userId, guildId, slot, item.id);
-    await message.reply(`🧰 Equipado en ${slot}: ${item.key}`);
+    await message.reply(`🧰 Equipado en ${slot}: ${label}`);
   }
 };
 

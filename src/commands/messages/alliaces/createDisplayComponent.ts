@@ -11,7 +11,15 @@ import logger from "../../../core/lib/logger";
 import {CommandMessage} from "../../../core/types/commands";
 import {listVariables} from "../../../core/lib/vars";
 import type Amayo from "../../../core/client";
-import {BlockState, DisplayComponentUtils, EditorActionRow} from "../../../core/types/displayComponentEditor";
+import {
+    BlockState,
+    DisplayComponentUtils,
+    EditorActionRow,
+    DESCRIPTION_PLACEHOLDER,
+    syncDescriptionComponent,
+    ensureDescriptionTextComponent,
+    normalizeDisplayContent
+} from "../../../core/types/displayComponentEditor";
 import type {DisplayComponentContainer} from "../../../core/types/displayComponents";
 import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 
@@ -42,6 +50,24 @@ async function updateEditor(message: Message, data: EditorData): Promise<void> {
     }
 
     await message.edit(payload);
+}
+
+function stripLegacyDescriptionComponent(blockState: BlockState, match?: string | null): void {
+    if (!Array.isArray(blockState.components) || blockState.components.length === 0) return;
+
+    const normalize = (value: string | undefined | null) => value?.replace(/\s+/g, " ").trim() ?? "";
+    const target = normalize(match ?? blockState.description ?? undefined);
+    if (!target) return;
+
+    const index = blockState.components.findIndex((component: any) => {
+        if (!component || component.type !== 10) return false;
+        if (component.thumbnail || component.linkButton) return false;
+        return normalize(component.content) === target;
+    });
+
+    if (index >= 0) {
+        blockState.components.splice(index, 1);
+    }
 }
 
 export const command: CommandMessage = {
@@ -85,7 +111,7 @@ export const command: CommandMessage = {
             coverImage: undefined,
             components: [
                 { type: 14, divider: false, spacing: 1 },
-                { type: 10, content: "Usa los botones para configurar.", thumbnail: null }
+                { type: 10, content: DESCRIPTION_PLACEHOLDER, thumbnail: null }
             ]
         };
 
@@ -200,6 +226,149 @@ async function handleButtonInteraction(
         case "add_image":
             await handleAddImage(interaction, editorMessage, originalMessage, blockState);
             break;
+
+        case "edit_thumbnail": {
+            ensureDescriptionTextComponent(blockState, { placeholder: DESCRIPTION_PLACEHOLDER });
+
+            const descriptionNormalized = normalizeDisplayContent(blockState.description);
+            const textDisplays = blockState.components
+                .map((component: any, idx: number) => ({ component, idx }))
+                .filter(({ component }) => component?.type === 10);
+
+            if (textDisplays.length === 0) {
+                await interaction.deferReply({ flags: MessageFlags.Ephemeral }).catch(() => {});
+                await interaction.editReply({ content: '❌ No hay bloques de texto disponibles para añadir thumbnail.' }).catch(() => {});
+                break;
+            }
+
+            const options = textDisplays.map(({ component, idx }) => ({
+                label: descriptionNormalized && normalizeDisplayContent(component.content) === descriptionNormalized
+                    ? 'Descripción principal'
+                    : `Texto #${idx + 1}: ${component.content?.slice(0, 30) || '...'}`,
+                value: String(idx),
+                description: component.thumbnail ? 'Con thumbnail' : component.linkButton ? 'Con botón link' : 'Sin accesorio'
+            }));
+
+            try {
+                await interaction.reply({
+                    flags: MessageFlags.Ephemeral,
+                    content: 'Selecciona el bloque de texto al que quieres editar el thumbnail:',
+                    components: [
+                        {
+                            type: 1,
+                            components: [
+                                {
+                                    type: 3,
+                                    custom_id: 'choose_text_for_thumbnail',
+                                    placeholder: 'Selecciona un bloque de texto',
+                                    options
+                                }
+                            ]
+                        }
+                    ]
+                });
+            } catch (error) {
+                logger.error({ err: error }, 'Error enviando selector de thumbnails');
+                break;
+            }
+
+            let replyMsg: Message | null = null;
+            try {
+                replyMsg = await interaction.fetchReply();
+            } catch {}
+
+            if (!replyMsg) break;
+
+            const selCollector = replyMsg.createMessageComponentCollector({
+                componentType: ComponentType.StringSelect,
+                max: 1,
+                time: 60000,
+                filter: (it: any) => it.user.id === originalMessage.author.id
+            });
+
+            selCollector.on('collect', async (sel: any) => {
+                selCollector.stop('collected');
+
+                const idx = parseInt(sel.values[0], 10);
+                if (Number.isNaN(idx)) {
+                    try {
+                        if (!sel.replied && !sel.deferred) {
+                            await sel.reply({ content: '❌ Selección inválida.', flags: MessageFlags.Ephemeral });
+                        }
+                    } catch {}
+                    return;
+                }
+
+                const textComp = blockState.components[idx];
+                if (!textComp || textComp.type !== 10) {
+                    try {
+                        if (!sel.replied && !sel.deferred) {
+                            await sel.reply({ content: '❌ El bloque seleccionado ya no existe.', flags: MessageFlags.Ephemeral });
+                        }
+                    } catch {}
+                    return;
+                }
+
+                const modal = {
+                    title: '📎 Editar Thumbnail',
+                    customId: `edit_thumbnail_modal_${idx}`,
+                    components: [
+                        {
+                            type: ComponentType.Label,
+                            label: 'URL del Thumbnail',
+                            component: {
+                                type: ComponentType.TextInput,
+                                customId: 'thumbnail_input',
+                                style: TextInputStyle.Short,
+                                placeholder: 'https://ejemplo.com/thumbnail.png (vacío para eliminar)',
+                                value: textComp.thumbnail || '',
+                                maxLength: 512,
+                                required: false
+                            }
+                        }
+                    ]
+                } as const;
+
+                try {
+                    await sel.showModal(modal);
+                } catch (error) {
+                    logger.error({ err: error }, 'No se pudo mostrar el modal de thumbnail');
+                    return;
+                }
+
+                const modalInteraction = await awaitModalWithDeferredReply(sel);
+                if (!modalInteraction) return;
+
+                const rawInput = modalInteraction.components.getTextInputValue('thumbnail_input').trim();
+
+                if (rawInput.length === 0) {
+                    textComp.thumbnail = null;
+                    await modalInteraction.editReply({ content: '✅ Thumbnail eliminado.' }).catch(() => {});
+                } else if (!DisplayComponentUtils.isValidUrl(rawInput)) {
+                    await modalInteraction.editReply({ content: '❌ URL de thumbnail inválida.' }).catch(() => {});
+                    return;
+                } else if (textComp.linkButton) {
+                    await modalInteraction.editReply({ content: '❌ Este bloque tiene un botón link. Elimínalo antes de añadir un thumbnail.' }).catch(() => {});
+                    return;
+                } else {
+                    textComp.thumbnail = rawInput;
+                    await modalInteraction.editReply({ content: '✅ Thumbnail actualizado.' }).catch(() => {});
+                }
+
+                await updateEditor(editorMessage, {
+                    display: await DisplayComponentUtils.renderPreview(blockState, originalMessage.member!, originalMessage.guild!),
+                    components: DisplayComponentUtils.createEditorButtons(false)
+                });
+            });
+
+            selCollector.on('end', async () => {
+                try {
+                    await replyMsg!.edit({ components: [] });
+                } catch {}
+            });
+
+            break;
+        }
 
         case "cover_image":
             await handleCoverImage(interaction, editorMessage, originalMessage, blockState);
@@ -338,7 +507,7 @@ async function handleButtonInteraction(
 }
 
 async function awaitModalWithDeferredReply(
-    interaction: ButtonInteraction,
+    interaction: ButtonInteraction | MessageComponentInteraction,
     options: Parameters<ButtonInteraction['awaitModalSubmit']>[0] = { time: 300000 }
 ): Promise<ModalSubmitInteraction | null> {
     try {
@@ -447,9 +616,13 @@ async function handleEditDescription(
         modalInteraction = await awaitModalWithDeferredReply(interaction);
         if (!modalInteraction) return;
 
-        const newDescription = modalInteraction.components.getTextInputValue("description_input").trim();
+        const rawDescription = modalInteraction.components.getTextInputValue("description_input");
+        const previousDescription = typeof blockState.description === "string" ? blockState.description : null;
+        syncDescriptionComponent(blockState, rawDescription, {
+            previousDescription,
+            placeholder: DESCRIPTION_PLACEHOLDER
+        });
 
-        blockState.description = newDescription || undefined;
         await updateEditor(editorMessage, {
             display: await DisplayComponentUtils.renderPreview(blockState, originalMessage.member!, originalMessage.guild!),
             components: DisplayComponentUtils.createEditorButtons(false)
@@ -802,6 +975,7 @@ async function handleSaveBlock(
     guildId: string
 ): Promise<void> {
     try {
+        stripLegacyDescriptionComponent(blockState);
         await client.prisma.blockV2Config.create({
             data: {
                 guildId,

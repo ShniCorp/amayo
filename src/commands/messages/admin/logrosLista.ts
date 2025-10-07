@@ -4,6 +4,7 @@ import { hasManageGuildOrStaff } from '../../../core/lib/permissions';
 import { prisma } from '../../../core/database/prisma';
 import { ComponentType, ButtonStyle } from 'discord-api-types/v10';
 import type { MessageComponentInteraction, TextBasedChannel } from 'discord.js';
+import { buildDisplay, dividerBlock, textBlock } from '../../../core/lib/componentsV2';
 
 export const command: CommandMessage = {
   name: 'logros-lista',
@@ -35,36 +36,29 @@ export const command: CommandMessage = {
 
     const totalPages = Math.ceil(total / perPage);
 
-    const display = {
-      type: 17,
-      accent_color: 0xFFD700,
-      components: [
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**🏆 Lista de Logros**\nPágina ${page}/${totalPages} • Total: ${total}`
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        ...achievements.map(ach => ({
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `${ach.icon || '🏆'} **${ach.name}** (${ach.points} pts)\n` +
-                       `└ Key: \`${ach.key}\`\n` +
-                       `└ Categoría: ${ach.category}\n` +
-                       `└ ${ach.description}\n` +
-                       `└ ${ach.hidden ? '🔒 Oculto' : '👁️ Visible'}` +
-                       (ach.guildId === guildId ? ' • 📍 Local' : ' • 🌐 Global')
-            }
-          ]
-        }))
-      ]
-    };
+    const displayBlocks = [
+      textBlock(`# 🏆 Lista de Logros`),
+      dividerBlock(),
+      textBlock(`Página ${page}/${totalPages} • Total: ${total}`),
+      dividerBlock({ divider: false, spacing: 2 }),
+      ...achievements.flatMap((ach, index) => {
+        const lines = [
+          `${ach.icon || '🏆'} **${ach.name}** (${ach.points} pts)`,
+          `└ Key: \`${ach.key}\``,
+          `└ Categoría: ${ach.category}`,
+          `└ ${ach.description}`,
+          `└ ${ach.hidden ? '🔒 Oculto' : '👁️ Visible'}${ach.guildId === guildId ? ' • 📍 Local' : ' • 🌐 Global'}`,
+        ].join('\n');
+
+        const blocks = [textBlock(lines)];
+        if (index < achievements.length - 1) {
+          blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+        }
+        return blocks;
+      })
+    ];
+
+    const display = buildDisplay(0xFFD700, displayBlocks);
 
     const buttons: any[] = [];
     
@@ -95,7 +89,9 @@ export const command: CommandMessage = {
 
     const channel = message.channel as TextBasedChannel & { send: Function };
     const msg = await (channel.send as any)({
+      content: null,
       flags: 32768,
+      reply: { messageReference: message.id },
       components: [
         display,
         ...(buttons.length > 0 ? [{

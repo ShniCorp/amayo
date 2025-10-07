@@ -1,5 +1,6 @@
 import { prisma } from '../../core/database/prisma';
 import type { ItemProps } from '../economy/types';
+import { ensureUserAndGuildExist } from '../core/userService';
 
 function parseItemProps(json: unknown): ItemProps {
   if (!json || typeof json !== 'object') return {};
@@ -7,6 +8,9 @@ function parseItemProps(json: unknown): ItemProps {
 }
 
 export async function ensurePlayerState(userId: string, guildId: string) {
+  // Asegurar que User y Guild existan antes de crear/buscar state
+  await ensureUserAndGuildExist(userId, guildId);
+  
   return prisma.playerState.upsert({
     where: { userId_guildId: { userId, guildId } },
     update: {},
@@ -15,6 +19,9 @@ export async function ensurePlayerState(userId: string, guildId: string) {
 }
 
 export async function getEquipment(userId: string, guildId: string) {
+  // Asegurar que User y Guild existan antes de crear/buscar equipment
+  await ensureUserAndGuildExist(userId, guildId);
+  
   const eq = await prisma.playerEquipment.upsert({
     where: { userId_guildId: { userId, guildId } },
     update: {},
@@ -27,6 +34,9 @@ export async function getEquipment(userId: string, guildId: string) {
 }
 
 export async function setEquipmentSlot(userId: string, guildId: string, slot: 'weapon'|'armor'|'cape', itemId: string | null) {
+  // Asegurar que User y Guild existan antes de crear/actualizar equipment
+  await ensureUserAndGuildExist(userId, guildId);
+  
   const data = slot === 'weapon' ? { weaponItemId: itemId }
     : slot === 'armor' ? { armorItemId: itemId }
     : { capeItemId: itemId };

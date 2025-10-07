@@ -43,6 +43,105 @@ export interface BlockState {
     components: EditorComponent[];
 }
 
+export const DESCRIPTION_PLACEHOLDER = "Usa los botones para configurar.";
+
+export const normalizeDisplayContent = (value?: string | null): string => {
+    if (typeof value !== "string") return "";
+    return value.replace(/\s+/g, " ").trim();
+};
+
+export function syncDescriptionComponent(
+    blockState: BlockState,
+    incomingDescription: string | undefined | null,
+    options: { previousDescription?: string | null; placeholder?: string } = {}
+): void {
+    if (!Array.isArray(blockState.components)) {
+        blockState.components = [];
+    }
+
+    const placeholder = normalizeDisplayContent(options.placeholder ?? DESCRIPTION_PLACEHOLDER);
+    const previousRaw = options.previousDescription ?? blockState.description ?? "";
+    const trimmedPrevious = normalizeDisplayContent(previousRaw);
+    const trimmedIncoming = normalizeDisplayContent(incomingDescription);
+
+    const textIndex = blockState.components.findIndex(
+        (component: EditorComponent) => component?.type === 10 && !(component as EditorTextDisplay).thumbnail && !(component as EditorTextDisplay).linkButton
+    );
+
+    const textComponent = textIndex >= 0 && blockState.components[textIndex]?.type === 10
+        ? blockState.components[textIndex] as EditorTextDisplay
+        : null;
+
+    const currentTrimmed = textComponent ? normalizeDisplayContent(textComponent.content) : "";
+
+    const matchesPrevious = trimmedPrevious.length > 0 && currentTrimmed === trimmedPrevious;
+    const matchesPlaceholder = currentTrimmed === placeholder;
+    const canMutateCurrent = textIndex >= 0 && (matchesPrevious || matchesPlaceholder || trimmedPrevious.length === 0);
+
+    if (trimmedIncoming.length > 0) {
+        blockState.description = incomingDescription ?? trimmedIncoming;
+
+        if (textComponent) {
+            if (canMutateCurrent) {
+                textComponent.content = trimmedIncoming;
+                if (textComponent.thumbnail === undefined) {
+                    textComponent.thumbnail = null;
+                }
+            }
+        } else if (trimmedPrevious.length === 0) {
+            blockState.components.unshift({ type: 10, content: incomingDescription ?? trimmedIncoming, thumbnail: null } as EditorTextDisplay);
+        }
+        return;
+    }
+
+    // No description provided -> clear and restore placeholder if applicable
+    blockState.description = undefined;
+
+    if (textComponent) {
+        if (canMutateCurrent) {
+            textComponent.content = placeholder;
+            if (textComponent.thumbnail === undefined) {
+                textComponent.thumbnail = null;
+            }
+        }
+        return;
+    }
+
+    if (trimmedPrevious.length === 0 || matchesPrevious) {
+        blockState.components.unshift({ type: 10, content: placeholder, thumbnail: null } as EditorTextDisplay);
+    }
+}
+
+export function ensureDescriptionTextComponent(
+    blockState: BlockState,
+    options: { placeholder?: string } = {}
+): number | null {
+    if (!Array.isArray(blockState.components)) {
+        blockState.components = [];
+    }
+
+    const placeholder = normalizeDisplayContent(options.placeholder ?? DESCRIPTION_PLACEHOLDER);
+    const descriptionRaw = blockState.description ?? "";
+    const normalizedDescription = normalizeDisplayContent(descriptionRaw);
+
+    const findIndexByContent = (target: string) => blockState.components.findIndex(
+        (component: any) => component?.type === 10 && typeof component.content === "string" && normalizeDisplayContent(component.content) === normalizeDisplayContent(target)
+    );
+
+    if (normalizedDescription.length > 0) {
+        const existingIndex = findIndexByContent(descriptionRaw);
+        if (existingIndex >= 0) return existingIndex;
+        blockState.components.unshift({ type: 10, content: descriptionRaw, thumbnail: null } as EditorTextDisplay);
+        return 0;
+    }
+
+    const placeholderIndex = findIndexByContent(placeholder);
+    if (placeholderIndex >= 0) return placeholderIndex;
+
+    blockState.components.unshift({ type: 10, content: options.placeholder ?? DESCRIPTION_PLACEHOLDER, thumbnail: null } as EditorTextDisplay);
+    return 0;
+}
+
 // Emoji input types
 export interface CustomEmoji {
     id: string;

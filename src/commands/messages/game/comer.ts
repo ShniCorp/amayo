@@ -1,6 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { useConsumableByKey } from '../../../game/consumables/service';
+import { fetchItemBasics, formatItemLabel } from './_helpers';
 
 export const command: CommandMessage = {
   name: 'comer',
@@ -12,11 +13,19 @@ export const command: CommandMessage = {
   run: async (message, args, _client: Amayo) => {
     const itemKey = args[0]?.trim();
     if (!itemKey) { await message.reply('Uso: `!comer <itemKey>`'); return; }
+    const guildId = message.guild!.id;
+    const userId = message.author.id;
+    let itemInfo: { key: string; name: string | null; icon: string | null } = { key: itemKey, name: null, icon: null };
     try {
-      const res = await useConsumableByKey(message.author.id, message.guild!.id, itemKey);
-      await message.reply(`🍽️ Usaste ${itemKey}. Curado: +${res.healed} HP.`);
+      const basics = await fetchItemBasics(guildId, [itemKey]);
+      itemInfo = basics.get(itemKey) ?? itemInfo;
+
+      const res = await useConsumableByKey(userId, guildId, itemKey);
+      const label = formatItemLabel(itemInfo, { bold: true });
+      await message.reply(`🍽️ Usaste ${label}. Curado: +${res.healed} HP.`);
     } catch (e: any) {
-      await message.reply(`❌ No se pudo usar ${itemKey}: ${e?.message ?? e}`);
+      const label = formatItemLabel(itemInfo, { bold: true });
+      await message.reply(`❌ No se pudo usar ${label}: ${e?.message ?? e}`);
     }
   }
 };

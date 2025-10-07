@@ -2,7 +2,8 @@ import type {CommandMessage} from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import {hasManageGuildOrStaff} from '../../../core/lib/permissions';
 import {prisma} from '../../../core/database/prisma';
-import {ButtonStyle, ComponentType, MessageFlags, TextInputStyle} from 'discord-api-types/v10';
+import {ButtonStyle, ComponentType, TextInputStyle} from 'discord-api-types/v10';
+import {buildDisplay, dividerBlock, textBlock} from '../../../core/lib/componentsV2';
 import type {ButtonInteraction, MessageComponentInteraction, TextBasedChannel} from 'discord.js';
 
 interface AchievementState {
@@ -53,25 +54,12 @@ export const command: CommandMessage = {
       rewards: { coins: 100 }
     };
 
-    // Crear mensaje con DisplayComponents
-    const displayMessage = createDisplay(state);
-    
     const channel = message.channel as TextBasedChannel & { send: Function };
-    const editorMsg = await channel.send({
-      ...displayMessage,
-      flags: 32768, // MessageFlags.IsComponentsV2
-      components: [
-        {
-          type: ComponentType.ActionRow,
-          components: [
-            { type: ComponentType.Button, style: ButtonStyle.Primary, label: 'Base', custom_id: 'ach_base' },
-            { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Requisitos', custom_id: 'ach_req' },
-            { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Recompensas', custom_id: 'ach_reward' },
-            { type: ComponentType.Button, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'ach_save' },
-            { type: ComponentType.Button, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'ach_cancel' }
-          ]
-        }
-      ]
+    const editorMsg = await (channel.send as any)({
+      content: null,
+      flags: 32768,
+      reply: { messageReference: message.id },
+      components: buildEditorComponents(state)
     });
 
     const collector = editorMsg.createMessageComponentCollector({
@@ -87,19 +75,13 @@ export const command: CommandMessage = {
           case 'ach_cancel':
             await i.deferUpdate();
             await editorMsg.edit({
-              display: {
-                type: 17,
-                accent_color: 0xFF0000,
-                components: [{
-                  type: 9,
-                  components: [{
-                    type: 10,
-                    content: '**❌ Creación de logro cancelada.**'
-                  }]
-                }]
-              },
+              content: null,
               flags: 32768,
-              components: []
+              components: [
+                buildDisplay(0xFF0000, [
+                  textBlock('**❌ Creación de logro cancelada.**')
+                ])
+              ]
             });
             collector.stop('cancel');
             return;
@@ -139,19 +121,13 @@ export const command: CommandMessage = {
 
             await i.reply({ content: '✅ Logro creado exitosamente!', flags: 64 });
             await editorMsg.edit({
-              display: {
-                type: 17,
-                accent_color: 0x00FF00,
-                components: [{
-                  type: 9,
-                  components: [{
-                    type: 10,
-                    content: `**✅ Logro \`${state.key}\` creado exitosamente.**`
-                  }]
-                }]
-              },
+              content: null,
               flags: 32768,
-              components: []
+              components: [
+                buildDisplay(0x00FF00, [
+                  textBlock(`**✅ Logro \`${state.key}\` creado exitosamente.**`)
+                ])
+              ]
             });
             collector.stop('saved');
             return;
@@ -168,19 +144,13 @@ export const command: CommandMessage = {
       if (r === 'time') {
         try {
           await editorMsg.edit({
-            display: {
-              type: 17,
-              accent_color: 0xFFA500,
-              components: [{
-                type: 9,
-                components: [{
-                  type: 10,
-                  content: '**⏰ Editor expirado.**'
-                }]
-              }]
-            },
+            content: null,
             flags: 32768,
-            components: []
+            components: [
+              buildDisplay(0xFFA500, [
+                textBlock('**⏰ Editor expirado.**')
+              ])
+            ]
           });
         } catch {}
       }
@@ -188,54 +158,41 @@ export const command: CommandMessage = {
   }
 };
 
-function createDisplay(state: AchievementState) {
-  return {
-    display: {
-      type: 17, // Container
-      accent_color: 0xFFD700,
+function buildEditorDisplay(state: AchievementState) {
+  const baseInfo = [
+    `**Nombre:** ${state.name || '*Sin definir*'}`,
+    `**Descripción:** ${state.description || '*Sin definir*'}`,
+    `**Categoría:** ${state.category || 'economy'}`,
+    `**Icono:** ${state.icon || '🏆'}`,
+    `**Puntos:** ${state.points ?? 10}`,
+    `**Oculto:** ${state.hidden ? 'Sí' : 'No'}`,
+  ].join('\n');
+
+  return buildDisplay(0xFFD700, [
+    textBlock(`# 🏆 Creando Logro: \`${state.key}\``),
+    dividerBlock(),
+    textBlock(baseInfo),
+    dividerBlock(),
+    textBlock(`**Requisitos:**\n\`\`\`json\n${JSON.stringify(state.requirements, null, 2)}\n\`\`\``),
+    dividerBlock(),
+    textBlock(`**Recompensas:**\n\`\`\`json\n${JSON.stringify(state.rewards, null, 2)}\n\`\`\``),
+  ]);
+}
+
+function buildEditorComponents(state: AchievementState) {
+  return [
+    buildEditorDisplay(state),
+    {
+      type: ComponentType.ActionRow,
       components: [
-        {
-          type: 9, // Section
-          components: [
-            {
-              type: 10, // Text Display
-              content: `**🏆 Creando Logro: \`${state.key}\`**`
-            }
-          ]
-        },
-        { type: 14, divider: true }, // Separator
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Nombre:** ${state.name || '*Sin definir*'}\n**Descripción:** ${state.description || '*Sin definir*'}\n**Categoría:** ${state.category || 'economy'}\n**Icono:** ${state.icon || '🏆'}\n**Puntos:** ${state.points || 10}\n**Oculto:** ${state.hidden ? 'Sí' : 'No'}`
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Requisitos:**\n\`\`\`json\n${JSON.stringify(state.requirements, null, 2)}\n\`\`\``
-            }
-          ]
-        },
-        { type: 14, divider: true },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Recompensas:**\n\`\`\`json\n${JSON.stringify(state.rewards, null, 2)}\n\`\`\``
-            }
-          ]
-        }
+        { type: ComponentType.Button, style: ButtonStyle.Primary, label: 'Base', custom_id: 'ach_base' },
+        { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Requisitos', custom_id: 'ach_req' },
+        { type: ComponentType.Button, style: ButtonStyle.Secondary, label: 'Recompensas', custom_id: 'ach_reward' },
+        { type: ComponentType.Button, style: ButtonStyle.Success, label: 'Guardar', custom_id: 'ach_save' },
+        { type: ComponentType.Button, style: ButtonStyle.Danger, label: 'Cancelar', custom_id: 'ach_cancel' }
       ]
     }
-  };
+  ];
 }
 
 async function showBaseModal(i: ButtonInteraction, state: AchievementState, editorMsg: any) {
@@ -316,7 +273,11 @@ async function showBaseModal(i: ButtonInteraction, state: AchievementState, edit
   state.points = parseInt(submit.components.getTextInputValue('points')) || 10;
 
   await submit.deferUpdate();
-  await editorMsg.edit(createDisplay(state));
+  await editorMsg.edit({
+    content: null,
+    flags: 32768,
+    components: buildEditorComponents(state)
+  });
 }
 
 async function showRequirementsModal(i: ButtonInteraction, state: AchievementState, editorMsg: any) {
@@ -351,7 +312,11 @@ async function showRequirementsModal(i: ButtonInteraction, state: AchievementSta
   try {
     state.requirements = JSON.parse(submit.components.getTextInputValue('requirements'));
     await submit.deferUpdate();
-    await editorMsg.edit(createDisplay(state));
+    await editorMsg.edit({
+      content: null,
+      flags: 32768,
+      components: buildEditorComponents(state)
+    });
   } catch (e) {
     await submit.reply({ content: '❌ JSON inválido en requisitos.', flags: 64 });
   }
@@ -389,7 +354,11 @@ async function showRewardsModal(i: ButtonInteraction, state: AchievementState, e
   try {
     state.rewards = JSON.parse(submit.components.getTextInputValue('rewards'));
     await submit.deferUpdate();
-    await editorMsg.edit(createDisplay(state));
+    await editorMsg.edit({
+      content: null,
+      flags: 32768,
+      components: buildEditorComponents(state)
+    });
   } catch (e) {
     await submit.reply({ content: '❌ JSON inválido en recompensas.', flags: 64 });
   }

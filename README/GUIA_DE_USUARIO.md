@@ -1,50 +1,182 @@
-# 🎮 Guía de Usuario - Sistema de Economía y Minijuegos
+# 🎮 Guía de Usuario Completa - Amayo Bot
 
-> **Bienvenido a la guía completa para crear contenido de juego en tu servidor de Discord**
+> **Última actualización: Enero 2025 • Versión 0.11.20**
 
-Esta guía te enseñará cómo crear items, enemigos, áreas de juego y ofertas de tienda usando comandos simples de Discord. No necesitas saber programación, solo seguir los pasos.
+Esta es la guía completa de Amayo Bot para usuarios finales de Discord. Aprende a usar todos los comandos, jugar minijuegos, gestionar tu economía y, si eres administrador, cómo crear contenido personalizado para tu servidor.
 
 ---
 
 ## 📋 Tabla de Contenidos
 
-1. [Requisitos Previos](#requisitos-previos)
-2. [Conceptos Básicos](#conceptos-básicos)
-3. [Creando Items](#creando-items)
-4. [Gestionando Items](#gestionando-items)
-5. [Creando Enemigos](#creando-enemigos)
-6. [Gestionando Enemigos](#gestionando-enemigos)
-7. [Configurando Áreas de Juego](#configurando-áreas)
-8. [Gestionando Áreas](#gestionando-áreas)
-9. [Configurando Niveles](#configurando-niveles)
-10. [Creando Ofertas de Tienda](#creando-ofertas)
-11. [Creando Logros](#creando-logros)
-12. [Gestionando Logros](#gestionando-logros)
-13. [Creando Misiones](#creando-misiones)
-14. [Gestionando Misiones](#gestionando-misiones)
-15. [Comandos de Jugador](#comandos-jugador)
-16. [Ejemplos Prácticos](#ejemplos-prácticos)
-17. [Preguntas Frecuentes](#preguntas-frecuentes)
+### Para Todos los Usuarios
+1. [Primeros Pasos](#primeros-pasos)
+2. [Comandos Básicos](#comandos-basicos)
+3. [Sistema de Juego](#sistema-juego)
+4. [Minijuegos](#minijuegos)
+5. [Inventario y Equipo](#inventario)
+6. [Economía](#economia)
+7. [Tienda](#tienda)
+8. [Crafteo](#crafteo)
+9. [Logros](#logros)
+10. [Misiones](#misiones)
+11. [Racha Diaria](#racha)
+12. [Consumibles](#consumibles)
+13. [Cofres](#cofres)
+14. [Encantamientos](#encantamientos)
+15. [Fundición](#fundicion)
+16. [IA Conversacional](#ia)
+17. [Recordatorios](#recordatorios)
+18. [Sistema de Alianzas](#alianzas)
+
+### Para Administradores
+19. [Creación de Contenido](#creacion-contenido)
+20. [Gestión de Items](#gestion-items)
+21. [Gestión de Mobs](#gestion-mobs)
+22. [Gestión de Áreas](#gestion-areas)
+23. [Gestión de Ofertas](#gestion-ofertas)
+24. [Configuración del Servidor](#configuracion)
+
+### Recursos
+25. [Tips y Trucos](#tips)
+26. [Preguntas Frecuentes](#faq)
 
 ---
 
-## 🔑 Requisitos Previos {#requisitos-previos}
+## 🚀 Primeros Pasos {#primeros-pasos}
 
-Para usar los comandos de creación de contenido, necesitas:
-- Tener el permiso **"Administrar Servidor"** en Discord, **O**
-- Tener un rol de Staff configurado en tu servidor
+### ¿Qué es Amayo Bot?
+
+Amayo Bot es un bot de Discord completo que añade un sistema de juego RPG a tu servidor con:
+- **Minijuegos**: Mina, pesca, pelea y cultiva
+- **Economía**: Sistema de monedas, tienda e inventario
+- **Progresión**: Logros, misiones y rachas diarias
+- **Personalización**: Equipo, encantamientos y crafteo
+- **IA**: Chat con Gemini AI
+- **Alianzas**: Sistema de puntos para servidores
+
+### Prefix del Bot
+
+El prefix por defecto es `!` pero los administradores pueden cambiarlo.
+
+**Ejemplos:**
+- `!ayuda` - Ver comandos disponibles
+- `!player` - Ver tu perfil
+- `!mina` - Jugar al minijuego de minería
+
+---
+
+## ⚡ Comandos Básicos {#comandos-basicos}
+
+### Información General
+
+- `!ayuda` o `!help` - Lista todos los comandos
+- `!ayuda <comando>` - Ayuda sobre un comando específico
+- `!ping` - Ver la latencia del bot
+- `!player [@usuario]` - Ver perfil de jugador
+
+### Ver tu Progreso
+
+- `!inventario` o `!inv` - Ver tu inventario
+- `!stats` - Ver tus estadísticas detalladas
+- `!logros` - Ver tus logros
+- `!misiones` - Ver misiones disponibles
+- `!cooldowns` - Ver tus cooldowns activos
+
+---
+
+## 🎮 Sistema de Juego {#sistema-juego}
+
+### Estadísticas de Combate
+
+Tu personaje tiene las siguientes estadísticas:
+
+- **HP (Vida)**: Puntos de vida actuales y máximos
+- **ATK (Ataque)**: Daño que infliges
+- **DEF (Defensa)**: Reduce el daño recibido
+
+### Equipo
+
+Puedes equipar:
+- **Arma (weapon)**: Aumenta tu ataque
+- **Armadura (armor)**: Aumenta tu defensa
+- **Capa (cape)**: Bonos especiales (HP, stats adicionales)
+
+**Comando:**
+```
+!equipar <slot> <itemKey>
+```
+
+**Ejemplos:**
+- `!equipar weapon iron_sword`
+- `!equipar armor leather_armor`
+- `!equipar cape red_cape`
+
+---
+
+## 🎯 Minijuegos {#minijuegos}
+
+Los minijuegos son la forma principal de obtener recursos y monedas.
+
+### ⛏️ Minar
+
+Extrae minerales valiosos de la mina.
+
+**Comando:** `!mina [nivel] [herramienta] [area:clave]`
+
+**Ejemplos:**
+- `!mina` - Mina en el nivel más alto desbloqueado
+- `!mina 2` - Mina en el nivel 2
+- `!mina 1 iron_pickaxe` - Usa un pico específico
+
+**Herramienta requerida:** Pico (pickaxe)
+
+### 🎣 Pescar
+
+Captura peces y tesoros en la laguna.
+
+**Comando:** `!pescar [nivel] [herramienta] [area:clave]`
+
+**Ejemplos:**
+- `!pescar` - Pesca automática
+- `!pescar 3` - Pesca en nivel 3
+
+**Herramienta requerida:** Caña de pescar (rod)
+
+### ⚔️ Pelear
+
+Enfrenta enemigos en la arena.
+
+**Comando:** `!pelear [nivel] [arma] [area:clave]`
+
+**Ejemplos:**
+- `!pelear` - Combate automático
+- `!pelear 1 iron_sword` - Usa espada específica
+
+**Herramienta requerida:** Arma (sword, bow, halberd)
+
+### 🌾 Plantar
+
+Cultiva plantas y cosecha alimentos.
+
+**Comando:** `!plantar [nivel] [herramienta]`
+
+**Herramienta requerida:** Azada (hoe)
+
+### Cooldowns
+
+Cada minijuego tiene un tiempo de espera entre usos. Usa `!cooldowns` para ver cuánto tiempo falta.
 
 ---
 
 ## 💡 Conceptos Básicos {#conceptos-básicos}
 
 ### ¿Qué es una "key"?
-Una **key** es un identificador único para cada elemento que crees. Piénsalo como el "nombre interno" del elemento.
+Una **key** es un identificador único para cada elemento (item, mob, área, etc.). Es como el "nombre interno" del elemento.
 
 **Ejemplos de keys:**
-- `iron_sword` (para una espada de hierro)
-- `health_potion` (para una poción de vida)
-- `cave_spider` (para un enemigo araña)
+- `iron_sword` - Espada de hierro
+- `health_potion` - Poción de vida  
+- `cave_spider` - Enemigo araña
 
 **⚠️ Importante:** Las keys no pueden repetirse y deben ser únicas.
 
@@ -1135,3 +1267,33 @@ Si tienes problemas o preguntas:
 ---
 
 **¡Feliz creación de contenido! 🎉**
+
+---
+
+## 📚 Documentación Completa
+
+Esta guía es un resumen. Para la **documentación completa, interactiva y moderna** con todas las secciones detalladas, incluyendo:
+
+- ✅ Todos los comandos con ejemplos
+- ✅ Sistema completo de creación de contenido (Items, Mobs, Áreas, Niveles, Ofertas)
+- ✅ Guía de Props y configuraciones JSON
+- ✅ Ejemplos prácticos completos
+- ✅ Tips, trucos y FAQ
+- ✅ Diseño moderno con navegación interactiva
+
+**Accede a:** `src/server/public/index.html`
+
+O visita la URL de tu servidor: `http://tu-servidor:puerto/`
+
+---
+
+## 🔗 Recursos Adicionales
+
+- **CREACION_DE_CONTENIDO.md** - Documentación técnica detallada para administradores sobre creación de contenido
+- **index.html** - Documentación web completa e interactiva
+- **Repositorio del Bot** - Código fuente y documentación técnica
+
+---
+
+**Última actualización:** Enero 2025 • Versión 0.11.20  
+**Amayo Bot** © 2025 - Documentación para usuarios finales de Discord

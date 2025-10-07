@@ -1,6 +1,7 @@
 import type { CommandMessage } from '../../../core/types/commands';
 import type Amayo from '../../../core/client';
 import { buyFromOffer } from '../../../game/economy/service';
+import { formatItemLabel } from './_helpers';
 
 export const command: CommandMessage = {
   name: 'comprar',
@@ -15,7 +16,8 @@ export const command: CommandMessage = {
     if (!offerId) { await message.reply('Uso: `!comprar <offerId> [qty]`'); return; }
     try {
       const res = await buyFromOffer(message.author.id, message.guild!.id, offerId, qty);
-      await message.reply(`🛒 Comprado: ${res.item.key} x${res.qty}`);
+      const label = formatItemLabel(res.item, { bold: true });
+      await message.reply(`🛒 Comprado: ${label} x${res.qty}`);
     } catch (e: any) {
       await message.reply(`❌ No se pudo comprar: ${e?.message ?? e}`);
     }

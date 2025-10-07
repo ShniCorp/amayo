@@ -13,6 +13,7 @@ import { prisma } from '../../../core/database/prisma';
 import { getOrCreateWallet, buyFromOffer } from '../../../game/economy/service';
 import type { DisplayComponentContainer } from '../../../core/types/displayComponents';
 import type { ItemProps } from '../../../game/economy/types';
+import { formatItemLabel, resolveItemIcon } from './_helpers';
 
 const ITEMS_PER_PAGE = 5;
 
@@ -100,12 +101,14 @@ export const command: CommandMessage = {
     }
 
     // Estado inicial
-    let currentPage = 1;
-    let selectedOfferId: string | null = null;
+    const sessionState = {
+      currentPage: 1,
+      selectedOfferId: null as string | null
+    };
 
     const shopMessage = await message.reply({
       flags: MessageFlags.SuppressEmbeds | 32768,
-      components: await buildShopPanel(filteredOffers, currentPage, wallet.coins, selectedOfferId)
+      components: await buildShopPanel(filteredOffers, sessionState.currentPage, wallet.coins, sessionState.selectedOfferId)
     });
 
     // Collector para interacciones
@@ -120,8 +123,7 @@ export const command: CommandMessage = {
           await handleButtonInteraction(
             interaction as ButtonInteraction,
             filteredOffers,
-            currentPage,
-            selectedOfferId,
+            sessionState,
             userId,
             guildId,
             shopMessage,
@@ -131,21 +133,11 @@ export const command: CommandMessage = {
           await handleSelectInteraction(
             interaction as StringSelectMenuInteraction,
             filteredOffers,
-            currentPage,
+            sessionState.currentPage,
             userId,
             guildId,
             shopMessage
           );
-        }
-
-        // Actualizar página y selección basado en customId
-        if (interaction.customId === 'shop_prev_page') {
-          currentPage = Math.max(1, currentPage - 1);
-        } else if (interaction.customId === 'shop_next_page') {
-          const totalPages = Math.ceil(filteredOffers.length / ITEMS_PER_PAGE);
-          currentPage = Math.min(totalPages, currentPage + 1);
-        } else if (interaction.customId === 'shop_select_item') {
-          // El select menu ya maneja la selección
         }
       } catch (error: any) {
         console.error('Error handling shop interaction:', error);
@@ -205,9 +197,9 @@ async function buildShopPanel(
 
   // Si hay una oferta seleccionada, mostrar detalles
   if (selectedOffer) {
-    const item = selectedOffer.item;
-    const props = parseItemProps(item.props);
-    const icon = getItemIcon(props, item.category);
+  const item = selectedOffer.item;
+  const props = parseItemProps(item.props);
+  const label = formatItemLabel(item, { fallbackIcon: getItemIcon(props, item.category), bold: true });
     const price = formatPrice(selectedOffer.price);
 
     // Stock info
@@ -234,7 +226,7 @@ async function buildShopPanel(
 
     container.components.push({
       type: 10,
-      content: `${icon} **${item.name || item.key}**\n\n${item.description || 'Sin descripción'}${statsInfo}\n\n💰 Precio: ${price}${stockInfo}`
+      content: `${label}\n\n${item.description || 'Sin descripción'}${statsInfo}\n\n💰 Precio: ${price}${stockInfo}`
     });
 
     container.components.push({
@@ -253,7 +245,7 @@ async function buildShopPanel(
   for (const offer of pageOffers) {
     const item = offer.item;
     const props = parseItemProps(item.props);
-    const icon = getItemIcon(props, item.category);
+  const label = formatItemLabel(item, { fallbackIcon: getItemIcon(props, item.category), bold: true });
     const price = formatPrice(offer.price);
     const isSelected = selectedOfferId === offer.id;
 
@@ -264,7 +256,7 @@ async function buildShopPanel(
       type: 9,
       components: [{
         type: 10,
-        content: `${icon} **${item.name || item.key}**${selectedMark}\n💰 ${price}${stockText}`
+  content: `${label}${selectedMark}\n💰 ${price}${stockText}`
       }],
       accessory: {
         type: 2,
@@ -341,8 +333,7 @@ async function buildShopPanel(
 async function handleButtonInteraction(
   interaction: ButtonInteraction,
   offers: any[],
-  currentPage: number,
-  selectedOfferId: string | null,
+  sessionState: { currentPage: number; selectedOfferId: string | null },
   userId: string,
   guildId: string,
   shopMessage: Message,
@@ -354,15 +345,17 @@ async function handleButtonInteraction(
   if (customId.startsWith('shop_view_')) {
     const offerId = customId.replace('shop_view_', '');
     const wallet = await getOrCreateWallet(userId, guildId);
+    sessionState.selectedOfferId = offerId;
 
     await interaction.update({
-      components: await buildShopPanel(offers, currentPage, wallet.coins, offerId)
+      components: await buildShopPanel(offers, sessionState.currentPage, wallet.coins, sessionState.selectedOfferId)
     });
     return;
   }
 
   // Comprar
   if (customId === 'shop_buy_1' || customId === 'shop_buy_5') {
+    const selectedOfferId = sessionState.selectedOfferId;
     if (!selectedOfferId) {
       await interaction.reply({
         content: '❌ Primero selecciona un item.',
@@ -378,14 +371,15 @@ async function handleButtonInteraction(
       const result = await buyFromOffer(userId, guildId, selectedOfferId, qty);
       const wallet = await getOrCreateWallet(userId, guildId);
 
+      const purchaseLabel = formatItemLabel(result.item, { fallbackIcon: resolveItemIcon(result.item.icon) });
       await interaction.followUp({
-        content: `✅ **Compra exitosa!**\n🛒 ${result.item.name || result.item.key} x${result.qty}\n💰 Te quedan: ${wallet.coins} monedas`,
+        content: `✅ **Compra exitosa!**\n🛒 ${purchaseLabel} x${result.qty}\n💰 Te quedan: ${wallet.coins} monedas`,
         flags: MessageFlags.Ephemeral
       });
 
       // Actualizar tienda
       await shopMessage.edit({
-        components: await buildShopPanel(offers, currentPage, wallet.coins, selectedOfferId)
+        components: await buildShopPanel(offers, sessionState.currentPage, wallet.coins, sessionState.selectedOfferId)
       });
     } catch (error: any) {
       await interaction.followUp({
@@ -400,7 +394,7 @@ async function handleButtonInteraction(
   if (customId === 'shop_refresh') {
     const wallet = await getOrCreateWallet(userId, guildId);
     await interaction.update({
-      components: await buildShopPanel(offers, currentPage, wallet.coins, selectedOfferId)
+      components: await buildShopPanel(offers, sessionState.currentPage, wallet.coins, sessionState.selectedOfferId)
     });
     return;
   }
@@ -417,17 +411,19 @@ async function handleButtonInteraction(
   // Navegación de páginas (ya manejado en el collect)
   if (customId === 'shop_prev_page' || customId === 'shop_next_page') {
     const wallet = await getOrCreateWallet(userId, guildId);
-    let newPage = currentPage;
+    let newPage = sessionState.currentPage;
 
     if (customId === 'shop_prev_page') {
-      newPage = Math.max(1, currentPage - 1);
+      newPage = Math.max(1, sessionState.currentPage - 1);
     } else {
       const totalPages = Math.ceil(offers.length / ITEMS_PER_PAGE);
-      newPage = Math.min(totalPages, currentPage + 1);
+      newPage = Math.min(totalPages, sessionState.currentPage + 1);
     }
 
+    sessionState.currentPage = newPage;
+
     await interaction.update({
-      components: await buildShopPanel(offers, newPage, wallet.coins, selectedOfferId)
+      components: await buildShopPanel(offers, sessionState.currentPage, wallet.coins, sessionState.selectedOfferId)
     });
     return;
   }
