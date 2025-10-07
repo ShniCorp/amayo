@@ -1,4 +1,26 @@
-<section id="crafteo" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl">
-  <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🛠️ Crafteo y Creación</h2>
-  <p class="text-slate-300 text-sm">Contenido en migración a EJS…</p>
+<section id="crafteo" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10">
+  <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🛠️ Crafteo</h2>
+  <p class="text-slate-200">Combina materiales para crear objetos. Algunas recetas requieren nivel mínimo o herramientas específicas.</p>
+
+  <div class="grid gap-6 md:grid-cols-2">
+    <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">📜 Ver Recetas</h3>
+      <div class="bg-slate-900/50 p-3 rounded-lg text-sm">
+        <code class="text-indigo-200">!recetas</code>
+      </div>
+      <p class="text-slate-300 text-sm">Lista de recetas disponibles y sus requisitos.</p>
+    </div>
+    <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">🧪 Crear un Objeto</h3>
+      <div class="bg-slate-900/50 p-3 rounded-lg text-sm">
+        <code class="text-indigo-200">!craftear &lt;receta&gt; [cantidad]</code>
+      </div>
+      <p class="text-slate-300 text-sm">Ejemplo: <span class="font-mono">!craftear espada 1</span></p>
+    </div>
+  </div>
+
+  <div class="mt-6 rounded-2xl border border-indigo-500/30 bg-indigo-500/10 p-5 text-sm text-indigo-100">
+    <strong class="block text-base font-semibold text-indigo-200 mb-2">Nota</strong>
+    <p>Las recetas pueden actualizarse con nuevos parches. Revisa <span class="font-mono">!recetas</span> después de una actualización.</p>
+  </div>
 </section>
