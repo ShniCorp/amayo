@@ -516,9 +516,8 @@ export async function promptKeySelection<T>(
 export function sendDisplayReply(message: Message, display: any, extraComponents: any[] = []) {
   const channel = message.channel as TextBasedChannel & { send: Function };
   return (channel.send as any)({
-    content: null,
     flags: 32768,
-    reply: { messageReference: message.id },
+    message_reference: { message_id: message.id },
     components: [display, ...extraComponents],
   });
 }
