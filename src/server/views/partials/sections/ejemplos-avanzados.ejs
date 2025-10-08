@@ -1,0 +1,55 @@
+<section id="ejemplos-avanzados" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10">
+  <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🧪 Ejemplos Avanzados</h2>
+  <p class="text-slate-200">Workflows completos inspirados en tu documentación para staff. Sigue los pasos y copia/pega los JSON cuando se soliciten.</p>
+
+  <div class="space-y-6">
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">1) Sistema de Minería (básico)</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg"># Ítem Herramienta
+!item-crear wooden_pickaxe
+Props (JSON): {"tool": {"type": "pickaxe", "tier": 1}, "breakable": {"enabled": true, "maxDurability": 50, "durabilityPerUse": 1}}
+
+# Ítem Recurso
+!item-crear copper_ore
+Props (JSON): {"craftingOnly": false}
+
+# Área y Nivel
+!area-crear mine.starter
+Config (JSON): {"cooldownSeconds": 30, "icon": "⛏️"}
+!area-nivel mine.starter 1
+Requisitos (JSON): {"tool": {"required": true, "toolType": "pickaxe", "minTier": 1}}
+Recompensas (JSON): {"draws": 2, "table": [{"type":"coins","amount":10,"weight":10},{"type":"item","itemKey":"copper_ore","qty":1,"weight":8}]}</pre>
+    </div>
+
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">2) Cofre de Recompensa Diaria</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg">!item-crear daily_chest
+Props (JSON): {
+  "chest": {"enabled": true, "rewards": [
+    {"type": "coins", "amount": 500},
+    {"type": "item", "itemKey": "health_potion", "qty": 3}
+  ], "consumeOnOpen": true}
+}</pre>
+    </div>
+
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">3) Espada Legendaria (cadena resumida)</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg"># Materiales base → fundición → crafteo
+!item-crear magic_dust
+!item-crear steel_ingot
+# (fundición configurada por el equipo)
+
+# Producto intermedio
+!item-crear steel_sword_base
+Props (JSON): {"tool": {"type": "sword", "tier": 3}, "damage": 25}
+
+# Encantamiento aplicado
+!encantar steel_sword_base ruby_core
+
+# Producto final
+!item-crear legendary_dragon_slayer
+Props (JSON): {"damage": 45, "breakable": {"enabled": true, "maxDurability": 300}}
+Receta (modal): steel_sword_base:1, magic_dust:3, dragon_scale:1</pre>
+    </div>
+  </div>
+</section>
