@@ -1,6 +1,10 @@
 node_modules
 .env
 .env.test
+qodana.yaml
 
+/.github
+/.vscode
+/.idea
 
 /src/generated/prisma
