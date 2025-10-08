@@ -1,11 +1,17 @@
 export type DisplayBlock =
-  | { kind: 'text'; content: string }
-  | { kind: 'divider'; divider?: boolean; spacing?: number };
+  | { kind: "text"; content: string }
+  | { kind: "divider"; divider?: boolean; spacing?: number }
+  | { kind: "image"; url: string };
 
-export const textBlock = (content: string): DisplayBlock => ({ kind: 'text', content });
+export const textBlock = (content: string): DisplayBlock => ({
+  kind: "text",
+  content,
+});
 
-export const dividerBlock = (options: { divider?: boolean; spacing?: number } = {}): DisplayBlock => ({
-  kind: 'divider',
+export const dividerBlock = (
+  options: { divider?: boolean; spacing?: number } = {}
+): DisplayBlock => ({
+  kind: "divider",
   divider: options.divider,
   spacing: options.spacing,
 });
@@ -15,8 +21,13 @@ export function buildDisplay(accentColor: number, blocks: DisplayBlock[]) {
     type: 17 as const,
     accent_color: accentColor,
     components: blocks.map((block) => {
-      if (block.kind === 'text') {
+      if (block.kind === "text") {
         return { type: 10 as const, content: block.content };
+      }
+
+      if (block.kind === "image") {
+        // This component type will be translated by the renderer to an embed image
+        return { type: 12 as const, url: block.url } as any;
       }
 
       return {

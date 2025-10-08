@@ -1,4 +1,5 @@
 import { prisma } from "../../../core/database/prisma";
+import { textBlock, dividerBlock } from "../../../core/lib/componentsV2";
 import type { GameArea } from "@prisma/client";
 import type { ItemProps } from "../../../game/economy/types";
 import type {
@@ -207,6 +208,44 @@ export async function fetchItemBasics(
   }
 
   return result;
+}
+
+export type AreaMetadata =
+  | {
+      previewImage?: string;
+      image?: string;
+      referenceImage?: string;
+      description?: string;
+      [k: string]: any;
+    }
+  | null
+  | undefined;
+
+export function buildAreaMetadataBlocks(
+  area: Pick<GameArea, "metadata" | "key" | "name">
+) {
+  const blocks: any[] = [];
+  const meta = (area.metadata as AreaMetadata) || undefined;
+  if (!meta) return blocks;
+
+  const img = meta.previewImage || meta.image || meta.referenceImage;
+  const desc =
+    typeof meta.description === "string" && meta.description.trim().length > 0
+      ? meta.description.trim()
+      : null;
+
+  if (desc) {
+    blocks.push(textBlock(`**🗺️ Detalles del área**\n${desc}`));
+  }
+  if (img && typeof img === "string") {
+    // Mostrar también como texto para compatibilidad, y dejar que el renderer agregue imagen si soporta
+    blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+    blocks.push(textBlock(`**🖼️ Mapa/Imagen:** ${img}`));
+    // Si el renderer soporta bloque de imagen, los consumidores podrán usarlo
+    // @ts-ignore: el builder acepta bloques extendidos
+    blocks.push({ kind: "image", url: img });
+  }
+  return blocks;
 }
 
 export interface KeyPickerOption {
