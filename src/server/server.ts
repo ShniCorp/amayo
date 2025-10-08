@@ -2,7 +2,11 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { promises as fs } from "node:fs";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { gzipSync } from "node:zlib";
+import {
+  gzipSync,
+  brotliCompressSync,
+  constants as zlibConstants,
+} from "node:zlib";
 import path from "node:path";
 import ejs from "ejs";
 
@@ -114,6 +118,45 @@ function applySecurityHeaders(base: Record<string, string> = {}) {
     ...base,
   };
 }
+function buildBaseCsp(frameAncestors: string = "'self'") {
+  // Use a mild CSP; add frame-ancestors dynamically per request.
+  return (
+    "default-src 'self'; " +
+    "img-src 'self' data: https:; " +
+    "style-src 'self' 'unsafe-inline' https:; " +
+    "script-src 'self' 'unsafe-inline' https:; " +
+    "font-src 'self' https: data:; " +
+    "frame-src 'self' https://ko-fi.com https://*.ko-fi.com; " +
+    "child-src 'self' https://ko-fi.com https://*.ko-fi.com; " +
+    `frame-ancestors ${frameAncestors}`
+  );
+}
+
+function applySecurityHeadersForRequest(
+  req: IncomingMessage,
+  base: Record<string, string> = {}
+) {
+  const host = ((req.headers.host as string) || "").toLowerCase();
+  const isDocsHost =
+    host === "docs.amayo.dev" || host.endsWith(".docs.amayo.dev");
+
+  // Allow embedding only from https://top.gg for docs.amayo.dev; otherwise, self only and keep XFO deny.
+  const csp = isDocsHost
+    ? buildBaseCsp("'self' https://top.gg")
+    : buildBaseCsp("'self'");
+
+  const headers: Record<string, string> = {
+    "Strict-Transport-Security": "max-age=15552000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    // X-Frame-Options is omitted for docs.amayo.dev to rely on CSP frame-ancestors allowing only top.gg
+    ...(isDocsHost ? {} : { "X-Frame-Options": "DENY" }),
+    "Content-Security-Policy": csp,
+    ...base,
+  };
+
+  return headers;
+}
 
 function computeEtag(buf: Buffer): string {
   // Weak ETag derived from content sha1 and length
@@ -127,6 +170,49 @@ function acceptsEncoding(req: IncomingMessage, enc: string): boolean {
     .split(",")
     .map((s) => s.trim())
     .includes(enc);
+}
+
+// Parse Accept-Encoding with q-values and return a map of encoding -> q
+function parseAcceptEncoding(req: IncomingMessage): Map<string, number> {
+  const header = (req.headers["accept-encoding"] as string) || "";
+  const map = new Map<string, number>();
+  if (!header) {
+    // If header missing, identity is acceptable
+    map.set("identity", 1);
+    return map;
+  }
+  const parts = header.split(",");
+  for (const raw of parts) {
+    const part = raw.trim();
+    if (!part) continue;
+    const [name, ...params] = part.split(";");
+    let q = 1;
+    for (const p of params) {
+      const [k, v] = p.split("=").map((s) => s.trim());
+      if (k === "q" && v) {
+        const n = Number(v);
+        if (!Number.isNaN(n)) q = n;
+      }
+    }
+    map.set(name.toLowerCase(), q);
+  }
+  // Ensure identity exists unless explicitly disabled (q=0)
+  if (!map.has("identity")) map.set("identity", 1);
+  return map;
+}
+
+// Choose the best compression given the request and mime type.
+function pickEncoding(
+  req: IncomingMessage,
+  mime: string
+): "br" | "gzip" | "identity" {
+  if (!shouldCompress(mime)) return "identity";
+  const encs = parseAcceptEncoding(req);
+  const qBr = encs.get("br") ?? 0;
+  const qGzip = encs.get("gzip") ?? 0;
+  if (qBr > 0) return "br";
+  if (qGzip > 0) return "gzip";
+  return "identity";
 }
 
 function shouldCompress(mime: string): boolean {
@@ -174,7 +260,7 @@ const sendResponse = async (
   if (inm && inm === etag) {
     res.writeHead(
       304,
-      applySecurityHeaders({
+      applySecurityHeadersForRequest(req, {
         ETag: etag,
         "Cache-Control": cacheControl,
         ...(stat ? { "Last-Modified": stat.mtime.toUTCString() } : {}),
@@ -192,17 +278,28 @@ const sendResponse = async (
     ...(stat ? { "Last-Modified": stat.mtime.toUTCString() } : {}),
   };
 
-  if (shouldCompress(mimeType) && acceptsEncoding(req, "gzip")) {
-    try {
+  // Prefer Brotli over Gzip when supported
+  const chosen = pickEncoding(req, mimeType);
+  try {
+    if (chosen === "br") {
+      body = brotliCompressSync(data, {
+        params: {
+          [zlibConstants.BROTLI_PARAM_QUALITY]: 4, // fast, good ratio for text
+          [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
+        },
+      });
+      headers["Content-Encoding"] = "br";
+      headers["Vary"] = "Accept-Encoding";
+    } else if (chosen === "gzip") {
       body = gzipSync(data);
       headers["Content-Encoding"] = "gzip";
       headers["Vary"] = "Accept-Encoding";
-    } catch {
-      // Si falla compresión, enviar sin comprimir
     }
+  } catch {
+    // Si falla compresión, enviar sin comprimir
   }
 
-  res.writeHead(statusCode, applySecurityHeaders(headers));
+  res.writeHead(statusCode, applySecurityHeadersForRequest(req, headers));
   res.end(body);
 };
 
@@ -238,7 +335,10 @@ const renderTemplate = async (
   if (inm && inm === etag) {
     res.writeHead(
       304,
-      applySecurityHeaders({ ETag: etag, "Cache-Control": "no-cache" })
+      applySecurityHeadersForRequest(req, {
+        ETag: etag,
+        "Cache-Control": "no-cache",
+      })
     );
     res.end();
     return;
@@ -251,17 +351,27 @@ const renderTemplate = async (
     ETag: etag,
   };
 
-  if (acceptsEncoding(req, "gzip")) {
-    try {
+  const chosenDyn = pickEncoding(req, "text/html; charset=utf-8");
+  try {
+    if (chosenDyn === "br") {
+      respBody = brotliCompressSync(htmlBuffer, {
+        params: {
+          [zlibConstants.BROTLI_PARAM_QUALITY]: 4,
+          [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
+        },
+      });
+      headers["Content-Encoding"] = "br";
+      headers["Vary"] = "Accept-Encoding";
+    } else if (chosenDyn === "gzip") {
       respBody = gzipSync(htmlBuffer);
       headers["Content-Encoding"] = "gzip";
       headers["Vary"] = "Accept-Encoding";
-    } catch {
-      // continuar sin comprimir
     }
+  } catch {
+    // continuar sin comprimir
   }
 
-  res.writeHead(statusCode, applySecurityHeaders(headers));
+  res.writeHead(statusCode, applySecurityHeadersForRequest(req, headers));
   res.end(respBody);
 };
 
@@ -289,7 +399,7 @@ export const server = createServer(
         const robots = "User-agent: *\nAllow: /\n"; // change to Disallow: / if you want to discourage polite crawlers
         res.writeHead(
           200,
-          applySecurityHeaders({
+          applySecurityHeadersForRequest(req, {
             "Content-Type": "text/plain; charset=utf-8",
             "Cache-Control": "public, max-age=86400",
           })
@@ -301,7 +411,7 @@ export const server = createServer(
       if (isSuspiciousPath(url.pathname)) {
         // Hard block known-bad keyword probes
         if (BLOCKED_PATTERNS.some((re) => re.test(url.pathname))) {
-          const headers = applySecurityHeaders({
+          const headers = applySecurityHeadersForRequest(req, {
             "Content-Type": "text/plain; charset=utf-8",
           });
           res.writeHead(403, headers);
@@ -310,7 +420,7 @@ export const server = createServer(
         // Rate limit repetitive suspicious hits per IP
         const rate = hitSuspicious(clientIp);
         if (!rate.allowed) {
-          const headers = applySecurityHeaders({
+          const headers = applySecurityHeadersForRequest(req, {
             "Content-Type": "text/plain; charset=utf-8",
             "Retry-After": String(Math.ceil(rate.resetIn / 1000)),
             "X-RateLimit-Limit": String(RATE_MAX_SUSPICIOUS),
@@ -360,7 +470,7 @@ export const server = createServer(
           } catch {
             res.writeHead(
               404,
-              applySecurityHeaders({
+              applySecurityHeadersForRequest(req, {
                 "Content-Type": "text/plain; charset=utf-8",
               })
             );
@@ -373,7 +483,7 @@ export const server = createServer(
           console.error("[Server] Error al servir archivo:", error);
           res.writeHead(
             500,
-            applySecurityHeaders({
+            applySecurityHeadersForRequest(req, {
               "Content-Type": "text/plain; charset=utf-8",
             })
           );
@@ -384,7 +494,9 @@ export const server = createServer(
       console.error("[Server] Error inesperado:", error);
       res.writeHead(
         500,
-        applySecurityHeaders({ "Content-Type": "text/plain; charset=utf-8" })
+        applySecurityHeadersForRequest(req, {
+          "Content-Type": "text/plain; charset=utf-8",
+        })
       );
       res.end("500 - Error interno");
     }
