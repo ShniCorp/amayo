@@ -2,7 +2,11 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { promises as fs } from "node:fs";
 import { readFileSync } from "node:fs";
 import { createHash } from "node:crypto";
-import { gzipSync, brotliCompressSync } from "node:zlib";
+import {
+  gzipSync,
+  brotliCompressSync,
+  constants as zlibConstants,
+} from "node:zlib";
 import path from "node:path";
 import ejs from "ejs";
 
@@ -168,6 +172,49 @@ function acceptsEncoding(req: IncomingMessage, enc: string): boolean {
     .includes(enc);
 }
 
+// Parse Accept-Encoding with q-values and return a map of encoding -> q
+function parseAcceptEncoding(req: IncomingMessage): Map<string, number> {
+  const header = (req.headers["accept-encoding"] as string) || "";
+  const map = new Map<string, number>();
+  if (!header) {
+    // If header missing, identity is acceptable
+    map.set("identity", 1);
+    return map;
+  }
+  const parts = header.split(",");
+  for (const raw of parts) {
+    const part = raw.trim();
+    if (!part) continue;
+    const [name, ...params] = part.split(";");
+    let q = 1;
+    for (const p of params) {
+      const [k, v] = p.split("=").map((s) => s.trim());
+      if (k === "q" && v) {
+        const n = Number(v);
+        if (!Number.isNaN(n)) q = n;
+      }
+    }
+    map.set(name.toLowerCase(), q);
+  }
+  // Ensure identity exists unless explicitly disabled (q=0)
+  if (!map.has("identity")) map.set("identity", 1);
+  return map;
+}
+
+// Choose the best compression given the request and mime type.
+function pickEncoding(
+  req: IncomingMessage,
+  mime: string
+): "br" | "gzip" | "identity" {
+  if (!shouldCompress(mime)) return "identity";
+  const encs = parseAcceptEncoding(req);
+  const qBr = encs.get("br") ?? 0;
+  const qGzip = encs.get("gzip") ?? 0;
+  if (qBr > 0) return "br";
+  if (qGzip > 0) return "gzip";
+  return "identity";
+}
+
 function shouldCompress(mime: string): boolean {
   return (
     mime.startsWith("text/") ||
@@ -231,14 +278,25 @@ const sendResponse = async (
     ...(stat ? { "Last-Modified": stat.mtime.toUTCString() } : {}),
   };
 
-  if (shouldCompress(mimeType) && acceptsEncoding(req, "gzip")) {
-    try {
+  // Prefer Brotli over Gzip when supported
+  const chosen = pickEncoding(req, mimeType);
+  try {
+    if (chosen === "br") {
+      body = brotliCompressSync(data, {
+        params: {
+          [zlibConstants.BROTLI_PARAM_QUALITY]: 4, // fast, good ratio for text
+          [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
+        },
+      });
+      headers["Content-Encoding"] = "br";
+      headers["Vary"] = "Accept-Encoding";
+    } else if (chosen === "gzip") {
       body = gzipSync(data);
       headers["Content-Encoding"] = "gzip";
       headers["Vary"] = "Accept-Encoding";
-    } catch {
-      // Si falla compresión, enviar sin comprimir
     }
+  } catch {
+    // Si falla compresión, enviar sin comprimir
   }
 
   res.writeHead(statusCode, applySecurityHeadersForRequest(req, headers));
@@ -293,14 +351,24 @@ const renderTemplate = async (
     ETag: etag,
   };
 
-  if (acceptsEncoding(req, "gzip")) {
-    try {
+  const chosenDyn = pickEncoding(req, "text/html; charset=utf-8");
+  try {
+    if (chosenDyn === "br") {
+      respBody = brotliCompressSync(htmlBuffer, {
+        params: {
+          [zlibConstants.BROTLI_PARAM_QUALITY]: 4,
+          [zlibConstants.BROTLI_PARAM_MODE]: zlibConstants.BROTLI_MODE_TEXT,
+        },
+      });
+      headers["Content-Encoding"] = "br";
+      headers["Vary"] = "Accept-Encoding";
+    } else if (chosenDyn === "gzip") {
       respBody = gzipSync(htmlBuffer);
       headers["Content-Encoding"] = "gzip";
       headers["Vary"] = "Accept-Encoding";
-    } catch {
-      // continuar sin comprimir
     }
+  } catch {
+    // continuar sin comprimir
   }
 
   res.writeHead(statusCode, applySecurityHeadersForRequest(req, headers));
