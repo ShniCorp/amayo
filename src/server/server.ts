@@ -107,7 +107,7 @@ function applySecurityHeaders(base: Record<string, string> = {}) {
     "X-Frame-Options": "DENY",
     // Mild CSP to avoid breaking inline styles/scripts already present; adjust as needed
     "Content-Security-Policy":
-      "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:",
+      "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:; frame-src 'self' https://ko-fi.com https://*.ko-fi.com; child-src 'self' https://ko-fi.com https://*.ko-fi.com",
     ...base,
   };
 }
