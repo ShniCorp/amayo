@@ -37,6 +37,81 @@ const MIME_TYPES: Record<string, string> = {
 
 const PORT = Number(process.env.PORT) || 3000;
 
+// --- Basic hardening: blocklist patterns and lightweight rate limiting for suspicious paths ---
+const BLOCKED_PATTERNS: RegExp[] = [
+  /\b(npci|upi|bhim|aadhaar|aadhar|cts|fastag|bbps|rgcs|nuup|apbs|hdfc|ergo|securities|banking|insurance)\b/i,
+];
+
+const SUSP_LENGTH = 18; // long single-segment slugs tend to be bot probes
+const RATE_WINDOW_MS = 60_000; // 1 minute window
+const RATE_MAX_SUSPICIOUS = 20; // allow up to 20 suspicious hits per minute per IP
+
+type Counter = { count: number; resetAt: number };
+const suspiciousCounters = new Map<string, Counter>();
+
+function getClientIp(req: IncomingMessage): string {
+  const cf = (req.headers["cf-connecting-ip"] as string) || "";
+  const xff = (req.headers["x-forwarded-for"] as string) || "";
+  const chain = (cf || xff)
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  return (
+    chain[0] || (req.socket && (req.socket as any).remoteAddress) || "unknown"
+  );
+}
+
+function isSingleSegment(pathname: string) {
+  // e.g. /foo-bar, no additional slashes
+  return /^\/[A-Za-z0-9._-]+$/.test(pathname);
+}
+
+function isSuspiciousPath(pathname: string): boolean {
+  if (
+    !pathname ||
+    pathname === "/" ||
+    pathname === "/index" ||
+    pathname === "/index.html"
+  )
+    return false;
+  if (BLOCKED_PATTERNS.some((re) => re.test(pathname))) return true;
+  if (isSingleSegment(pathname) && pathname.length > SUSP_LENGTH) return true;
+  return false;
+}
+
+function hitSuspicious(ip: string): {
+  allowed: boolean;
+  resetIn: number;
+  remaining: number;
+} {
+  const now = Date.now();
+  let bucket = suspiciousCounters.get(ip);
+  if (!bucket || now >= bucket.resetAt) {
+    bucket = { count: 0, resetAt: now + RATE_WINDOW_MS };
+  }
+  bucket.count += 1;
+  suspiciousCounters.set(ip, bucket);
+  const allowed = bucket.count <= RATE_MAX_SUSPICIOUS;
+  return {
+    allowed,
+    resetIn: Math.max(0, bucket.resetAt - now),
+    remaining: Math.max(0, RATE_MAX_SUSPICIOUS - bucket.count),
+  };
+}
+
+function applySecurityHeaders(base: Record<string, string> = {}) {
+  return {
+    "Strict-Transport-Security": "max-age=15552000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    "X-Frame-Options": "DENY",
+    // Mild CSP to avoid breaking inline styles/scripts already present; adjust as needed
+    "Content-Security-Policy":
+      "default-src 'self'; img-src 'self' data: https:; style-src 'self' 'unsafe-inline' https:; script-src 'self' 'unsafe-inline' https:; font-src 'self' https: data:",
+    ...base,
+  };
+}
+
 const resolvePath = (pathname: string): string => {
   const decoded = decodeURIComponent(pathname);
   let target = decoded;
@@ -64,10 +139,13 @@ const sendResponse = async (
     : "public, max-age=86400, immutable";
 
   const data = await fs.readFile(filePath);
-  res.writeHead(statusCode, {
-    "Content-Type": mimeType,
-    "Cache-Control": cacheControl,
-  });
+  res.writeHead(
+    statusCode,
+    applySecurityHeaders({
+      "Content-Type": mimeType,
+      "Cache-Control": cacheControl,
+    })
+  );
   res.end(data);
 };
 
@@ -94,10 +172,13 @@ const renderTemplate = async (
     },
     { async: true }
   );
-  res.writeHead(statusCode, {
-    "Content-Type": "text/html; charset=utf-8",
-    "Cache-Control": "no-cache",
-  });
+  res.writeHead(
+    statusCode,
+    applySecurityHeaders({
+      "Content-Type": "text/html; charset=utf-8",
+      "Cache-Control": "no-cache",
+    })
+  );
   res.end(html);
 };
 
@@ -119,6 +200,43 @@ export const server = createServer(
         req.url ?? "/",
         `http://${req.headers.host ?? "localhost"}`
       );
+
+      // Basic hardening: respond to robots.txt quickly (optional: disallow all or keep current)
+      if (url.pathname === "/robots.txt") {
+        const robots = "User-agent: *\nAllow: /\n"; // change to Disallow: / if you want to discourage polite crawlers
+        res.writeHead(
+          200,
+          applySecurityHeaders({
+            "Content-Type": "text/plain; charset=utf-8",
+            "Cache-Control": "public, max-age=86400",
+          })
+        );
+        return res.end(robots);
+      }
+
+      const clientIp = getClientIp(req);
+      if (isSuspiciousPath(url.pathname)) {
+        // Hard block known-bad keyword probes
+        if (BLOCKED_PATTERNS.some((re) => re.test(url.pathname))) {
+          const headers = applySecurityHeaders({
+            "Content-Type": "text/plain; charset=utf-8",
+          });
+          res.writeHead(403, headers);
+          return res.end("Forbidden");
+        }
+        // Rate limit repetitive suspicious hits per IP
+        const rate = hitSuspicious(clientIp);
+        if (!rate.allowed) {
+          const headers = applySecurityHeaders({
+            "Content-Type": "text/plain; charset=utf-8",
+            "Retry-After": String(Math.ceil(rate.resetIn / 1000)),
+            "X-RateLimit-Limit": String(RATE_MAX_SUSPICIOUS),
+            "X-RateLimit-Remaining": String(rate.remaining),
+          });
+          res.writeHead(429, headers);
+          return res.end("Too Many Requests");
+        }
+      }
 
       // Ruta dinámica: renderizar index con EJS
       if (
@@ -157,7 +275,12 @@ export const server = createServer(
           try {
             await sendResponse(res, notFoundPath, 404);
           } catch {
-            res.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
+            res.writeHead(
+              404,
+              applySecurityHeaders({
+                "Content-Type": "text/plain; charset=utf-8",
+              })
+            );
             res.end("404 - Recurso no encontrado");
           }
         } else if (error.code === "EISDIR") {
@@ -165,13 +288,21 @@ export const server = createServer(
           await sendResponse(res, indexPath);
         } else {
           console.error("[Server] Error al servir archivo:", error);
-          res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+          res.writeHead(
+            500,
+            applySecurityHeaders({
+              "Content-Type": "text/plain; charset=utf-8",
+            })
+          );
           res.end("500 - Error interno del servidor");
         }
       }
     } catch (error) {
       console.error("[Server] Error inesperado:", error);
-      res.writeHead(500, { "Content-Type": "text/plain; charset=utf-8" });
+      res.writeHead(
+        500,
+        applySecurityHeaders({ "Content-Type": "text/plain; charset=utf-8" })
+      );
       res.end("500 - Error interno");
     }
   }
