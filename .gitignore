@@ -3,8 +3,8 @@ node_modules
 .env.test
 qodana.yaml
 
-/.github
-/.vscode
-/.idea
+.github
+.vscode
+.idea
 
 /src/generated/prisma
