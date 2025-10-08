@@ -114,6 +114,45 @@ function applySecurityHeaders(base: Record<string, string> = {}) {
     ...base,
   };
 }
+function buildBaseCsp(frameAncestors: string = "'self'") {
+  // Use a mild CSP; add frame-ancestors dynamically per request.
+  return (
+    "default-src 'self'; " +
+    "img-src 'self' data: https:; " +
+    "style-src 'self' 'unsafe-inline' https:; " +
+    "script-src 'self' 'unsafe-inline' https:; " +
+    "font-src 'self' https: data:; " +
+    "frame-src 'self' https://ko-fi.com https://*.ko-fi.com; " +
+    "child-src 'self' https://ko-fi.com https://*.ko-fi.com; " +
+    `frame-ancestors ${frameAncestors}`
+  );
+}
+
+function applySecurityHeadersForRequest(
+  req: IncomingMessage,
+  base: Record<string, string> = {}
+) {
+  const host = ((req.headers.host as string) || "").toLowerCase();
+  const isDocsHost =
+    host === "docs.amayo.dev" || host.endsWith(".docs.amayo.dev");
+
+  // Allow embedding only from https://top.gg for docs.amayo.dev; otherwise, self only and keep XFO deny.
+  const csp = isDocsHost
+    ? buildBaseCsp("'self' https://top.gg")
+    : buildBaseCsp("'self'");
+
+  const headers: Record<string, string> = {
+    "Strict-Transport-Security": "max-age=15552000; includeSubDomains; preload",
+    "X-Content-Type-Options": "nosniff",
+    "Referrer-Policy": "no-referrer",
+    // X-Frame-Options is omitted for docs.amayo.dev to rely on CSP frame-ancestors allowing only top.gg
+    ...(isDocsHost ? {} : { "X-Frame-Options": "DENY" }),
+    "Content-Security-Policy": csp,
+    ...base,
+  };
+
+  return headers;
+}
 
 function computeEtag(buf: Buffer): string {
   // Weak ETag derived from content sha1 and length
@@ -174,7 +213,7 @@ const sendResponse = async (
   if (inm && inm === etag) {
     res.writeHead(
       304,
-      applySecurityHeaders({
+      applySecurityHeadersForRequest(req, {
         ETag: etag,
         "Cache-Control": cacheControl,
         ...(stat ? { "Last-Modified": stat.mtime.toUTCString() } : {}),
@@ -202,7 +241,7 @@ const sendResponse = async (
     }
   }
 
-  res.writeHead(statusCode, applySecurityHeaders(headers));
+  res.writeHead(statusCode, applySecurityHeadersForRequest(req, headers));
   res.end(body);
 };
 
@@ -238,7 +277,10 @@ const renderTemplate = async (
   if (inm && inm === etag) {
     res.writeHead(
       304,
-      applySecurityHeaders({ ETag: etag, "Cache-Control": "no-cache" })
+      applySecurityHeadersForRequest(req, {
+        ETag: etag,
+        "Cache-Control": "no-cache",
+      })
     );
     res.end();
     return;
@@ -261,7 +303,7 @@ const renderTemplate = async (
     }
   }
 
-  res.writeHead(statusCode, applySecurityHeaders(headers));
+  res.writeHead(statusCode, applySecurityHeadersForRequest(req, headers));
   res.end(respBody);
 };
 
@@ -289,7 +331,7 @@ export const server = createServer(
         const robots = "User-agent: *\nAllow: /\n"; // change to Disallow: / if you want to discourage polite crawlers
         res.writeHead(
           200,
-          applySecurityHeaders({
+          applySecurityHeadersForRequest(req, {
             "Content-Type": "text/plain; charset=utf-8",
             "Cache-Control": "public, max-age=86400",
           })
@@ -301,7 +343,7 @@ export const server = createServer(
       if (isSuspiciousPath(url.pathname)) {
         // Hard block known-bad keyword probes
         if (BLOCKED_PATTERNS.some((re) => re.test(url.pathname))) {
-          const headers = applySecurityHeaders({
+          const headers = applySecurityHeadersForRequest(req, {
             "Content-Type": "text/plain; charset=utf-8",
           });
           res.writeHead(403, headers);
@@ -310,7 +352,7 @@ export const server = createServer(
         // Rate limit repetitive suspicious hits per IP
         const rate = hitSuspicious(clientIp);
         if (!rate.allowed) {
-          const headers = applySecurityHeaders({
+          const headers = applySecurityHeadersForRequest(req, {
             "Content-Type": "text/plain; charset=utf-8",
             "Retry-After": String(Math.ceil(rate.resetIn / 1000)),
             "X-RateLimit-Limit": String(RATE_MAX_SUSPICIOUS),
@@ -360,7 +402,7 @@ export const server = createServer(
           } catch {
             res.writeHead(
               404,
-              applySecurityHeaders({
+              applySecurityHeadersForRequest(req, {
                 "Content-Type": "text/plain; charset=utf-8",
               })
             );
@@ -373,7 +415,7 @@ export const server = createServer(
           console.error("[Server] Error al servir archivo:", error);
           res.writeHead(
             500,
-            applySecurityHeaders({
+            applySecurityHeadersForRequest(req, {
               "Content-Type": "text/plain; charset=utf-8",
             })
           );
@@ -384,7 +426,9 @@ export const server = createServer(
       console.error("[Server] Error inesperado:", error);
       res.writeHead(
         500,
-        applySecurityHeaders({ "Content-Type": "text/plain; charset=utf-8" })
+        applySecurityHeadersForRequest(req, {
+          "Content-Type": "text/plain; charset=utf-8",
+        })
       );
       res.end("500 - Error interno");
     }
