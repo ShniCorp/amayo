@@ -23,6 +23,29 @@ body {
   animation: glow 3s ease-in-out infinite;
 }
 
+/* Code blocks enhancements */
+.code-block pre {
+  background: transparent !important;
+  margin: 0;
+  padding: 0;
+}
+
+.code-block pre code {
+  display: block;
+  padding: 1rem 1.25rem;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+/* Etiquetas visuales API/CLI (apoyadas por header dinámico) */
+.code-block .is-api {
+  background: linear-gradient(90deg, rgba(99,102,241,0.15), rgba(147,51,234,0.15));
+}
+
+.code-block .is-cli {
+  background: linear-gradient(90deg, rgba(236,72,153,0.15), rgba(59,130,246,0.15));
+}
+
 /* Scrollbar personalizado (opcional, moderno) */
 ::-webkit-scrollbar {
   width: 8px;

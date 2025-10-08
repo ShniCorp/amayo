@@ -1,11 +1,14 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { promises as fs } from "node:fs";
 import { readFileSync } from "node:fs";
+import { createHash } from "node:crypto";
+import { gzipSync } from "node:zlib";
 import path from "node:path";
 import ejs from "ejs";
 
 const publicDir = path.join(__dirname, "public");
 const viewsDir = path.join(__dirname, "views");
+// Compresión síncrona (rápida para tamaños pequeños de HTML/CSS/JS)
 
 // Cargar metadatos del proyecto para usarlos como variables en las vistas
 let pkg: {
@@ -112,6 +115,29 @@ function applySecurityHeaders(base: Record<string, string> = {}) {
   };
 }
 
+function computeEtag(buf: Buffer): string {
+  // Weak ETag derived from content sha1 and length
+  const hash = createHash("sha1").update(buf).digest("base64");
+  return `W/"${buf.length.toString(16)}-${hash}"`;
+}
+
+function acceptsEncoding(req: IncomingMessage, enc: string): boolean {
+  const ae = (req.headers["accept-encoding"] as string) || "";
+  return ae
+    .split(",")
+    .map((s) => s.trim())
+    .includes(enc);
+}
+
+function shouldCompress(mime: string): boolean {
+  return (
+    mime.startsWith("text/") ||
+    mime.includes("json") ||
+    mime.includes("javascript") ||
+    mime.includes("svg")
+  );
+}
+
 const resolvePath = (pathname: string): string => {
   const decoded = decodeURIComponent(pathname);
   let target = decoded;
@@ -128,6 +154,7 @@ const resolvePath = (pathname: string): string => {
 };
 
 const sendResponse = async (
+  req: IncomingMessage,
   res: ServerResponse,
   filePath: string,
   statusCode = 200
@@ -138,18 +165,49 @@ const sendResponse = async (
     ? "no-cache"
     : "public, max-age=86400, immutable";
 
+  const stat = await fs.stat(filePath).catch(() => undefined);
   const data = await fs.readFile(filePath);
-  res.writeHead(
-    statusCode,
-    applySecurityHeaders({
-      "Content-Type": mimeType,
-      "Cache-Control": cacheControl,
-    })
-  );
-  res.end(data);
+  const etag = computeEtag(data);
+
+  // Conditional requests
+  const inm = (req.headers["if-none-match"] as string) || "";
+  if (inm && inm === etag) {
+    res.writeHead(
+      304,
+      applySecurityHeaders({
+        ETag: etag,
+        "Cache-Control": cacheControl,
+        ...(stat ? { "Last-Modified": stat.mtime.toUTCString() } : {}),
+      })
+    );
+    res.end();
+    return;
+  }
+
+  let body: any = data;
+  const headers: Record<string, string> = {
+    "Content-Type": mimeType,
+    "Cache-Control": cacheControl,
+    ETag: etag,
+    ...(stat ? { "Last-Modified": stat.mtime.toUTCString() } : {}),
+  };
+
+  if (shouldCompress(mimeType) && acceptsEncoding(req, "gzip")) {
+    try {
+      body = gzipSync(data);
+      headers["Content-Encoding"] = "gzip";
+      headers["Vary"] = "Accept-Encoding";
+    } catch {
+      // Si falla compresión, enviar sin comprimir
+    }
+  }
+
+  res.writeHead(statusCode, applySecurityHeaders(headers));
+  res.end(body);
 };
 
 const renderTemplate = async (
+  req: IncomingMessage,
   res: ServerResponse,
   template: string,
   locals: Record<string, any> = {},
@@ -157,7 +215,7 @@ const renderTemplate = async (
 ) => {
   const pageFile = path.join(viewsDir, "pages", `${template}.ejs`);
   const layoutFile = path.join(viewsDir, "layouts", "layout.ejs");
-  const body = await ejs.renderFile(pageFile, locals, { async: true });
+  const pageBody = await ejs.renderFile(pageFile, locals, { async: true });
   const defaultTitle = `${
     locals.appName ?? pkg.name ?? "Amayo Bot"
   } | Guía Completa`;
@@ -168,18 +226,43 @@ const renderTemplate = async (
       scripts: null,
       ...locals,
       title: locals.title ?? defaultTitle,
-      body,
+      body: pageBody,
     },
     { async: true }
   );
-  res.writeHead(
-    statusCode,
-    applySecurityHeaders({
-      "Content-Type": "text/html; charset=utf-8",
-      "Cache-Control": "no-cache",
-    })
-  );
-  res.end(html);
+  const htmlBuffer = Buffer.from(html, "utf8");
+  const etag = computeEtag(htmlBuffer);
+
+  // Conditional ETag for dynamic page (fresh each deploy change)
+  const inm = (req.headers["if-none-match"] as string) || "";
+  if (inm && inm === etag) {
+    res.writeHead(
+      304,
+      applySecurityHeaders({ ETag: etag, "Cache-Control": "no-cache" })
+    );
+    res.end();
+    return;
+  }
+
+  let respBody: any = htmlBuffer;
+  const headers: Record<string, string> = {
+    "Content-Type": "text/html; charset=utf-8",
+    "Cache-Control": "no-cache",
+    ETag: etag,
+  };
+
+  if (acceptsEncoding(req, "gzip")) {
+    try {
+      respBody = gzipSync(htmlBuffer);
+      headers["Content-Encoding"] = "gzip";
+      headers["Vary"] = "Accept-Encoding";
+    } catch {
+      // continuar sin comprimir
+    }
+  }
+
+  res.writeHead(statusCode, applySecurityHeaders(headers));
+  res.end(respBody);
 };
 
 export const server = createServer(
@@ -250,7 +333,7 @@ export const server = createServer(
           year: "numeric",
         });
         const djsVersion = pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev";
-        await renderTemplate(res, "index", {
+        await renderTemplate(req, res, "index", {
           appName: pkg.name ?? "Amayo Bot",
           version: pkg.version ?? "2.0.0",
           djsVersion,
@@ -268,12 +351,12 @@ export const server = createServer(
       }
 
       try {
-        await sendResponse(res, filePath);
+        await sendResponse(req, res, filePath);
       } catch (error: any) {
         if (error.code === "ENOENT") {
           const notFoundPath = path.join(publicDir, "404.html");
           try {
-            await sendResponse(res, notFoundPath, 404);
+            await sendResponse(req, res, notFoundPath, 404);
           } catch {
             res.writeHead(
               404,
@@ -285,7 +368,7 @@ export const server = createServer(
           }
         } else if (error.code === "EISDIR") {
           const indexPath = path.join(filePath, "index.html");
-          await sendResponse(res, indexPath);
+          await sendResponse(req, res, indexPath);
         } else {
           console.error("[Server] Error al servir archivo:", error);
           res.writeHead(
