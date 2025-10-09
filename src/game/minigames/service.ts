@@ -338,22 +338,31 @@ async function reduceToolDurability(
   const state = parseInvState(entry.state);
   state.instances ??= [{}];
   if (state.instances.length === 0) state.instances.push({});
+
   // Seleccionar instancia: ahora usamos la primera, en futuro se puede elegir la de mayor durabilidad restante
-  const inst = state.instances[0];
   const max = maxConfigured; // ya calculado arriba
-  // Si la instancia no tiene durabilidad inicial, la inicializamos
-  if (inst.durability == null) (inst as any).durability = max;
-  const current = Math.min(Math.max(0, inst.durability ?? max), max);
+
+  // Inicializar durabilidad si no existe (DIRECTO en el array para evitar problemas de referencia)
+  if (state.instances[0].durability == null) {
+    state.instances[0].durability = max;
+  }
+
+  const current = Math.min(
+    Math.max(0, state.instances[0].durability ?? max),
+    max
+  );
   const next = current - delta;
   let brokenInstance = false;
+
   if (next <= 0) {
     // romper sólo esta instancia
     state.instances.shift();
     brokenInstance = true;
   } else {
-    (inst as any).durability = next;
-    state.instances[0] = inst;
+    // Actualizar DIRECTO en el array (no via variable temporal)
+    state.instances[0].durability = next;
   }
+
   const instancesRemaining = state.instances.length;
   const broken = instancesRemaining === 0; // Ítem totalmente agotado
   await prisma.inventoryEntry.update({
