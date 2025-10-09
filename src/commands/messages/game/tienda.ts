@@ -18,6 +18,24 @@ import { formatItemLabel, resolveItemIcon } from "./_helpers";
 
 const ITEMS_PER_PAGE = 5;
 
+// Helper para convertir cadena como <:name:id> o <a:name:id> en objeto emoji válido
+function buildEmoji(
+  raw: string | undefined
+): { id?: string; name: string; animated?: boolean } | undefined {
+  if (!raw) return undefined;
+  // Si viene ya sin brackets retornar como nombre simple
+  if (!raw.startsWith("<") || !raw.endsWith(">")) {
+    return { name: raw };
+  }
+  // Formatos: <a:name:id> o <:name:id>
+  const match = raw.match(/^<(a?):([^:>]+):([0-9]+)>$/);
+  if (!match) return undefined;
+  const animated = match[1] === "a";
+  const name = match[2];
+  const id = match[3];
+  return { id, name, animated };
+}
+
 function parseItemProps(json: unknown): ItemProps {
   if (!json || typeof json !== "object") return {};
   return json as ItemProps;
@@ -303,11 +321,9 @@ async function buildShopPanel(
       accessory: {
         type: 2,
         style: isSelected ? ButtonStyle.Success : ButtonStyle.Primary,
-        emoji: {
-          name: isSelected
-            ? "<:Sup_res:1420535051162095747>"
-            : "<:preview:1425678718918987976>",
-        },
+        emoji: isSelected
+          ? buildEmoji("<:Sup_res:1420535051162095747>")
+          : buildEmoji("<:preview:1425678718918987976>"),
         label: isSelected ? "Seleccionado" : "Ver",
         custom_id: `shop_view_${offer.id}`,
       },
@@ -322,7 +338,7 @@ async function buildShopPanel(
         type: ComponentType.Button,
         style: ButtonStyle.Secondary,
         //label: "<:blueskip2:1425682929782362122>",
-        emoji: { name: "<:blueskip2:1425682929782362122>" },
+        emoji: buildEmoji("<:blueskip2:1425682929782362122>"),
         custom_id: "shop_prev_page",
         disabled: safePage <= 1,
       },
@@ -330,7 +346,7 @@ async function buildShopPanel(
         type: ComponentType.Button,
         style: ButtonStyle.Secondary,
         label: `${safePage}/${totalPages}`,
-        emoji: { name: "<:apoint:1336536296767750298>" },
+        emoji: buildEmoji("<:apoint:1336536296767750298>"),
         custom_id: "shop_current_page",
         disabled: true,
       },
@@ -338,7 +354,7 @@ async function buildShopPanel(
         type: ComponentType.Button,
         style: ButtonStyle.Secondary,
         //label: "<:blueskip:1425682992801644627>",
-        emoji: { name: "<:blueskip:1425682992801644627>" },
+        emoji: buildEmoji("<:blueskip:1425682992801644627>"),
         custom_id: "shop_next_page",
         disabled: safePage >= totalPages,
       },
@@ -352,7 +368,7 @@ async function buildShopPanel(
         type: ComponentType.Button,
         style: ButtonStyle.Success,
         label: "Comprar (x1)",
-        emoji: { name: "<:onlineshopping:1425684275008897064>" },
+        emoji: buildEmoji("<:onlineshopping:1425684275008897064>"),
         custom_id: "shop_buy_1",
         disabled: !selectedOfferId,
       },
@@ -360,7 +376,7 @@ async function buildShopPanel(
         type: ComponentType.Button,
         style: ButtonStyle.Success,
         label: "Comprar (x5)",
-        emoji: { name: "<:onlineshopping:1425684275008897064>" },
+        emoji: buildEmoji("<:onlineshopping:1425684275008897064>"),
         custom_id: "shop_buy_5",
         disabled: !selectedOfferId,
       },
@@ -368,14 +384,14 @@ async function buildShopPanel(
         type: ComponentType.Button,
         style: ButtonStyle.Primary,
         label: "Actualizar",
-        emoji: { name: "<:reload:1425684687753580645>" },
+        emoji: buildEmoji("<:reload:1425684687753580645>"),
         custom_id: "shop_refresh",
       },
       {
         type: ComponentType.Button,
         style: ButtonStyle.Danger,
         label: "Cerrar",
-        emoji: { name: "<:Cross:1420535096208920576>" },
+        emoji: buildEmoji("<:Cross:1420535096208920576>"),
         custom_id: "shop_close",
       },
     ],
@@ -399,7 +415,12 @@ async function handleButtonInteraction(
   if (customId.startsWith("shop_view_")) {
     const offerId = customId.replace("shop_view_", "");
     const wallet = await getOrCreateWallet(userId, guildId);
-    sessionState.selectedOfferId = offerId;
+    // Toggle: si el usuario vuelve a pulsar la misma oferta, la des-selecciona para volver al listado general
+    if (sessionState.selectedOfferId === offerId) {
+      sessionState.selectedOfferId = null;
+    } else {
+      sessionState.selectedOfferId = offerId;
+    }
 
     await interaction.update({
       components: await buildShopPanel(
