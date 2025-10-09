@@ -84,8 +84,6 @@ Demostración/ejemplos:
   - Qué hace: Responde con “pong!” (prueba rápida de slash).
 
 ## Consejos rápidos
-- ¿No recuerdas el prefix? Usa `@mencionar_al_bot ayuda` o prueba `!ayuda`.
-- ¿No te funciona un comando?
   - Puede requerir permisos de Administrador o ser solo del dueño.
   - Asegúrate de usarlo en un canal de texto compatible.
   - Escribe `!ayuda <comando>` para ver el uso correcto.
@@ -95,6 +93,51 @@ Demostración/ejemplos:
 Copia todo este bloque y pégalo en tu canal de información o bienvenida.
 
 ```
+## Sistema RPG (Beta)
+
+El bot incluye un sistema RPG ligero con progreso persistente y combate simplificado.
+
+### Conceptos Clave
+- **HP Persistente:** Tu vida (HP) se mantiene entre actividades. Si llegas a 0 en combate, resurges automáticamente al 50% de tu máximo (regeneración de seguridad) y se incrementa `Veces Derrotado`.
+- **Rachas de Victoria:** Cada 3 victorias consecutivas obtienes +1% de daño (hasta +30%). Al perder, la racha se reinicia.
+- **Herramientas con Durabilidad por Instancia:** Las herramientas no apilables crean instancias independientes; cada uso consume durabilidad de una instancia. Al agotarse una instancia, desaparece solo esa (si quedan otras, se siguen usando). Cuando la última instancia se rompe, el ítem queda completamente agotado.
+- **Origen de Herramienta:** El sistema selecciona herramienta en este orden: (1) la que pases directamente (argumento), (2) la equipada (slot apropiado), (3) la mejor del inventario. El comando mostrará su procedencia (`toolSource`).
+- **Combate Simplificado:** Se simulan rondas contra mobs; se registra daño infligido/recibido, mobs derrotados y resultado (Victoria/Derrota).
+- **Resumen Visual:** Corazones (❤/♡) y barra de durabilidad reflejan estado tras cada acción.
+
+### Comandos RPG Principales
+- `!mina [nivel] [toolKey]` — Minar (usa pico).
+- `!pescar [nivel] [toolKey]` — Pescar (usa caña).
+- `!pelear [nivel] [toolKey]` — Combatir (usa espada).
+- `!combate-historial [n]` — Últimos combates resumidos.
+- `!tool-breaks [n]` — Rupturas recientes de herramientas (memoria).
+- (Opcional futuro) `!tool-info <toolKey>` — Ver instancias y durabilidad.
+
+### Estadísticas (PlayerStats)
+Se actualizan automáticamente:
+- Actividades: `minesCompleted`, `fishingCompleted`, `fightsCompleted`.
+- Combate: `mobsDefeated`, `damageDealt`, `damageTaken`, `timesDefeated`, `currentWinStreak`, `longestWinStreak`.
+
+### Estructura de Resultados
+Cada minijuego produce un `RunResult` con bloque `tool` (incluye `toolSource`, `brokenInstance`, `instancesRemaining`) y, si aplica, `combat` con:
+- `playerStartHp`, `playerEndHp`, `outcome`, `damageDealt`, `damageTaken`, `mobsDefeated`.
+
+### Próximas Mejoras Planeadas
+- Tabla persistente de rupturas (`ToolBreakLog`).
+- Definiciones avanzadas de mobs (stats dinámicos, efectos críticos, resistencias).
+- Efectos de equipo: críticos, sangrado, bloqueo, robo de vida.
+- Consumo de pociones en combate y estados alterados.
+- Eventos programados (ataques globales de mobs) vía funciones externas (Appwrite / cron).
+
+### Notas Técnicas
+- HP y maxHp: `PlayerState` + bonificaciones de equipo.
+- Racha: cálculo en `getEffectiveStats()` (1% cada 3 victorias, tope 30%).
+- Durabilidad: lógica por instancia en `reduceToolDurability` (remueve instancia agotada).
+- Combate: loop interno en servicio de minijuegos actualiza daño y resultado, persistiendo HP final.
+- Logs: Rupturas se guardan en memoria (buffer circular) para inspección rápida.
+
+> Esta sección está en evolución: puede cambiar estructura interna para soportar mobs declarativos y balance más profundo.
+
 📌 Amayo Bot — Guía Rápida de Comandos
 Prefix: ! (puedes cambiarlo con !configuracion)
 

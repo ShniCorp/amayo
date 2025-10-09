@@ -5,6 +5,13 @@ import {
   findItemByKey,
   getInventoryEntry,
 } from "../economy/service";
+import {
+  getEffectiveStats,
+  adjustHP,
+  ensurePlayerState,
+} from "../combat/equipmentService"; // 🟩 local authoritative
+import { logToolBreak } from "../lib/toolBreakLog";
+import { updateStats } from "../stats/service"; // 🟩 local authoritative
 import type { ItemProps, InventoryState } from "../economy/types";
 import type {
   LevelRequirements,
@@ -95,25 +102,60 @@ async function validateRequirements(
   req?: LevelRequirements,
   toolKey?: string
 ) {
-  if (!req) return { toolKeyUsed: undefined as string | undefined };
+  if (!req)
+    return {
+      toolKeyUsed: undefined as string | undefined,
+      toolSource: undefined as "provided" | "equipped" | "auto" | undefined,
+    };
   const toolReq = req.tool;
-  if (!toolReq) return { toolKeyUsed: undefined as string | undefined };
+  if (!toolReq)
+    return {
+      toolKeyUsed: undefined as string | undefined,
+      toolSource: undefined,
+    };
 
   let toolKeyUsed = toolKey;
+  let toolSource: "provided" | "equipped" | "auto" | undefined = undefined;
+  if (toolKeyUsed) toolSource = "provided";
 
   // Auto-select tool when required and not provided
   if (!toolKeyUsed && toolReq.required && toolReq.toolType) {
-    toolKeyUsed =
-      (await findBestToolKey(userId, guildId, toolReq.toolType, {
+    // 1. Intentar herramienta equipada en slot weapon si coincide el tipo
+    const equip = await prisma.playerEquipment.findUnique({
+      where: { userId_guildId: { userId, guildId } },
+      include: { weaponItem: true } as any,
+    });
+    if (equip?.weaponItemId && equip?.weaponItem) {
+      const wProps = parseItemProps((equip as any).weaponItem.props);
+      if (wProps.tool?.type === toolReq.toolType) {
+        const tier = Math.max(0, wProps.tool?.tier ?? 0);
+        if (
+          (toolReq.minTier == null || tier >= toolReq.minTier) &&
+          (!toolReq.allowedKeys ||
+            toolReq.allowedKeys.includes((equip as any).weaponItem.key))
+        ) {
+          toolKeyUsed = (equip as any).weaponItem.key;
+          toolSource = "equipped";
+        }
+      }
+    }
+    // 2. Best inventory si no se obtuvo del equipo
+    if (!toolKeyUsed) {
+      const best = await findBestToolKey(userId, guildId, toolReq.toolType, {
         minTier: toolReq.minTier,
         allowedKeys: toolReq.allowedKeys,
-      })) ?? undefined;
+      });
+      if (best) {
+        toolKeyUsed = best;
+        toolSource = "auto";
+      }
+    }
   }
 
   // herramienta requerida
   if (toolReq.required && !toolKeyUsed)
     throw new Error("Se requiere una herramienta adecuada");
-  if (!toolKeyUsed) return { toolKeyUsed: undefined };
+  if (!toolKeyUsed) return { toolKeyUsed: undefined, toolSource };
 
   // verificar herramienta
   const toolItem = await findItemByKey(guildId, toolKeyUsed);
@@ -131,7 +173,7 @@ async function validateRequirements(
   if (toolReq.allowedKeys && !toolReq.allowedKeys.includes(toolKeyUsed))
     throw new Error("Esta herramienta no es válida para esta área");
 
-  return { toolKeyUsed };
+  return { toolKeyUsed, toolSource };
 }
 
 async function applyRewards(
@@ -261,10 +303,14 @@ async function reduceToolDurability(
   });
   // Placeholder: logging de ruptura (migrar a ToolBreakLog futuro)
   if (brokenInstance) {
-    // eslint-disable-next-line no-console
-    console.log(
-      `[tool-break] user=${userId} guild=${guildId} toolKey=${toolKey}`
-    );
+    logToolBreak({
+      ts: Date.now(),
+      userId,
+      guildId,
+      toolKey,
+      brokenInstance: !broken, // true = solo una instancia
+      instancesRemaining,
+    });
   }
   return {
     broken,
@@ -329,76 +375,141 @@ export async function runMinigame(
       max: t.max,
       brokenInstance: t.brokenInstance,
       instancesRemaining: t.instancesRemaining,
+      toolSource: reqRes.toolSource ?? (opts?.toolKey ? "provided" : "auto"),
     };
   }
 
-  // --- Combate Básico (placeholder) ---
-  // Objetivo: procesar mobs spawneados y generar resumen estadístico simple.
-  // Futuro: stats jugador, equipo, habilidades. Ahora: valores fijos pseudo-aleatorios.
+  // (Eliminado combate placeholder; sustituido por sistema integrado más abajo)
+  // --- Combate Integrado con Equipo y HP Persistente ---
   let combatSummary: CombatSummary | undefined;
   if (mobsSpawned.length > 0) {
+    // Obtener stats efectivos del jugador (arma = daño, armadura = defensa, capa = maxHp extra + mutaciones)
+    const eff = await getEffectiveStats(userId, guildId);
+    const playerState = await ensurePlayerState(userId, guildId);
+    const startHp = eff.hp; // HP actual persistente
+    let currentHp = startHp;
     const mobLogs: CombatSummary["mobs"] = [];
     let totalDealt = 0;
     let totalTaken = 0;
-    let defeated = 0;
-    const basePlayerAtk = 5 + Math.random() * 3; // placeholder
-    const basePlayerDef = 1 + Math.random() * 2; // placeholder
+    let totalMobsDefeated = 0;
+    // Variación de ±20%
+    const variance = (base: number) => {
+      const factor = 0.8 + Math.random() * 0.4; // 0.8 - 1.2
+      return base * factor;
+    };
     for (const mobKey of mobsSpawned) {
-      // Se podría leer tabla real de mobs (stats json en prisma.mob) en futuro.
-      // Por ahora HP aleatorio controlado.
-      const maxHp = 8 + Math.floor(Math.random() * 8); // 8-15
-      let hp = maxHp;
-      const rounds = [] as any[];
-      let roundIndex = 1;
-      let mobTotalDealt = 0;
-      let mobTotalTaken = 0;
-      while (hp > 0 && roundIndex <= 10) {
-        // limite de 10 rondas por mob
-        const playerDamage = Math.max(
-          1,
-          Math.round(basePlayerAtk + Math.random() * 2)
-        );
-        hp -= playerDamage;
-        mobTotalDealt += playerDamage;
+      if (currentHp <= 0) break; // jugador derrotado antes de iniciar este mob
+      // Stats simples del mob (placeholder mejorable con tabla real)
+      const mobBaseHp = 10 + Math.floor(Math.random() * 6); // 10-15
+      let mobHp = mobBaseHp;
+      const rounds: any[] = [];
+      let round = 1;
+      let mobDamageDealt = 0; // daño que jugador hace a este mob
+      let mobDamageTakenFromMob = 0; // daño que jugador recibe de este mob
+      while (mobHp > 0 && currentHp > 0 && round <= 12) {
+        // Daño jugador -> mob
+        const playerRaw = variance(eff.damage || 1) + 1; // asegurar >=1
+        const playerDamage = Math.max(1, Math.round(playerRaw));
+        mobHp -= playerDamage;
+        mobDamageDealt += playerDamage;
         totalDealt += playerDamage;
         let playerTaken = 0;
-        if (hp > 0) {
-          // Mob sólo pega si sigue vivo
-          const mobAtk = 2 + Math.random() * 3; // 2-5
-          const mitigated = Math.max(0, mobAtk - basePlayerDef * 0.5);
-          playerTaken = Math.round(mitigated);
-          totalTaken += playerTaken;
-          mobTotalTaken += playerTaken;
+        if (mobHp > 0) {
+          const mobAtkBase = 3 + Math.random() * 4; // 3-7
+          const mobAtk = variance(mobAtkBase);
+          // Mitigación por defensa => defensa reduce linealmente hasta 60% cap
+          const mitigationRatio = Math.min(0.6, (eff.defense || 0) * 0.05); // 5% por punto defensa hasta 60%
+          const mitigated = mobAtk * (1 - mitigationRatio);
+          playerTaken = Math.max(0, Math.round(mitigated));
+          if (playerTaken > 0) {
+            currentHp = Math.max(0, currentHp - playerTaken);
+            mobDamageTakenFromMob += playerTaken;
+            totalTaken += playerTaken;
+          }
         }
         rounds.push({
           mobKey,
-          round: roundIndex,
+          round,
           playerDamageDealt: playerDamage,
           playerDamageTaken: playerTaken,
-          mobRemainingHp: Math.max(0, hp),
-          mobDefeated: hp <= 0,
+          mobRemainingHp: Math.max(0, mobHp),
+          mobDefeated: mobHp <= 0,
         });
-        if (hp <= 0) {
-          defeated++;
+        if (mobHp <= 0) {
+          totalMobsDefeated++;
           break;
         }
-        roundIndex++;
+        if (currentHp <= 0) break;
+        round++;
       }
       mobLogs.push({
         mobKey,
-        maxHp,
-        defeated: hp <= 0,
-        totalDamageDealt: mobTotalDealt,
-        totalDamageTakenFromMob: mobTotalTaken,
+        maxHp: mobBaseHp,
+        defeated: mobHp <= 0,
+        totalDamageDealt: mobDamageDealt,
+        totalDamageTakenFromMob: mobDamageTakenFromMob,
         rounds,
       });
+      if (currentHp <= 0) break; // fin combate global
+    }
+    const victory = currentHp > 0 && totalMobsDefeated === mobsSpawned.length;
+    // Persistir HP (si derrota -> regenerar al 50% del maxHp, regla confirmada por usuario)
+    let endHp = currentHp;
+    let defeatedNow = false;
+    if (currentHp <= 0) {
+      defeatedNow = true;
+      const regen = Math.max(1, Math.floor(eff.maxHp * 0.5));
+      endHp = regen;
+      await adjustHP(userId, guildId, regen - playerState.hp); // set a 50% (delta relativo)
+    } else {
+      // almacenar HP restante real
+      await adjustHP(userId, guildId, currentHp - playerState.hp);
+    }
+    // Actualizar estadísticas
+    const statUpdates: Record<string, number> = {};
+    if (area.key.startsWith("mine")) statUpdates.minesCompleted = 1;
+    if (area.key.startsWith("lagoon")) statUpdates.fishingCompleted = 1;
+    if (
+      area.key.startsWith("arena") ||
+      area.key.startsWith("battle") ||
+      area.key.includes("fight")
+    )
+      statUpdates.fightsCompleted = 1;
+    if (totalMobsDefeated > 0) statUpdates.mobsDefeated = totalMobsDefeated;
+    if (totalDealt > 0) statUpdates.damageDealt = totalDealt;
+    if (totalTaken > 0) statUpdates.damageTaken = totalTaken;
+    if (defeatedNow) statUpdates.timesDefeated = 1;
+    // Rachas de victoria
+    if (victory) {
+      statUpdates.currentWinStreak = 1; // increment
+    } else if (defeatedNow) {
+      // reset current streak
+      // No podemos hacer decrement directo, así que setearemos manual luego
+    }
+    await updateStats(userId, guildId, statUpdates as any);
+    if (defeatedNow) {
+      // reset de racha: update directo
+      await prisma.playerStats.update({
+        where: { userId_guildId: { userId, guildId } },
+        data: { currentWinStreak: 0 },
+      });
+    } else if (victory) {
+      // posible actualización de longestWinStreak si superada ya la maneja updateStats parcialmente; reforzar
+      await prisma.$executeRawUnsafe(
+        `UPDATE "PlayerStats" SET "longestWinStreak" = GREATEST("longestWinStreak", "currentWinStreak") WHERE "userId" = $1 AND "guildId" = $2`,
+        userId,
+        guildId
+      );
     }
     combatSummary = {
       mobs: mobLogs,
       totalDamageDealt: totalDealt,
       totalDamageTaken: totalTaken,
-      mobsDefeated: defeated,
-      victory: defeated === mobsSpawned.length,
+      mobsDefeated: totalMobsDefeated,
+      victory,
+      playerStartHp: startHp,
+      playerEndHp: endHp,
+      outcome: victory ? "victory" : "defeat",
     };
   }
 

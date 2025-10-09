@@ -59,6 +59,7 @@ export type RunResult = {
     max?: number; // durabilidad máxima configurada
     brokenInstance?: boolean; // true si solo se rompió una instancia
     instancesRemaining?: number; // instancias que quedan después del uso
+    toolSource?: "provided" | "equipped" | "auto"; // origen de la selección
   };
   combat?: CombatSummary; // resumen de combate si hubo mobs y se procesó
 };
@@ -88,4 +89,7 @@ export type CombatSummary = {
   totalDamageTaken: number;
   mobsDefeated: number;
   victory: boolean; // true si el jugador sobrevivió a todos los mobs
+  playerStartHp?: number;
+  playerEndHp?: number;
+  outcome?: "victory" | "defeat";
 };

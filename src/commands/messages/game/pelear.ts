@@ -19,6 +19,7 @@ import {
   dividerBlock,
   textBlock,
 } from "../../../core/lib/componentsV2";
+import { formatToolLabel, combatSummaryRPG } from "../../../game/lib/rpgFormat";
 import { buildAreaMetadataBlocks } from "./_helpers";
 
 const FIGHT_ACCENT = 0x992d22;
@@ -115,54 +116,37 @@ export const command: CommandMessage = {
       const mobsLines = result.mobs.length
         ? result.mobs.map((m) => `• ${m}`).join("\n")
         : "• —";
-      const durabilityBar = () => {
-        if (
-          !result.tool ||
-          result.tool.remaining == null ||
-          result.tool.max == null
-        )
-          return "";
-        const rem = Math.max(0, result.tool.remaining);
-        const max = Math.max(1, result.tool.max);
-        const ratio = rem / max;
-        const totalSegs = 10;
-        const filled = Math.round(ratio * totalSegs);
-        const bar = Array.from({ length: totalSegs })
-          .map((_, i) => (i < filled ? "█" : "░"))
-          .join("");
-        return `\nDurabilidad: [${bar}] ${rem}/${max}`;
-      };
       const toolInfo = result.tool?.key
-        ? (() => {
-            const base = formatItemLabel(
+        ? formatToolLabel({
+            key: result.tool.key,
+            displayName: formatItemLabel(
               rewardItems.get(result.tool.key) ?? {
                 key: result.tool.key,
                 name: null,
                 icon: null,
               },
               { fallbackIcon: "🗡️" }
-            );
-            if (result.tool.broken)
-              return `${base} (agotada)${durabilityBar()}`;
-            if (result.tool.brokenInstance)
-              return `${base} (se rompió una instancia, quedan ${
-                result.tool.instancesRemaining
-              }) (-${result.tool.durabilityDelta ?? 0} dur.)${durabilityBar()}`;
-            const multi =
-              result.tool.instancesRemaining &&
-              result.tool.instancesRemaining > 1
-                ? ` (x${result.tool.instancesRemaining})`
-                : "";
-            return `${base}${multi} (-${
-              result.tool.durabilityDelta ?? 0
-            } dur.)${durabilityBar()}`;
-          })()
+            ),
+            instancesRemaining: result.tool.instancesRemaining,
+            broken: result.tool.broken,
+            brokenInstance: result.tool.brokenInstance,
+            durabilityDelta: result.tool.durabilityDelta,
+            remaining: result.tool.remaining,
+            max: result.tool.max,
+            source: result.tool.toolSource,
+          })
         : "—";
-      const combatSummary = (() => {
-        if (!result.combat) return null;
-        const c = result.combat;
-        return `**Combate**\n• Mobs: ${c.mobs.length} | Derrotados: ${c.mobsDefeated}/${result.mobs.length}\n• Daño hecho: ${c.totalDamageDealt} | Daño recibido: ${c.totalDamageTaken}`;
-      })();
+      const combatSummary = result.combat
+        ? combatSummaryRPG({
+            mobs: result.mobs.length,
+            mobsDefeated: result.combat.mobsDefeated,
+            totalDamageDealt: result.combat.totalDamageDealt,
+            totalDamageTaken: result.combat.totalDamageTaken,
+            playerStartHp: result.combat.playerStartHp,
+            playerEndHp: result.combat.playerEndHp,
+            outcome: result.combat.outcome,
+          })
+        : null;
 
       const blocks = [textBlock("# ⚔️ Arena")];
 
