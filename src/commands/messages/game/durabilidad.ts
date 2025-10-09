@@ -81,7 +81,9 @@ export const command: CommandMessage = {
         const bars = Math.floor(percentage / 10);
         const barDisplay = "█".repeat(bars) + "░".repeat(10 - bars);
 
-        output += `  [${idx + 1}] ${barDisplay} ${dur}/${maxDur} (${percentage}%)\n`;
+        output += `  [${
+          idx + 1
+        }] ${barDisplay} ${dur}/${maxDur} (${percentage}%)\n`;
       });
 
       output += `• Total: ${instances.length} unidad(es)\n\n`;
