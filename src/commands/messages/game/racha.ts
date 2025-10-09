@@ -13,6 +13,7 @@ export const command: CommandMessage = {
   name: "racha",
   type: "message",
   aliases: ["streak", "daily"],
+  category: "Economía",
   cooldown: 10,
   description: "Ver tu racha diaria y reclamar recompensa",
   usage: "racha",
@@ -80,7 +81,7 @@ export const command: CommandMessage = {
             });
           }
 
-          blocks.push(dividerBlock({ spacing: 1 }));
+          blocks.push(dividerBlock({ spacing: 1, divider: false }));
           blocks.push(textBlock(rewardsText));
         }
       } else {
@@ -97,7 +98,7 @@ export const command: CommandMessage = {
 
       if (nextMilestone) {
         const remaining = nextMilestone - streak.currentStreak;
-        blocks.push(dividerBlock({ spacing: 1 }));
+        blocks.push(dividerBlock({ spacing: 1, divider: false }));
         blocks.push(
           textBlock(
             `**🎯 PRÓXIMO HITO**\nFaltan **${remaining}** días para alcanzar el día **${nextMilestone}**`

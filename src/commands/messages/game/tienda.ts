@@ -78,6 +78,7 @@ export const command: CommandMessage = {
   type: "message",
   aliases: ["shop", "store"],
   cooldown: 5,
+  category: "Economía",
   description:
     "Abre la tienda y navega por las ofertas disponibles con un panel interactivo.",
   usage: "tienda [categoria]",
@@ -279,7 +280,7 @@ async function buildShopPanel(
     container.components.push({
       type: 10,
       content: `${label}\n\n${
-        item.description || null
+        item.description || ""
       }${statsInfo}\n\nPrecio: ${price}${stockInfo}`,
     });
 

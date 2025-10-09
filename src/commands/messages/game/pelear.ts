@@ -28,6 +28,7 @@ export const command: CommandMessage = {
   type: "message",
   aliases: ["fight", "arena"],
   cooldown: 8,
+  category: "Minijuegos",
   description: "Entra a la arena y pelea (usa espada si está disponible).",
   usage:
     "pelear [nivel] [toolKey] [area:clave] (ej: pelear 1 weapon.sword.iron)",

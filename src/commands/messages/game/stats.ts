@@ -8,6 +8,7 @@ export const command: CommandMessage = {
   type: "message",
   aliases: ["estadisticas", "est"],
   cooldown: 5,
+  category: "Economía",
   description: "Ver estadísticas detalladas de un jugador",
   usage: "stats [@usuario]",
   run: async (message, args, client: Amayo) => {

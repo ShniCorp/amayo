@@ -1,19 +1,24 @@
-import type { CommandMessage } from '../../../core/types/commands';
-import type Amayo from '../../../core/client';
-import { prisma } from '../../../core/database/prisma';
-import { getOrCreateWallet } from '../../../game/economy/service';
-import { getEquipment, getEffectiveStats } from '../../../game/combat/equipmentService';
-import { getPlayerStatsFormatted } from '../../../game/stats/service';
-import type { TextBasedChannel } from 'discord.js';
-import { formatItemLabel } from './_helpers';
+import type { CommandMessage } from "../../../core/types/commands";
+import type Amayo from "../../../core/client";
+import { prisma } from "../../../core/database/prisma";
+import { getOrCreateWallet } from "../../../game/economy/service";
+import {
+  getEquipment,
+  getEffectiveStats,
+} from "../../../game/combat/equipmentService";
+import { getPlayerStatsFormatted } from "../../../game/stats/service";
+import type { TextBasedChannel } from "discord.js";
+import { formatItemLabel } from "./_helpers";
 
 export const command: CommandMessage = {
-  name: 'player',
-  type: 'message',
-  aliases: ['perfil', 'profile', 'yo', 'me'],
+  name: "player",
+  type: "message",
+  aliases: ["perfil", "profile", "yo", "me"],
   cooldown: 5,
-  description: 'Muestra toda tu información de jugador con vista visual mejorada',
-  usage: 'player [@usuario]',
+  category: "Economía",
+  description:
+    "Muestra toda tu información de jugador con vista visual mejorada",
+  usage: "player [@usuario]",
   run: async (message, args, _client: Amayo) => {
     const targetUser = message.mentions.users.first() || message.author;
     const userId = targetUser.id;
@@ -29,7 +34,7 @@ export const command: CommandMessage = {
     const progress = await prisma.playerProgress.findMany({
       where: { userId, guildId },
       include: { area: true },
-      orderBy: { updatedAt: 'desc' },
+      orderBy: { updatedAt: "desc" },
       take: 5,
     });
 
@@ -46,54 +51,67 @@ export const command: CommandMessage = {
     // Cooldowns activos
     const activeCooldowns = await prisma.actionCooldown.findMany({
       where: { userId, guildId, until: { gt: new Date() } },
-      orderBy: { until: 'asc' },
+      orderBy: { until: "asc" },
       take: 3,
     });
 
     const weaponLine = weapon
-      ? `⚔️ Arma: ${formatItemLabel(weapon, { fallbackIcon: '🗡️', bold: true })}`
-      : '⚔️ Arma: *Ninguna*';
+      ? `⚔️ Arma: ${formatItemLabel(weapon, {
+          fallbackIcon: "🗡️",
+          bold: true,
+        })}`
+      : "⚔️ Arma: *Ninguna*";
     const armorLine = armor
-      ? `🛡️ Armadura: ${formatItemLabel(armor, { fallbackIcon: '🛡️', bold: true })}`
-      : '🛡️ Armadura: *Ninguna*';
+      ? `🛡️ Armadura: ${formatItemLabel(armor, {
+          fallbackIcon: "🛡️",
+          bold: true,
+        })}`
+      : "🛡️ Armadura: *Ninguna*";
     const capeLine = cape
-      ? `🧥 Capa: ${formatItemLabel(cape, { fallbackIcon: '🧥', bold: true })}`
-      : '🧥 Capa: *Ninguna*';
+      ? `🧥 Capa: ${formatItemLabel(cape, { fallbackIcon: "🧥", bold: true })}`
+      : "🧥 Capa: *Ninguna*";
 
     // Crear DisplayComponent
     const display = {
       type: 17,
-      accent_color: 0x5865F2,
+      accent_color: 0x5865f2,
       components: [
         {
           type: 10,
-          content: `👤 **${targetUser.username}**\n${targetUser.bot ? '🤖 Bot' : '👨 Usuario'}`
+          content: `👤 **${targetUser.username}**\n${
+            targetUser.bot ? "🤖 Bot" : "👨 Usuario"
+          }`,
         },
         { type: 14, divider: true },
         {
           type: 10,
-          content: `**📊 ESTADÍSTICAS**\n` +
-                   `❤️ HP: **${stats.hp}/${stats.maxHp}**\n` +
-                   `⚔️ ATK: **${stats.damage}**\n` +
-                   `🛡️ DEF: **${stats.defense}**\n` +
-                   `💰 Monedas: **${wallet.coins.toLocaleString()}**`
+          content:
+            `**<:stats:1425689271788113991> ESTADÍSTICAS**\n` +
+            `<:healbonus:1425671499792121877> HP: **${stats.hp}/${stats.maxHp}**\n` +
+            `<:damage:1425670476449189998> ATK: **${stats.damage}**\n` +
+            `<:defens:1425670433910427862> DEF: **${stats.defense}**\n` +
+            `<a:9470coin:1425694135607885906> Monedas: **${wallet.coins.toLocaleString()}**`,
         },
         { type: 14, divider: true },
         {
           type: 10,
-          content: `**⚔️ EQUIPO**\n` +
-                   `${weaponLine}\n` +
-                   `${armorLine}\n` +
-                   `${capeLine}`
+          content:
+            `**<:damage:1425670476449189998> EQUIPO**\n` +
+            `${weaponLine}\n` +
+            `${armorLine}\n` +
+            `${capeLine}`,
         },
         { type: 14, divider: true },
         {
           type: 10,
-          content: `**🎒 INVENTARIO**\n` +
-                   `📦 Items únicos: **${inventoryCount}**\n` +
-                   `🔢 Total items: **${inventorySum._sum.quantity ?? 0}**`
-        }
-      ]
+          content:
+            `**🎒 INVENTARIO**\n` +
+            `<:emptybox:1425678700753588305> Items únicos: **${inventoryCount}**\n` +
+            `<:table:1425673712312782879> Total items: **${
+              inventorySum._sum.quantity ?? 0
+            }**`,
+        },
+      ],
     };
 
     // Añadir stats de actividades si existen
@@ -101,13 +119,13 @@ export const command: CommandMessage = {
       const activitiesText = Object.entries(playerStats.activities)
         .filter(([_, value]) => value > 0)
         .map(([key, value]) => `${key}: **${value}**`)
-        .join('\n');
-      
+        .join("\n");
+
       if (activitiesText) {
         display.components.push({ type: 14, divider: true });
         display.components.push({
           type: 10,
-          content: `**🎮 ACTIVIDADES**\n${activitiesText}`
+          content: `**🎮 ACTIVIDADES**\n${activitiesText}`,
         });
       }
     }
@@ -117,25 +135,33 @@ export const command: CommandMessage = {
       display.components.push({ type: 14, divider: true });
       display.components.push({
         type: 10,
-        content: `**🗺️ PROGRESO EN ÁREAS**\n` +
-                 progress.map(p => `• ${p.area.name || p.area.key}: Nivel **${p.highestLevel}**`).join('\n')
+        content:
+          `**🗺️ PROGRESO EN ÁREAS**\n` +
+          progress
+            .map(
+              (p) =>
+                `• ${p.area.name || p.area.key}: Nivel **${p.highestLevel}**`
+            )
+            .join("\n"),
       });
     }
 
     // Añadir cooldowns activos
     if (activeCooldowns.length > 0) {
       const now = Date.now();
-      const cooldownsText = activeCooldowns.map(cd => {
-        const remaining = Math.ceil((cd.until.getTime() - now) / 1000);
-        const mins = Math.floor(remaining / 60);
-        const secs = remaining % 60;
-        return `• ${cd.key}: **${mins}m ${secs}s**`;
-      }).join('\n');
+      const cooldownsText = activeCooldowns
+        .map((cd) => {
+          const remaining = Math.ceil((cd.until.getTime() - now) / 1000);
+          const mins = Math.floor(remaining / 60);
+          const secs = remaining % 60;
+          return `• ${cd.key}: **${mins}m ${secs}s**`;
+        })
+        .join("\n");
 
       display.components.push({ type: 14, divider: true });
       display.components.push({
         type: 10,
-        content: `**⏰ COOLDOWNS ACTIVOS**\n${cooldownsText}`
+        content: `**<:swordcooldown:1425695375028912168> COOLDOWNS ACTIVOS**\n${cooldownsText}`,
       });
     }
 
@@ -144,7 +170,7 @@ export const command: CommandMessage = {
       content: null,
       components: [display],
       flags: 32768, // MessageFlags.IS_COMPONENTS_V2
-      reply: { messageReference: message.id }
+      reply: { messageReference: message.id },
     });
-  }
+  },
 };
