@@ -76,6 +76,7 @@ export const command: CommandMessage = {
         )
         .map((r) => r.itemKey!);
       if (result.tool?.key) rewardKeys.push(result.tool.key);
+      if (result.weaponTool?.key) rewardKeys.push(result.weaponTool.key);
       const rewardItems = await fetchItemBasics(guildId, rewardKeys);
 
       // Actualizar stats
@@ -141,6 +142,27 @@ export const command: CommandMessage = {
           })
         : "—";
 
+      const weaponInfo = result.weaponTool?.key
+        ? formatToolLabel({
+            key: result.weaponTool.key,
+            displayName: formatItemLabel(
+              rewardItems.get(result.weaponTool.key) ?? {
+                key: result.weaponTool.key,
+                name: null,
+                icon: null,
+              },
+              { fallbackIcon: "⚔️" }
+            ),
+            instancesRemaining: result.weaponTool.instancesRemaining,
+            broken: result.weaponTool.broken,
+            brokenInstance: result.weaponTool.brokenInstance,
+            durabilityDelta: result.weaponTool.durabilityDelta,
+            remaining: result.weaponTool.remaining,
+            max: result.weaponTool.max,
+            source: result.weaponTool.toolSource,
+          })
+        : null;
+
       const combatSummary = result.combat
         ? combatSummaryRPG({
             mobs: result.mobs.length,
@@ -165,9 +187,12 @@ export const command: CommandMessage = {
         source === "global"
           ? "🌐 Configuración global"
           : "📍 Configuración local";
+      const toolsLine = weaponInfo
+        ? `**Pico:** ${toolInfo}\n**Arma (defensa):** ${weaponInfo}`
+        : `**Herramienta:** ${toolInfo}`;
       blocks.push(
         textBlock(
-          `**Área:** \`${area.key}\` • ${areaScope}\n**Nivel:** ${level}\n**Herramienta:** ${toolInfo}`
+          `**Área:** \`${area.key}\` • ${areaScope}\n**Nivel:** ${level}\n${toolsLine}`
         )
       );
       blocks.push(dividerBlock({ divider: false, spacing: 1 }));

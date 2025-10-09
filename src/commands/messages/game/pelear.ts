@@ -77,6 +77,7 @@ export const command: CommandMessage = {
         )
         .map((r) => r.itemKey!);
       if (result.tool?.key) rewardKeys.push(result.tool.key);
+      if (result.weaponTool?.key) rewardKeys.push(result.weaponTool.key);
       const rewardItems = await fetchItemBasics(guildId, rewardKeys);
 
       // Actualizar stats y misiones

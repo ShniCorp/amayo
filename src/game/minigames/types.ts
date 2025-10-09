@@ -61,6 +61,17 @@ export type RunResult = {
     instancesRemaining?: number; // instancias que quedan después del uso
     toolSource?: "provided" | "equipped" | "auto"; // origen de la selección
   };
+  // Nueva: arma usada en combate (se degrada con un multiplicador menor para evitar roturas instantáneas)
+  weaponTool?: {
+    key?: string;
+    durabilityDelta?: number;
+    broken?: boolean;
+    remaining?: number;
+    max?: number;
+    brokenInstance?: boolean;
+    instancesRemaining?: number;
+    toolSource?: "equipped"; // siempre proviene del slot de arma
+  };
   combat?: CombatSummary; // resumen de combate si hubo mobs y se procesó
   // Modificadores aplicados a las recompensas (ej: penalización por FATIGUE sobre monedas)
   rewardModifiers?: {

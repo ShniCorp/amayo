@@ -14,6 +14,7 @@ import {
   getEffectiveStats,
   adjustHP,
   ensurePlayerState,
+  getEquipment,
 } from "../combat/equipmentService"; // 🟩 local authoritative
 import { logToolBreak } from "../lib/toolBreakLog";
 import { updateStats } from "../stats/service"; // 🟩 local authoritative
@@ -269,7 +270,8 @@ async function sampleMobs(mobs?: MobsTable): Promise<string[]> {
 async function reduceToolDurability(
   userId: string,
   guildId: string,
-  toolKey: string
+  toolKey: string,
+  usage: "gather" | "combat" = "gather"
 ) {
   const { item, entry } = await getInventoryEntry(userId, guildId, toolKey);
   if (!entry)
@@ -298,6 +300,11 @@ async function reduceToolDurability(
   // Valores base
   const maxConfigured = Math.max(1, breakable.maxDurability ?? 1);
   let perUse = Math.max(1, breakable.durabilityPerUse ?? 1);
+  // Ajuste: en combate degradamos menos para evitar roturas instantáneas de armas caras
+  if (usage === "combat") {
+    // Reducimos a la mitad (redondeo hacia arriba mínimo 1)
+    perUse = Math.max(1, Math.ceil(perUse * 0.5));
+  }
 
   // Protección: si perUse > maxDurability asumimos configuración errónea y lo reducimos a 1
   // (en lugar de romper inmediatamente el ítem). Si quieres que se rompa de un uso, define maxDurability igual a 1.
@@ -758,10 +765,49 @@ export async function runMinigame(
   }
 
   // Registrar la ejecución
+  let weaponToolInfo: RunResult["weaponTool"] | undefined;
+  // Si hubo combate y el jugador tenía un arma equipada distinta de la herramienta de recolección, degradarla.
+  if (combatSummary && combatSummary.mobs.length > 0) {
+    try {
+      const { weapon } = await getEquipment(userId, guildId);
+      if (weapon) {
+        const weaponProps = parseItemProps(weapon.props);
+        if (weaponProps?.tool?.type === "sword") {
+          // Evitar degradar dos veces si la herramienta principal ya era la espada usada para recoger (no aplica en mina/pesca normalmente)
+          const alreadyMain = toolInfo?.key === weapon.key;
+          if (!alreadyMain) {
+            const wt = await reduceToolDurability(
+              userId,
+              guildId,
+              weapon.key,
+              "combat"
+            );
+            weaponToolInfo = {
+              key: weapon.key,
+              durabilityDelta: wt.delta,
+              broken: wt.broken,
+              remaining: wt.remaining,
+              max: wt.max,
+              brokenInstance: wt.brokenInstance,
+              instancesRemaining: wt.instancesRemaining,
+              toolSource: "equipped",
+            };
+          } else {
+            // Si la espada era también la herramienta (pelear) ya se degradó en la fase de tool principal
+            weaponToolInfo = undefined;
+          }
+        }
+      }
+    } catch {
+      // silencioso
+    }
+  }
+
   const resultJson: Prisma.InputJsonValue = {
     rewards: delivered,
     mobs: mobsSpawned,
     tool: toolInfo,
+    weaponTool: weaponToolInfo,
     combat: combatSummary,
     rewardModifiers,
     notes: "auto",
@@ -810,6 +856,7 @@ export async function runMinigame(
     rewards: delivered,
     mobs: mobsSpawned,
     tool: toolInfo,
+    weaponTool: weaponToolInfo,
     combat: combatSummary,
     rewardModifiers,
   };
