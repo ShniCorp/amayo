@@ -8,6 +8,7 @@ import {
   ButtonStyle,
   MessageFlags,
   StringSelectMenuInteraction,
+  email,
 } from "discord.js";
 import { prisma } from "../../../core/database/prisma";
 import { getOrCreateWallet, buyFromOffer } from "../../../game/economy/service";
@@ -24,33 +25,34 @@ function parseItemProps(json: unknown): ItemProps {
 
 function formatPrice(price: any): string {
   const parts: string[] = [];
-  if (price.coins) parts.push(`💰 ${price.coins}`);
+  if (price.coins) parts.push(`<:coin:1425667511013081169> ${price.coins}`);
   if (price.items && price.items.length > 0) {
     for (const item of price.items) {
       parts.push(`📦 ${item.itemKey} x${item.qty}`);
     }
   }
-  return parts.join(" + ") || "¿Gratis?";
+  return parts.join(" + ") || "<:free:1425681948172357732>";
 }
 
 function getItemIcon(props: ItemProps, category?: string): string {
   if (props.tool) {
     const t = props.tool.type;
-    if (t === "pickaxe") return "⛏️";
-    if (t === "rod") return "🎣";
-    if (t === "sword") return "🗡️";
-    if (t === "bow") return "🏹";
-    if (t === "halberd") return "⚔️";
-    if (t === "net") return "🕸️";
-    return "🔧";
+    if (t === "pickaxe") return "<:pickaxe_default:1424589544585695398>";
+    if (t === "rod") return "<:rod:1425680136912633866>";
+    if (t === "sword") return "<:27621stonesword:1424591948102107167>";
+    if (t === "bow") return "<:bow:1425680803756511232>";
+    if (t === "halberd") return "<:hgard:1425681197316571217>";
+    if (t === "net") return "<:net:1425681511788576839>";
+    return "<:table:1425673712312782879>";
   }
-  if (props.damage && props.damage > 0) return "⚔️";
-  if (props.defense && props.defense > 0) return "🛡️";
-  if (props.food) return "🍖";
-  if (props.chest) return "📦";
+  if (props.damage && props.damage > 0) return "<:damage:1425670476449189998>";
+  if (props.defense && props.defense > 0)
+    return "<:defens:1425670433910427862>";
+  if (props.food) return "<:clipmushroom:1425679121954115704>";
+  if (props.chest) return "<:legendchest:1425679137565179914>";
   if (category === "consumables") return "🧪";
   if (category === "materials") return "🔨";
-  return "📦";
+  return "<:emptybox:1425678700753588305>";
 }
 
 export const command: CommandMessage = {
@@ -201,7 +203,7 @@ async function buildShopPanel(
     components: [
       {
         type: 10,
-        content: `# <a:seven:1425666197466255481> Tienda - Ofertas Disponibles`,
+        content: `### <a:seven:1425666197466255481> Tienda - Ofertas Disponibles`,
       },
       {
         type: 10,
@@ -257,8 +259,8 @@ async function buildShopPanel(
     container.components.push({
       type: 10,
       content: `${label}\n\n${
-        item.description || "Sin descripción"
-      }${statsInfo}\n\n<:price:1425673879094820906> Precio: ${price}${stockInfo}`,
+        item.description || undefined
+      }${statsInfo}\n\nPrecio: ${price}${stockInfo}`,
     });
 
     container.components.push({
@@ -295,12 +297,17 @@ async function buildShopPanel(
       components: [
         {
           type: 10,
-          content: `${label}${selectedMark}\n<:coin:1425667511013081169> ${price}${stockText}`,
+          content: `${label}${selectedMark}\n${price}${stockText}`,
         },
       ],
       accessory: {
         type: 2,
         style: isSelected ? ButtonStyle.Success : ButtonStyle.Primary,
+        emoji: {
+          name: isSelected
+            ? "<:Sup_res:1420535051162095747>"
+            : "<:preview:1425678718918987976>",
+        },
         label: isSelected ? "Seleccionado" : "Ver",
         custom_id: `shop_view_${offer.id}`,
       },
@@ -314,21 +321,24 @@ async function buildShopPanel(
       {
         type: ComponentType.Button,
         style: ButtonStyle.Secondary,
-        label: "◀️ Anterior",
+        //label: "<:blueskip2:1425682929782362122>",
+        emoji: { name: "<:blueskip2:1425682929782362122>" },
         custom_id: "shop_prev_page",
         disabled: safePage <= 1,
       },
       {
         type: ComponentType.Button,
         style: ButtonStyle.Secondary,
-        label: `Página ${safePage}/${totalPages}`,
+        label: `${safePage}/${totalPages}`,
+        emoji: { name: "<:apoint:1336536296767750298>" },
         custom_id: "shop_current_page",
         disabled: true,
       },
       {
         type: ComponentType.Button,
         style: ButtonStyle.Secondary,
-        label: "Siguiente ▶️",
+        //label: "<:blueskip:1425682992801644627>",
+        emoji: { name: "<:blueskip:1425682992801644627>" },
         custom_id: "shop_next_page",
         disabled: safePage >= totalPages,
       },
@@ -341,27 +351,31 @@ async function buildShopPanel(
       {
         type: ComponentType.Button,
         style: ButtonStyle.Success,
-        label: "🛒 Comprar (x1)",
+        label: "Comprar (x1)",
+        emoji: { name: "<:onlineshopping:1425684275008897064>" },
         custom_id: "shop_buy_1",
         disabled: !selectedOfferId,
       },
       {
         type: ComponentType.Button,
         style: ButtonStyle.Success,
-        label: "🛒 Comprar (x5)",
+        label: "Comprar (x5)",
+        emoji: { name: "<:onlineshopping:1425684275008897064>" },
         custom_id: "shop_buy_5",
         disabled: !selectedOfferId,
       },
       {
         type: ComponentType.Button,
         style: ButtonStyle.Primary,
-        label: "🔄 Actualizar",
+        label: "Actualizar",
+        emoji: { name: "<:reload:1425684687753580645>" },
         custom_id: "shop_refresh",
       },
       {
         type: ComponentType.Button,
         style: ButtonStyle.Danger,
-        label: "❌ Cerrar",
+        label: "Cerrar",
+        emoji: { name: "<:Cross:1420535096208920576>" },
         custom_id: "shop_close",
       },
     ],
@@ -403,7 +417,7 @@ async function handleButtonInteraction(
     const selectedOfferId = sessionState.selectedOfferId;
     if (!selectedOfferId) {
       await interaction.reply({
-        content: "❌ Primero selecciona un item.",
+        content: "<:Cross:1420535096208920576> Primero selecciona un item.",
         flags: MessageFlags.Ephemeral,
       });
       return;
@@ -420,7 +434,7 @@ async function handleButtonInteraction(
         fallbackIcon: resolveItemIcon(result.item.icon),
       });
       await interaction.followUp({
-        content: `✅ **Compra exitosa!**\n🛒 ${purchaseLabel} x${result.qty}\n<:coin:1425667511013081169> Te quedan: ${wallet.coins} monedas`,
+        content: `<:Sup_res:1420535051162095747> **Compra exitosa!**\n🛒 ${purchaseLabel} x${result.qty}\n<:coin:1425667511013081169> Te quedan: ${wallet.coins} monedas`,
         flags: MessageFlags.Ephemeral,
       });
 
@@ -435,7 +449,9 @@ async function handleButtonInteraction(
       });
     } catch (error: any) {
       await interaction.followUp({
-        content: `❌ No se pudo comprar: ${error?.message ?? error}`,
+        content: `<:Cross:1420535096208920576> No se pudo comprar: ${
+          error?.message ?? error
+        }`,
         flags: MessageFlags.Ephemeral,
       });
     }
@@ -513,7 +529,7 @@ async function buildExpiredPanel(): Promise<any[]> {
     components: [
       {
         type: 10,
-        content: "⏰ **Tienda Expirada**",
+        content: "<:timeout:1425685226088169513> **Tienda Expirada**",
       },
       {
         type: 14,
@@ -538,7 +554,7 @@ async function buildClosedPanel(): Promise<any[]> {
     components: [
       {
         type: 10,
-        content: "✅ **Tienda Cerrada**",
+        content: "<:Sup_res:1420535051162095747> **Tienda Cerrada**",
       },
       {
         type: 14,
@@ -547,7 +563,8 @@ async function buildClosedPanel(): Promise<any[]> {
       },
       {
         type: 10,
-        content: "¡Gracias por visitar la tienda!\nVuelve pronto. 🛒",
+        content:
+          "¡Gracias por visitar la tienda!\nVuelve pronto. <:onlineshopping:1425684275008897064>",
       },
     ],
   };
