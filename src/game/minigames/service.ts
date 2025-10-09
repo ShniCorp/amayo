@@ -1,3 +1,5 @@
+import { applyDeathFatigue } from "../combat/statusEffectsService";
+import { getOrCreateWallet } from "../economy/service";
 import { prisma } from "../../core/database/prisma";
 import {
   addItemByKey,
@@ -411,17 +413,61 @@ export async function runMinigame(
         where: { userId_guildId: { userId, guildId } },
         data: { currentWinStreak: 0 },
       });
-      combatSummary = {
-        mobs: mobLogs,
-        totalDamageDealt: 0,
-        totalDamageTaken: 0,
-        mobsDefeated: 0,
-        victory: false,
-        playerStartHp: startHp,
-        playerEndHp: endHp,
-        outcome: "defeat",
-        autoDefeatNoWeapon: true,
-      };
+      // Penalizaciones por derrota: pérdida de oro + fatiga
+      let deathPenalty: CombatSummary["deathPenalty"] | undefined;
+      try {
+        const wallet = await getOrCreateWallet(userId, guildId);
+        const coins = wallet.coins;
+        let goldLost = 0;
+        if (coins > 0) {
+          goldLost = Math.floor(coins * 0.05); // 5%
+          if (goldLost < 1) goldLost = 1;
+          if (goldLost > 500) goldLost = 500; // cap
+          if (goldLost > 0) {
+            await prisma.economyWallet.update({
+              where: { userId_guildId: { userId, guildId } },
+              data: { coins: { decrement: goldLost } },
+            });
+          }
+        }
+        const fatigueMagnitude = 0.15;
+        const fatigueMinutes = 5;
+        await applyDeathFatigue(
+          userId,
+          guildId,
+          fatigueMagnitude,
+          fatigueMinutes
+        );
+        deathPenalty = {
+          goldLost,
+          fatigueAppliedMinutes: fatigueMinutes,
+          fatigueMagnitude,
+        };
+        combatSummary = {
+          mobs: mobLogs,
+          totalDamageDealt: 0,
+          totalDamageTaken: 0,
+          mobsDefeated: 0,
+          victory: false,
+          playerStartHp: startHp,
+          playerEndHp: endHp,
+          outcome: "defeat",
+          autoDefeatNoWeapon: true,
+          deathPenalty,
+        };
+      } catch {
+        combatSummary = {
+          mobs: mobLogs,
+          totalDamageDealt: 0,
+          totalDamageTaken: 0,
+          mobsDefeated: 0,
+          victory: false,
+          playerStartHp: startHp,
+          playerEndHp: endHp,
+          outcome: "defeat",
+          autoDefeatNoWeapon: true,
+        };
+      }
     } else {
       let currentHp = startHp;
       const mobLogs: CombatSummary["mobs"] = [];
@@ -524,29 +570,73 @@ export async function runMinigame(
       }
       await updateStats(userId, guildId, statUpdates as any);
       if (defeatedNow) {
-        // reset de racha: update directo
         await prisma.playerStats.update({
           where: { userId_guildId: { userId, guildId } },
           data: { currentWinStreak: 0 },
         });
-      } else if (victory) {
-        // posible actualización de longestWinStreak si superada ya la maneja updateStats parcialmente; reforzar
-        await prisma.$executeRawUnsafe(
-          `UPDATE "PlayerStats" SET "longestWinStreak" = GREATEST("longestWinStreak", "currentWinStreak") WHERE "userId" = $1 AND "guildId" = $2`,
-          userId,
-          guildId
-        );
+        // Penalizaciones por derrota
+        let deathPenalty: CombatSummary["deathPenalty"] | undefined;
+        try {
+          const wallet = await getOrCreateWallet(userId, guildId);
+          const coins = wallet.coins;
+          let goldLost = 0;
+          if (coins > 0) {
+            goldLost = Math.floor(coins * 0.05);
+            if (goldLost < 1) goldLost = 1;
+            if (goldLost > 500) goldLost = 500;
+            if (goldLost > 0) {
+              await prisma.economyWallet.update({
+                where: { userId_guildId: { userId, guildId } },
+                data: { coins: { decrement: goldLost } },
+              });
+            }
+          }
+          const fatigueMagnitude = 0.15;
+          const fatigueMinutes = 5;
+          await applyDeathFatigue(
+            userId,
+            guildId,
+            fatigueMagnitude,
+            fatigueMinutes
+          );
+          deathPenalty = {
+            goldLost,
+            fatigueAppliedMinutes: fatigueMinutes,
+            fatigueMagnitude,
+          };
+        } catch {
+          // silencioso
+        }
+        combatSummary = {
+          mobs: mobLogs,
+          totalDamageDealt: totalDealt,
+          totalDamageTaken: totalTaken,
+          mobsDefeated: totalMobsDefeated,
+          victory,
+          playerStartHp: startHp,
+          playerEndHp: endHp,
+          outcome: "defeat",
+          deathPenalty,
+        };
+      } else {
+        if (victory) {
+          await prisma.$executeRawUnsafe(
+            `UPDATE "PlayerStats" SET "longestWinStreak" = GREATEST("longestWinStreak", "currentWinStreak") WHERE "userId" = $1 AND "guildId" = $2`,
+            userId,
+            guildId
+          );
+        }
+        combatSummary = {
+          mobs: mobLogs,
+          totalDamageDealt: totalDealt,
+          totalDamageTaken: totalTaken,
+          mobsDefeated: totalMobsDefeated,
+          victory,
+          playerStartHp: startHp,
+          playerEndHp: endHp,
+          outcome: victory ? "victory" : "defeat",
+        };
       }
-      combatSummary = {
-        mobs: mobLogs,
-        totalDamageDealt: totalDealt,
-        totalDamageTaken: totalTaken,
-        mobsDefeated: totalMobsDefeated,
-        victory,
-        playerStartHp: startHp,
-        playerEndHp: endHp,
-        outcome: victory ? "victory" : "defeat",
-      };
     }
   }
 

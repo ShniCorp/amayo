@@ -6,9 +6,14 @@ import {
   getEquipment,
   getEffectiveStats,
 } from "../../../game/combat/equipmentService";
-import { getPlayerStatsFormatted } from "../../../game/stats/service";
+import {
+  getPlayerStatsFormatted,
+  getOrCreatePlayerStats,
+} from "../../../game/stats/service";
 import type { TextBasedChannel } from "discord.js";
 import { formatItemLabel } from "./_helpers";
+import { heartsBar } from "../../../game/lib/rpgFormat";
+import { getActiveStatusEffects } from "../../../game/combat/statusEffectsService";
 
 export const command: CommandMessage = {
   name: "player",
@@ -29,6 +34,12 @@ export const command: CommandMessage = {
     const { eq, weapon, armor, cape } = await getEquipment(userId, guildId);
     const stats = await getEffectiveStats(userId, guildId);
     const playerStats = await getPlayerStatsFormatted(userId, guildId);
+    const rawStats = await getOrCreatePlayerStats(userId, guildId);
+    const streak = rawStats.currentWinStreak;
+    const streakBonusPct = Math.min(Math.floor(streak / 3), 30); // cada 3 = 1%, mostramos valor base en %
+    const damageBonusDisplay =
+      streakBonusPct > 0 ? `(+${streakBonusPct}% racha)` : "";
+    const effects = await getActiveStatusEffects(userId, guildId);
 
     // Progreso por áreas
     const progress = await prisma.playerProgress.findMany({
@@ -87,9 +98,12 @@ export const command: CommandMessage = {
           type: 10,
           content:
             `**<:stats:1425689271788113991> ESTADÍSTICAS**\n` +
-            `<:healbonus:1425671499792121877> HP: **${stats.hp}/${stats.maxHp}**\n` +
-            `<:damage:1425670476449189998> ATK: **${stats.damage}**\n` +
+            `<:healbonus:1425671499792121877> HP: **${stats.hp}/${
+              stats.maxHp
+            }** ${heartsBar(stats.hp, stats.maxHp)}\n` +
+            `<:damage:1425670476449189998> ATK: **${stats.damage}** ${damageBonusDisplay}\n` +
             `<:defens:1425670433910427862> DEF: **${stats.defense}**\n` +
+            `🏆 Racha: **${streak}** (mejor: ${rawStats.longestWinStreak})\n` +
             `<a:9470coin:1425694135607885906> Monedas: **${wallet.coins.toLocaleString()}**`,
         },
         { type: 14, divider: true },
@@ -113,6 +127,37 @@ export const command: CommandMessage = {
         },
       ],
     };
+
+    // Añadir efectos activos (después de construir el bloque base para mantener orden)
+    if (effects.length > 0) {
+      const nowTs = Date.now();
+      const fxLines = effects
+        .map((e) => {
+          let remain = "";
+          if (e.expiresAt) {
+            const ms = e.expiresAt.getTime() - nowTs;
+            if (ms > 0) {
+              const m = Math.floor(ms / 60000);
+              const s = Math.floor((ms % 60000) / 1000);
+              remain = ` (${m}m ${s}s)`;
+            } else remain = " (exp)";
+          }
+          switch (e.type) {
+            case "FATIGUE": {
+              const pct = Math.round(e.magnitude * 100);
+              return `• Fatiga: -${pct}% daño${remain}`;
+            }
+            default:
+              return `• ${e.type}${remain}`;
+          }
+        })
+        .join("\n");
+      display.components.push({ type: 14, divider: true });
+      display.components.push({
+        type: 10,
+        content: `**😵 EFECTOS ACTIVOS**\n${fxLines}`,
+      });
+    }
 
     // Añadir stats de actividades si existen
     if (playerStats.activities) {

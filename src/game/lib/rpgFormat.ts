@@ -83,6 +83,11 @@ export function combatSummaryRPG(c: {
   outcome?: "victory" | "defeat";
   maxRefHp?: number; // para cálculo visual si difiere
   autoDefeatNoWeapon?: boolean;
+  deathPenalty?: {
+    goldLost?: number;
+    fatigueAppliedMinutes?: number;
+    fatigueMagnitude?: number;
+  };
 }) {
   const header = `**Combate (${outcomeLabel(c.outcome)})**`;
   const lines = [
@@ -93,6 +98,21 @@ export function combatSummaryRPG(c: {
     lines.push(
       `• Derrota automática: no tenías arma equipada o válida (daño 0). Equipa un arma para poder atacar.`
     );
+  }
+  if (c.deathPenalty) {
+    const parts: string[] = [];
+    if (
+      typeof c.deathPenalty.goldLost === "number" &&
+      c.deathPenalty.goldLost > 0
+    )
+      parts.push(`-${c.deathPenalty.goldLost} monedas`);
+    if (c.deathPenalty.fatigueAppliedMinutes) {
+      const pct = c.deathPenalty.fatigueMagnitude
+        ? Math.round(c.deathPenalty.fatigueMagnitude * 100)
+        : 15;
+      parts.push(`Fatiga ${pct}% ${c.deathPenalty.fatigueAppliedMinutes}m`);
+    }
+    if (parts.length) lines.push(`• Penalización: ${parts.join(" | ")}`);
   }
   if (c.playerStartHp != null && c.playerEndHp != null) {
     const maxHp = c.maxRefHp || Math.max(c.playerStartHp, c.playerEndHp);

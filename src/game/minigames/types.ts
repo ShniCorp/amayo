@@ -93,4 +93,9 @@ export type CombatSummary = {
   playerEndHp?: number;
   outcome?: "victory" | "defeat";
   autoDefeatNoWeapon?: boolean; // true si la derrota fue inmediata por no tener arma (damage <= 0)
+  deathPenalty?: {
+    goldLost?: number;
+    fatigueAppliedMinutes?: number;
+    fatigueMagnitude?: number; // 0.15 = 15%
+  };
 };
