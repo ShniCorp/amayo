@@ -148,19 +148,23 @@ async function validateRequirements(
     // 1. Intentar herramienta equipada en slot weapon si coincide el tipo
     const equip = await prisma.playerEquipment.findUnique({
       where: { userId_guildId: { userId, guildId } },
-      include: { weaponItem: true } as any,
     });
-    if (equip?.weaponItemId && equip?.weaponItem) {
-      const wProps = parseItemProps((equip as any).weaponItem.props);
-      if (wProps.tool?.type === toolReq.toolType) {
-        const tier = Math.max(0, wProps.tool?.tier ?? 0);
-        if (
-          (toolReq.minTier == null || tier >= toolReq.minTier) &&
-          (!toolReq.allowedKeys ||
-            toolReq.allowedKeys.includes((equip as any).weaponItem.key))
-        ) {
-          toolKeyUsed = (equip as any).weaponItem.key;
-          toolSource = "equipped";
+    if (equip?.weaponItemId) {
+      const weaponItem = await prisma.economyItem.findUnique({
+        where: { id: equip.weaponItemId },
+      });
+      if (weaponItem) {
+        const wProps = parseItemProps(weaponItem.props);
+        if (wProps.tool?.type === toolReq.toolType) {
+          const tier = Math.max(0, wProps.tool?.tier ?? 0);
+          if (
+            (toolReq.minTier == null || tier >= toolReq.minTier) &&
+            (!toolReq.allowedKeys ||
+              toolReq.allowedKeys.includes(weaponItem.key))
+          ) {
+            toolKeyUsed = weaponItem.key;
+            toolSource = "equipped";
+          }
         }
       }
     }
