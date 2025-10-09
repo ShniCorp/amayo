@@ -25,6 +25,25 @@ import type {
 } from "./types";
 import type { Prisma } from "@prisma/client";
 
+// Escalado dinámico de penalización por derrota según área/nivel y riesgo.
+// Se puede ampliar leyendo area.metadata.riskFactor (0-3) y level.
+function computeDeathPenaltyPercent(
+  area: { key: string; metadata: any },
+  level: number
+): number {
+  const meta = (area.metadata as any) || {};
+  const base = 0.05; // 5% base
+  const risk =
+    typeof meta.riskFactor === "number"
+      ? Math.max(0, Math.min(3, meta.riskFactor))
+      : 0;
+  const levelBoost = Math.min(0.1, Math.max(0, (level - 1) * 0.005)); // +0.5% por nivel adicional hasta +10%
+  const riskBoost = risk * 0.02; // cada punto riesgo +2%
+  let pct = base + levelBoost + riskBoost;
+  if (pct > 0.25) pct = 0.25; // cap 25%
+  return pct; // ej: 0.08 = 8%
+}
+
 // Auto-select best tool from inventory by type and constraints
 async function findBestToolKey(
   userId: string,
@@ -418,11 +437,13 @@ export async function runMinigame(
       try {
         const wallet = await getOrCreateWallet(userId, guildId);
         const coins = wallet.coins;
+        const percent = computeDeathPenaltyPercent(area, level);
         let goldLost = 0;
         if (coins > 0) {
-          goldLost = Math.floor(coins * 0.05); // 5%
+          goldLost = Math.floor(coins * percent);
           if (goldLost < 1) goldLost = 1;
-          if (goldLost > 500) goldLost = 500; // cap
+          if (goldLost > 5000) goldLost = 5000; // nuevo cap más alto por riesgo escalado
+          if (goldLost > coins) goldLost = coins; // no perder más de lo que tienes
           if (goldLost > 0) {
             await prisma.economyWallet.update({
               where: { userId_guildId: { userId, guildId } },
@@ -442,7 +463,25 @@ export async function runMinigame(
           goldLost,
           fatigueAppliedMinutes: fatigueMinutes,
           fatigueMagnitude,
+          percentApplied: percent,
         };
+        try {
+          await prisma.deathLog.create({
+            data: {
+              userId,
+              guildId,
+              areaId: area.id,
+              areaKey: area.key,
+              level,
+              goldLost: goldLost || 0,
+              percentApplied: percent,
+              autoDefeatNoWeapon: true,
+              fatigueMagnitude,
+              fatigueMinutes,
+              metadata: {},
+            },
+          });
+        } catch {}
         combatSummary = {
           mobs: mobLogs,
           totalDamageDealt: 0,
@@ -579,11 +618,13 @@ export async function runMinigame(
         try {
           const wallet = await getOrCreateWallet(userId, guildId);
           const coins = wallet.coins;
+          const percent = computeDeathPenaltyPercent(area, level);
           let goldLost = 0;
           if (coins > 0) {
-            goldLost = Math.floor(coins * 0.05);
+            goldLost = Math.floor(coins * percent);
             if (goldLost < 1) goldLost = 1;
-            if (goldLost > 500) goldLost = 500;
+            if (goldLost > 5000) goldLost = 5000;
+            if (goldLost > coins) goldLost = coins;
             if (goldLost > 0) {
               await prisma.economyWallet.update({
                 where: { userId_guildId: { userId, guildId } },
@@ -603,7 +644,25 @@ export async function runMinigame(
             goldLost,
             fatigueAppliedMinutes: fatigueMinutes,
             fatigueMagnitude,
+            percentApplied: percent,
           };
+          try {
+            await prisma.deathLog.create({
+              data: {
+                userId,
+                guildId,
+                areaId: area.id,
+                areaKey: area.key,
+                level,
+                goldLost: goldLost || 0,
+                percentApplied: percent,
+                autoDefeatNoWeapon: false,
+                fatigueMagnitude,
+                fatigueMinutes,
+                metadata: { mobs: totalMobsDefeated },
+              },
+            });
+          } catch {}
         } catch {
           // silencioso
         }

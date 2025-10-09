@@ -97,5 +97,6 @@ export type CombatSummary = {
     goldLost?: number;
     fatigueAppliedMinutes?: number;
     fatigueMagnitude?: number; // 0.15 = 15%
+    percentApplied?: number; // porcentaje calculado dinámicamente según área/nivel
   };
 };

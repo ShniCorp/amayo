@@ -75,3 +75,17 @@ export async function applyDeathFatigue(
     data: { reason: "death" },
   });
 }
+
+export async function removeStatusEffect(
+  userId: string,
+  guildId: string,
+  type: StatusEffectType
+) {
+  await prisma.playerStatusEffect.deleteMany({
+    where: { userId, guildId, type },
+  });
+}
+
+export async function clearAllStatusEffects(userId: string, guildId: string) {
+  await prisma.playerStatusEffect.deleteMany({ where: { userId, guildId } });
+}

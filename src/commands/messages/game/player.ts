@@ -33,6 +33,14 @@ export const command: CommandMessage = {
     const wallet = await getOrCreateWallet(userId, guildId);
     const { eq, weapon, armor, cape } = await getEquipment(userId, guildId);
     const stats = await getEffectiveStats(userId, guildId);
+    const showDefense =
+      stats.baseDefense != null && stats.baseDefense !== stats.defense
+        ? `${stats.defense} (_${stats.baseDefense}_ base)`
+        : `${stats.defense}`;
+    const showDamage =
+      stats.baseDamage != null && stats.baseDamage !== stats.damage
+        ? `${stats.damage} (_${stats.baseDamage}_ base)`
+        : `${stats.damage}`;
     const playerStats = await getPlayerStatsFormatted(userId, guildId);
     const rawStats = await getOrCreatePlayerStats(userId, guildId);
     const streak = rawStats.currentWinStreak;
@@ -101,8 +109,8 @@ export const command: CommandMessage = {
             `<:healbonus:1425671499792121877> HP: **${stats.hp}/${
               stats.maxHp
             }** ${heartsBar(stats.hp, stats.maxHp)}\n` +
-            `<:damage:1425670476449189998> ATK: **${stats.damage}** ${damageBonusDisplay}\n` +
-            `<:defens:1425670433910427862> DEF: **${stats.defense}**\n` +
+            `<:damage:1425670476449189998> ATK: **${showDamage}** ${damageBonusDisplay}\n` +
+            `<:defens:1425670433910427862> DEF: **${showDefense}**\n` +
             `🏆 Racha: **${streak}** (mejor: ${rawStats.longestWinStreak})\n` +
             `<a:9470coin:1425694135607885906> Monedas: **${wallet.coins.toLocaleString()}**`,
         },

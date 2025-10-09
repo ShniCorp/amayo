@@ -63,6 +63,7 @@ model Guild {
   PlayerStreak       PlayerStreak[]
   AuditLog           AuditLog[]
   PlayerStatusEffect PlayerStatusEffect[]
+  DeathLog           DeathLog[]
 }
 
 /**
@@ -99,6 +100,7 @@ model User {
   PlayerStreak       PlayerStreak[]
   AuditLog           AuditLog[]
   PlayerStatusEffect PlayerStatusEffect[]
+  DeathLog           DeathLog[]
 }
 
 /**
@@ -527,9 +529,10 @@ model GameArea {
   config   Json?
   metadata Json?
 
-  levels   GameAreaLevel[]
-  runs     MinigameRun[]
-  progress PlayerProgress[]
+  levels    GameAreaLevel[]
+  runs      MinigameRun[]
+  progress  PlayerProgress[]
+  deathLogs DeathLog[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -1018,5 +1021,34 @@ model AuditLog {
 
   @@index([userId, guildId])
   @@index([action])
+  @@index([createdAt])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Log de Muertes (DeathLog)
+ * -----------------------------------------------------------------------------
+ * Auditoría de penalizaciones al morir para trazabilidad y balance.
+ */
+model DeathLog {
+  id                 String   @id @default(cuid())
+  userId             String
+  guildId            String
+  areaId             String?
+  areaKey            String?
+  level              Int?
+  goldLost           Int      @default(0)
+  percentApplied     Float    @default(0) // porcentaje calculado de penalización
+  autoDefeatNoWeapon Boolean  @default(false)
+  fatigueMagnitude   Float? // 0.15 = 15%
+  fatigueMinutes     Int? // minutos aplicados
+  metadata           Json?
+  createdAt          DateTime @default(now())
+
+  user  User      @relation(fields: [userId], references: [id])
+  guild Guild     @relation(fields: [guildId], references: [id])
+  area  GameArea? @relation(fields: [areaId], references: [id])
+
+  @@index([userId, guildId])
   @@index([createdAt])
 }

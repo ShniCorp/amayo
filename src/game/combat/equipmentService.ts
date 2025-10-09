@@ -66,10 +66,12 @@ export async function setEquipmentSlot(
 }
 
 export type EffectiveStats = {
-  damage: number;
-  defense: number;
+  damage: number; // daño efectivo (con racha + efectos)
+  defense: number; // defensa efectiva (con efectos)
   maxHp: number;
   hp: number;
+  baseDamage?: number; // daño base antes de status effects
+  baseDefense?: number; // defensa base antes de status effects
 };
 
 async function getMutationBonuses(
@@ -113,7 +115,7 @@ export async function getEffectiveStats(
   const mutC = await getMutationBonuses(userId, guildId, cape?.id ?? null);
 
   let damage = Math.max(0, (w.damage ?? 0) + mutW.damageBonus);
-  const defense = Math.max(0, (a.defense ?? 0) + mutA.defenseBonus);
+  const defenseBase = Math.max(0, (a.defense ?? 0) + mutA.defenseBonus);
   const maxHp = Math.max(
     1,
     state.maxHp + (c.maxHpBonus ?? 0) + mutC.maxHpBonus
@@ -141,18 +143,33 @@ export async function getEffectiveStats(
       const { damageMultiplier, defenseMultiplier } = computeDerivedModifiers(
         effects.map((e) => ({ type: e.type, magnitude: e.magnitude }))
       );
+      const baseDamage = damage;
+      const baseDefense = defenseBase;
       damage = Math.max(0, Math.round(damage * damageMultiplier));
-      // defensa se recalcula localmente (no mutamos const original para claridad)
       const adjustedDefense = Math.max(
         0,
-        Math.round(defense * defenseMultiplier)
+        Math.round(defenseBase * defenseMultiplier)
       );
-      return { damage, defense: adjustedDefense, maxHp, hp };
+      return {
+        damage,
+        defense: adjustedDefense,
+        maxHp,
+        hp,
+        baseDamage,
+        baseDefense,
+      };
     }
   } catch {
     // silencioso
   }
-  return { damage, defense, maxHp, hp };
+  return {
+    damage,
+    defense: defenseBase,
+    maxHp,
+    hp,
+    baseDamage: damage,
+    baseDefense: defenseBase,
+  };
 }
 
 export async function adjustHP(userId: string, guildId: string, delta: number) {
