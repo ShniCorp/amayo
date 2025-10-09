@@ -222,7 +222,14 @@ async function reduceToolDurability(
       // Consideramos "rota" sólo si después de consumir ya no queda ninguna unidad
       broken = (updated.quantity ?? 0) <= 0;
     }
-    return { broken, brokenInstance: broken, delta, remaining: undefined, max: maxConfigured, instancesRemaining: broken ? 0 : (entry.quantity ?? 1) - 1 } as const;
+    return {
+      broken,
+      brokenInstance: broken,
+      delta,
+      remaining: undefined,
+      max: maxConfigured,
+      instancesRemaining: broken ? 0 : (entry.quantity ?? 1) - 1,
+    } as const;
   }
   const state = parseInvState(entry.state);
   state.instances ??= [{}];
@@ -259,7 +266,14 @@ async function reduceToolDurability(
       `[tool-break] user=${userId} guild=${guildId} toolKey=${toolKey}`
     );
   }
-  return { broken, brokenInstance, delta, remaining: broken ? 0 : next, max, instancesRemaining } as const;
+  return {
+    broken,
+    brokenInstance,
+    delta,
+    remaining: broken ? 0 : next,
+    max,
+    instancesRemaining,
+  } as const;
 }
 
 export { reduceToolDurability };

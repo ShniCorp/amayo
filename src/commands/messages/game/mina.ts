@@ -138,10 +138,18 @@ export const command: CommandMessage = {
               return `${base} (agotada)${durabilityBar()}`;
             }
             if (result.tool.brokenInstance) {
-              return `${base} (se rompió una instancia, quedan ${result.tool.instancesRemaining}) (-${result.tool.durabilityDelta ?? 0} dur.)${durabilityBar()}`;
+              return `${base} (se rompió una instancia, quedan ${
+                result.tool.instancesRemaining
+              }) (-${result.tool.durabilityDelta ?? 0} dur.)${durabilityBar()}`;
             }
-            const multi = result.tool.instancesRemaining && result.tool.instancesRemaining > 1 ? ` (x${result.tool.instancesRemaining})` : "";
-            return `${base}${multi} (-${result.tool.durabilityDelta ?? 0} dur.)${durabilityBar()}`;
+            const multi =
+              result.tool.instancesRemaining &&
+              result.tool.instancesRemaining > 1
+                ? ` (x${result.tool.instancesRemaining})`
+                : "";
+            return `${base}${multi} (-${
+              result.tool.durabilityDelta ?? 0
+            } dur.)${durabilityBar()}`;
           })()
         : "—";
 

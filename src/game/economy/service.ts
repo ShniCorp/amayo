@@ -164,7 +164,8 @@ export async function addItemByKey(
     // Inicializar durabilidad si corresponde
     const props = parseItemProps(item.props);
     const breakable = props.breakable;
-    const maxDurability = breakable?.enabled !== false ? breakable?.maxDurability : undefined;
+    const maxDurability =
+      breakable?.enabled !== false ? breakable?.maxDurability : undefined;
     for (let i = 0; i < canAdd; i++) {
       if (maxDurability && maxDurability > 0) {
         state.instances.push({ durability: maxDurability });

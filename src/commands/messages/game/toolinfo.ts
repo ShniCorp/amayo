@@ -68,10 +68,7 @@ export const command: CommandMessage = {
       const durLines = instances.length
         ? instances
             .map((inst, idx) => {
-              const cur = Math.min(
-                Math.max(0, inst?.durability ?? max),
-                max
-              );
+              const cur = Math.min(Math.max(0, inst?.durability ?? max), max);
               return `#${idx + 1} [${renderBar(cur)}] ${cur}/${max}`;
             })
             .join("\n")
