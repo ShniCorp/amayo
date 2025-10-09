@@ -178,7 +178,9 @@ export const command: CommandMessage = {
           console.error("Error handling shop interaction:", error);
           if (!interaction.replied && !interaction.deferred) {
             await interaction.reply({
-              content: `❌ Error: ${error?.message ?? error}`,
+              content: `<:Cross:1420535096208920576> Error: ${
+                error?.message ?? error
+              }`,
               flags: MessageFlags.Ephemeral,
             });
           }
@@ -229,7 +231,7 @@ async function buildShopPanel(
       },
       {
         type: 14,
-        divider: true,
+        divider: false,
         spacing: 2,
       },
     ],
@@ -277,13 +279,13 @@ async function buildShopPanel(
     container.components.push({
       type: 10,
       content: `${label}\n\n${
-        item.description || undefined
+        item.description || null
       }${statsInfo}\n\nPrecio: ${price}${stockInfo}`,
     });
 
     container.components.push({
       type: 14,
-      divider: true,
+      divider: false,
       spacing: 1,
     });
   }
@@ -308,7 +310,7 @@ async function buildShopPanel(
 
     const stockText =
       offer.stock != null ? ` (${offer.stock} disponibles)` : "";
-    const selectedMark = isSelected ? " ✓" : "";
+    const selectedMark = isSelected ? " <a:Sparkles:1321196183133098056>" : "";
 
     container.components.push({
       type: 9,
