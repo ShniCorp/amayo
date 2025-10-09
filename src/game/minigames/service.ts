@@ -1,4 +1,7 @@
-import { applyDeathFatigue } from "../combat/statusEffectsService";
+import {
+  applyDeathFatigue,
+  getActiveStatusEffects,
+} from "../combat/statusEffectsService";
 import { getOrCreateWallet } from "../economy/service";
 import { prisma } from "../../core/database/prisma";
 import {
@@ -201,19 +204,42 @@ async function applyRewards(
   userId: string,
   guildId: string,
   rewards?: RewardsTable
-): Promise<RunResult["rewards"]> {
+): Promise<{
+  rewards: RunResult["rewards"];
+  modifiers?: RunResult["rewardModifiers"];
+}> {
   const results: RunResult["rewards"] = [];
   if (!rewards || !Array.isArray(rewards.table) || rewards.table.length === 0)
-    return results;
+    return { rewards: results };
+
+  // Detectar efecto FATIGUE activo para penalizar SOLO monedas.
+  let fatigueMagnitude: number | undefined;
+  try {
+    const effects = await getActiveStatusEffects(userId, guildId);
+    const fatigue = effects.find((e) => e.type === "FATIGUE");
+    if (fatigue && typeof fatigue.magnitude === "number") {
+      fatigueMagnitude = Math.max(0, Math.min(0.9, fatigue.magnitude));
+    }
+  } catch {
+    // silencioso
+  }
+  const coinMultiplier = fatigueMagnitude
+    ? Math.max(0, 1 - fatigueMagnitude)
+    : 1;
+
   const draws = Math.max(1, rewards.draws ?? 1);
   for (let i = 0; i < draws; i++) {
     const pick = pickWeighted(rewards.table);
     if (!pick) continue;
     if (pick.type === "coins") {
-      const amt = Math.max(0, pick.amount);
-      if (amt > 0) {
-        await adjustCoins(userId, guildId, amt);
-        results.push({ type: "coins", amount: amt });
+      const baseAmt = Math.max(0, pick.amount);
+      if (baseAmt > 0) {
+        const adjusted = Math.max(0, Math.floor(baseAmt * coinMultiplier));
+        const finalAmt = coinMultiplier < 1 && adjusted === 0 ? 1 : adjusted; // al menos 1 si había algo base
+        if (finalAmt > 0) {
+          await adjustCoins(userId, guildId, finalAmt);
+          results.push({ type: "coins", amount: finalAmt });
+        }
       }
     } else if (pick.type === "item") {
       const qty = Math.max(1, pick.qty);
@@ -221,7 +247,11 @@ async function applyRewards(
       results.push({ type: "item", itemKey: pick.itemKey, qty });
     }
   }
-  return results;
+  const modifiers =
+    coinMultiplier < 1
+      ? { fatigueCoinMultiplier: coinMultiplier, fatigueMagnitude }
+      : undefined;
+  return { rewards: results, modifiers };
 }
 
 async function sampleMobs(mobs?: MobsTable): Promise<string[]> {
@@ -381,7 +411,11 @@ export async function runMinigame(
   );
 
   // Aplicar recompensas y samplear mobs
-  const delivered = await applyRewards(userId, guildId, rewards);
+  const { rewards: delivered, modifiers: rewardModifiers } = await applyRewards(
+    userId,
+    guildId,
+    rewards
+  );
   const mobsSpawned = await sampleMobs(mobs);
 
   // Reducir durabilidad de herramienta si se usó
@@ -729,6 +763,7 @@ export async function runMinigame(
     mobs: mobsSpawned,
     tool: toolInfo,
     combat: combatSummary,
+    rewardModifiers,
     notes: "auto",
   } as unknown as Prisma.InputJsonValue;
 
@@ -776,6 +811,7 @@ export async function runMinigame(
     mobs: mobsSpawned,
     tool: toolInfo,
     combat: combatSummary,
+    rewardModifiers,
   };
 }
 

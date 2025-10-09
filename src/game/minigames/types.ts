@@ -62,6 +62,11 @@ export type RunResult = {
     toolSource?: "provided" | "equipped" | "auto"; // origen de la selección
   };
   combat?: CombatSummary; // resumen de combate si hubo mobs y se procesó
+  // Modificadores aplicados a las recompensas (ej: penalización por FATIGUE sobre monedas)
+  rewardModifiers?: {
+    fatigueCoinMultiplier?: number; // 0.85 si hay -15%
+    fatigueMagnitude?: number; // magnitud original del efecto
+  };
 };
 
 // --- Combate Básico ---

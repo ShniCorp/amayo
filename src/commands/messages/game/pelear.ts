@@ -101,7 +101,7 @@ export const command: CommandMessage = {
         "fight_count"
       );
 
-      const rewardLines = result.rewards.length
+      let rewardLines = result.rewards.length
         ? result.rewards
             .map((r) => {
               if (r.type === "coins") return `• 🪙 +${r.amount}`;
@@ -113,6 +113,15 @@ export const command: CommandMessage = {
             })
             .join("\n")
         : "• —";
+      if (
+        result.rewardModifiers?.fatigueCoinMultiplier != null &&
+        result.rewardModifiers.fatigueCoinMultiplier < 1
+      ) {
+        const pct = Math.round(
+          (1 - result.rewardModifiers.fatigueCoinMultiplier) * 100
+        );
+        rewardLines += `\n  (⚠️ Fatiga -${pct}% monedas)`;
+      }
       const mobsLines = result.mobs.length
         ? result.mobs.map((m) => `• ${m}`).join("\n")
         : "• —";
