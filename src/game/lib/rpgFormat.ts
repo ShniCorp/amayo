@@ -82,12 +82,18 @@ export function combatSummaryRPG(c: {
   playerEndHp?: number | null;
   outcome?: "victory" | "defeat";
   maxRefHp?: number; // para cálculo visual si difiere
+  autoDefeatNoWeapon?: boolean;
 }) {
   const header = `**Combate (${outcomeLabel(c.outcome)})**`;
   const lines = [
     `• Mobs: ${c.mobs} | Derrotados: ${c.mobsDefeated}/${c.mobs}`,
     `• Daño hecho: ${c.totalDamageDealt} | Daño recibido: ${c.totalDamageTaken}`,
   ];
+  if (c.autoDefeatNoWeapon) {
+    lines.push(
+      `• Derrota automática: no tenías arma equipada o válida (daño 0). Equipa un arma para poder atacar.`
+    );
+  }
   if (c.playerStartHp != null && c.playerEndHp != null) {
     const maxHp = c.maxRefHp || Math.max(c.playerStartHp, c.playerEndHp);
     lines.push(

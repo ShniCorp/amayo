@@ -1,4 +1,8 @@
 import { prisma } from "../../core/database/prisma";
+import {
+  getActiveStatusEffects,
+  computeDerivedModifiers,
+} from "./statusEffectsService";
 import type { ItemProps } from "../economy/types";
 import { ensureUserAndGuildExist } from "../core/userService";
 
@@ -129,6 +133,24 @@ export async function getEffectiveStats(
     }
   } catch {
     // silencioso: si falla stats no bloquea
+  }
+  // Aplicar efectos de estado activos (FATIGUE etc.)
+  try {
+    const effects = await getActiveStatusEffects(userId, guildId);
+    if (effects.length) {
+      const { damageMultiplier, defenseMultiplier } = computeDerivedModifiers(
+        effects.map((e) => ({ type: e.type, magnitude: e.magnitude }))
+      );
+      damage = Math.max(0, Math.round(damage * damageMultiplier));
+      // defensa se recalcula localmente (no mutamos const original para claridad)
+      const adjustedDefense = Math.max(
+        0,
+        Math.round(defense * defenseMultiplier)
+      );
+      return { damage, defense: adjustedDefense, maxHp, hp };
+    }
+  } catch {
+    // silencioso
   }
   return { damage, defense, maxHp, hp };
 }

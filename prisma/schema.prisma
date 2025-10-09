@@ -9,12 +9,10 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("XATA_DB")
+  provider          = "postgresql"
+  url               = env("XATA_DB")
   shadowDatabaseUrl = env("XATA_SHADOW_DB")
 }
-
-
 
 /**
  * -----------------------------------------------------------------------------
@@ -57,13 +55,14 @@ model Guild {
   ScheduledMobAttack ScheduledMobAttack[]
 
   // Nuevas relaciones para sistemas de engagement
-  Achievement       Achievement[]
-  PlayerAchievement PlayerAchievement[]
-  Quest             Quest[]
-  QuestProgress     QuestProgress[]
-  PlayerStats       PlayerStats[]
-  PlayerStreak      PlayerStreak[]
-  AuditLog          AuditLog[]
+  Achievement        Achievement[]
+  PlayerAchievement  PlayerAchievement[]
+  Quest              Quest[]
+  QuestProgress      QuestProgress[]
+  PlayerStats        PlayerStats[]
+  PlayerStreak       PlayerStreak[]
+  AuditLog           AuditLog[]
+  PlayerStatusEffect PlayerStatusEffect[]
 }
 
 /**
@@ -94,11 +93,12 @@ model User {
   ScheduledMobAttack ScheduledMobAttack[]
 
   // Nuevas relaciones para sistemas de engagement
-  PlayerAchievement PlayerAchievement[]
-  QuestProgress     QuestProgress[]
-  PlayerStats       PlayerStats[]
-  PlayerStreak      PlayerStreak[]
-  AuditLog          AuditLog[]
+  PlayerAchievement  PlayerAchievement[]
+  QuestProgress      QuestProgress[]
+  PlayerStats        PlayerStats[]
+  PlayerStreak       PlayerStreak[]
+  AuditLog           AuditLog[]
+  PlayerStatusEffect PlayerStatusEffect[]
 }
 
 /**
@@ -769,27 +769,27 @@ model ScheduledMobAttack {
  * -----------------------------------------------------------------------------
  */
 model Achievement {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   key         String
   name        String
   description String
   icon        String?
-  category    String   // "mining", "crafting", "combat", "economy", "exploration"
+  category    String // "mining", "crafting", "combat", "economy", "exploration"
 
   // Requisitos para desbloquear (JSON flexible)
-  requirements Json    // { type: "mine_count", value: 100 }
+  requirements Json // { type: "mine_count", value: 100 }
 
   // Recompensas al desbloquear
-  rewards      Json?   // { coins: 500, items: [...], title: "..." }
+  rewards Json? // { coins: 500, items: [...], title: "..." }
 
-  guildId      String?
-  guild        Guild?  @relation(fields: [guildId], references: [id])
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
 
   // Logros desbloqueados por usuarios
-  unlocked     PlayerAchievement[]
+  unlocked PlayerAchievement[]
 
-  hidden       Boolean @default(false) // logros secretos
-  points       Int     @default(10)    // puntos que otorga el logro
+  hidden Boolean @default(false) // logros secretos
+  points Int     @default(10) // puntos que otorga el logro
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -799,7 +799,7 @@ model Achievement {
 }
 
 model PlayerAchievement {
-  id            String   @id @default(cuid())
+  id            String @id @default(cuid())
   userId        String
   guildId       String
   achievementId String
@@ -808,10 +808,10 @@ model PlayerAchievement {
   guild       Guild       @relation(fields: [guildId], references: [id])
   achievement Achievement @relation(fields: [achievementId], references: [id])
 
-  progress    Int      @default(0)    // progreso actual hacia el logro
-  unlockedAt  DateTime?               // null si aún no está desbloqueado
-  notified    Boolean  @default(false) // si ya se notificó al usuario
-  metadata    Json?
+  progress   Int       @default(0) // progreso actual hacia el logro
+  unlockedAt DateTime? // null si aún no está desbloqueado
+  notified   Boolean   @default(false) // si ya se notificó al usuario
+  metadata   Json?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -826,33 +826,33 @@ model PlayerAchievement {
  * -----------------------------------------------------------------------------
  */
 model Quest {
-  id          String   @id @default(cuid())
+  id          String  @id @default(cuid())
   key         String
   name        String
   description String
   icon        String?
 
   // Tipo de misión
-  type        String   // "daily", "weekly", "event", "permanent"
-  category    String   // "mining", "combat", "economy", "exploration"
+  type     String // "daily", "weekly", "event", "permanent"
+  category String // "mining", "combat", "economy", "exploration"
 
   // Requisitos
-  requirements Json    // { type: "mine", count: 10 }
+  requirements Json // { type: "mine", count: 10 }
 
   // Recompensas
-  rewards      Json    // { coins: 500, items: [...], xp: 100 }
+  rewards Json // { coins: 500, items: [...], xp: 100 }
 
   // Disponibilidad
-  startAt     DateTime?
-  endAt       DateTime?
+  startAt DateTime?
+  endAt   DateTime?
 
-  guildId     String?
-  guild       Guild?   @relation(fields: [guildId], references: [id])
+  guildId String?
+  guild   Guild?  @relation(fields: [guildId], references: [id])
 
-  progress    QuestProgress[]
+  progress QuestProgress[]
 
-  active      Boolean  @default(true)
-  repeatable  Boolean  @default(false) // si se puede repetir después de completar
+  active     Boolean @default(true)
+  repeatable Boolean @default(false) // si se puede repetir después de completar
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -863,18 +863,18 @@ model Quest {
 }
 
 model QuestProgress {
-  id       String @id @default(cuid())
-  userId   String
-  guildId  String
-  questId  String
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
+  questId String
 
-  progress   Int     @default(0) // progreso actual
-  completed  Boolean @default(false)
-  claimed    Boolean @default(false) // si ya reclamó recompensa
+  progress  Int     @default(0) // progreso actual
+  completed Boolean @default(false)
+  claimed   Boolean @default(false) // si ya reclamó recompensa
 
-  user   User  @relation(fields: [userId], references: [id])
-  guild  Guild @relation(fields: [guildId], references: [id])
-  quest  Quest @relation(fields: [questId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+  quest Quest @relation(fields: [questId], references: [id])
 
   completedAt DateTime?
   claimedAt   DateTime?
@@ -900,34 +900,34 @@ model PlayerStats {
   guildId String
 
   // Stats de minijuegos
-  minesCompleted      Int @default(0)
-  fishingCompleted    Int @default(0)
-  fightsCompleted     Int @default(0)
-  farmsCompleted      Int @default(0)
+  minesCompleted   Int @default(0)
+  fishingCompleted Int @default(0)
+  fightsCompleted  Int @default(0)
+  farmsCompleted   Int @default(0)
 
   // Stats de combate
-  mobsDefeated        Int @default(0)
-  damageDealt         Int @default(0)
-  damageTaken         Int @default(0)
-  timesDefeated       Int @default(0)
+  mobsDefeated  Int @default(0)
+  damageDealt   Int @default(0)
+  damageTaken   Int @default(0)
+  timesDefeated Int @default(0)
 
   // Stats de economía
-  totalCoinsEarned    Int @default(0)
-  totalCoinsSpent     Int @default(0)
-  itemsCrafted        Int @default(0)
-  itemsSmelted        Int @default(0)
-  itemsPurchased      Int @default(0)
+  totalCoinsEarned Int @default(0)
+  totalCoinsSpent  Int @default(0)
+  itemsCrafted     Int @default(0)
+  itemsSmelted     Int @default(0)
+  itemsPurchased   Int @default(0)
 
   // Stats de items
-  chestsOpened        Int @default(0)
-  itemsConsumed       Int @default(0)
-  itemsEquipped       Int @default(0)
+  chestsOpened  Int @default(0)
+  itemsConsumed Int @default(0)
+  itemsEquipped Int @default(0)
 
   // Récords personales
-  highestDamageDealt  Int @default(0)
-  longestWinStreak    Int @default(0)
-  currentWinStreak    Int @default(0)
-  mostCoinsAtOnce     Int @default(0)
+  highestDamageDealt Int @default(0)
+  longestWinStreak   Int @default(0)
+  currentWinStreak   Int @default(0)
+  mostCoinsAtOnce    Int @default(0)
 
   user  User  @relation(fields: [userId], references: [id])
   guild Guild @relation(fields: [guildId], references: [id])
@@ -941,21 +941,52 @@ model PlayerStats {
 
 /**
  * -----------------------------------------------------------------------------
+ * Efectos de Estado del Jugador (Status Effects)
+ * -----------------------------------------------------------------------------
+ * Almacena efectos temporales como FATIGUE (reduce daño/defensa), BLEED, BUFFS, etc.
+ * type: clave tipo string flexible (ej: "FATIGUE", "BLESSING", "POISON")
+ * stacking: se puede permitir múltiples efectos del mismo tipo si cambias la unique compuesta.
+ */
+model PlayerStatusEffect {
+  id        String    @id @default(cuid())
+  userId    String
+  guildId   String
+  type      String
+  // magnitud genérica (ej: 0.15 para 15%); interpretación depende del tipo
+  magnitude Float     @default(0)
+  // duración controlada por expiresAt; si null = permanente hasta eliminación manual
+  expiresAt DateTime?
+  data      Json?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
+
+  // Un efecto único por tipo (puedes quitar esta línea si quieres stackeables):
+  @@unique([userId, guildId, type])
+  @@index([userId, guildId])
+  @@index([guildId])
+  @@index([expiresAt])
+}
+
+/**
+ * -----------------------------------------------------------------------------
  * Sistema de Rachas (Streaks)
  * -----------------------------------------------------------------------------
  */
 model PlayerStreak {
-  id       String @id @default(cuid())
-  userId   String
-  guildId  String
+  id      String @id @default(cuid())
+  userId  String
+  guildId String
 
-  currentStreak      Int      @default(0)
-  longestStreak      Int      @default(0)
-  lastActiveDate     DateTime @default(now())
-  totalDaysActive    Int      @default(0)
+  currentStreak   Int      @default(0)
+  longestStreak   Int      @default(0)
+  lastActiveDate  DateTime @default(now())
+  totalDaysActive Int      @default(0)
 
   // Recompensas reclamadas por día
-  rewardsClaimed     Json?    // { day3: true, day7: true, etc }
+  rewardsClaimed Json? // { day3: true, day7: true, etc }
 
   user  User  @relation(fields: [userId], references: [id])
   guild Guild @relation(fields: [guildId], references: [id])
@@ -973,15 +1004,15 @@ model PlayerStreak {
  * -----------------------------------------------------------------------------
  */
 model AuditLog {
-  id       String   @id @default(cuid())
-  userId   String
-  guildId  String
-  action   String   // "buy", "craft", "trade", "equip", "mine", "fight", etc.
-  target   String?  // ID del item/mob/área afectado
-  details  Json?    // detalles adicionales
+  id      String  @id @default(cuid())
+  userId  String
+  guildId String
+  action  String // "buy", "craft", "trade", "equip", "mine", "fight", etc.
+  target  String? // ID del item/mob/área afectado
+  details Json? // detalles adicionales
 
-  user   User   @relation(fields: [userId], references: [id])
-  guild  Guild  @relation(fields: [guildId], references: [id])
+  user  User  @relation(fields: [userId], references: [id])
+  guild Guild @relation(fields: [guildId], references: [id])
 
   createdAt DateTime @default(now())
 

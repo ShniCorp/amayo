@@ -387,130 +387,167 @@ export async function runMinigame(
     const eff = await getEffectiveStats(userId, guildId);
     const playerState = await ensurePlayerState(userId, guildId);
     const startHp = eff.hp; // HP actual persistente
-    let currentHp = startHp;
-    const mobLogs: CombatSummary["mobs"] = [];
-    let totalDealt = 0;
-    let totalTaken = 0;
-    let totalMobsDefeated = 0;
-    // Variación de ±20%
-    const variance = (base: number) => {
-      const factor = 0.8 + Math.random() * 0.4; // 0.8 - 1.2
-      return base * factor;
-    };
-    for (const mobKey of mobsSpawned) {
-      if (currentHp <= 0) break; // jugador derrotado antes de iniciar este mob
-      // Stats simples del mob (placeholder mejorable con tabla real)
-      const mobBaseHp = 10 + Math.floor(Math.random() * 6); // 10-15
-      let mobHp = mobBaseHp;
-      const rounds: any[] = [];
-      let round = 1;
-      let mobDamageDealt = 0; // daño que jugador hace a este mob
-      let mobDamageTakenFromMob = 0; // daño que jugador recibe de este mob
-      while (mobHp > 0 && currentHp > 0 && round <= 12) {
-        // Daño jugador -> mob
-        const playerRaw = variance(eff.damage || 1) + 1; // asegurar >=1
-        const playerDamage = Math.max(1, Math.round(playerRaw));
-        mobHp -= playerDamage;
-        mobDamageDealt += playerDamage;
-        totalDealt += playerDamage;
-        let playerTaken = 0;
-        if (mobHp > 0) {
-          const mobAtkBase = 3 + Math.random() * 4; // 3-7
-          const mobAtk = variance(mobAtkBase);
-          // Mitigación por defensa => defensa reduce linealmente hasta 60% cap
-          const mitigationRatio = Math.min(0.6, (eff.defense || 0) * 0.05); // 5% por punto defensa hasta 60%
-          const mitigated = mobAtk * (1 - mitigationRatio);
-          playerTaken = Math.max(0, Math.round(mitigated));
-          if (playerTaken > 0) {
-            currentHp = Math.max(0, currentHp - playerTaken);
-            mobDamageTakenFromMob += playerTaken;
-            totalTaken += playerTaken;
-          }
-        }
-        rounds.push({
-          mobKey,
-          round,
-          playerDamageDealt: playerDamage,
-          playerDamageTaken: playerTaken,
-          mobRemainingHp: Math.max(0, mobHp),
-          mobDefeated: mobHp <= 0,
-        });
-        if (mobHp <= 0) {
-          totalMobsDefeated++;
-          break;
-        }
-        if (currentHp <= 0) break;
-        round++;
-      }
-      mobLogs.push({
-        mobKey,
-        maxHp: mobBaseHp,
-        defeated: mobHp <= 0,
-        totalDamageDealt: mobDamageDealt,
-        totalDamageTakenFromMob: mobDamageTakenFromMob,
-        rounds,
-      });
-      if (currentHp <= 0) break; // fin combate global
-    }
-    const victory = currentHp > 0 && totalMobsDefeated === mobsSpawned.length;
-    // Persistir HP (si derrota -> regenerar al 50% del maxHp, regla confirmada por usuario)
-    let endHp = currentHp;
-    let defeatedNow = false;
-    if (currentHp <= 0) {
-      defeatedNow = true;
-      const regen = Math.max(1, Math.floor(eff.maxHp * 0.5));
-      endHp = regen;
-      await adjustHP(userId, guildId, regen - playerState.hp); // set a 50% (delta relativo)
-    } else {
-      // almacenar HP restante real
-      await adjustHP(userId, guildId, currentHp - playerState.hp);
-    }
-    // Actualizar estadísticas
-    const statUpdates: Record<string, number> = {};
-    if (area.key.startsWith("mine")) statUpdates.minesCompleted = 1;
-    if (area.key.startsWith("lagoon")) statUpdates.fishingCompleted = 1;
-    if (
-      area.key.startsWith("arena") ||
-      area.key.startsWith("battle") ||
-      area.key.includes("fight")
-    )
-      statUpdates.fightsCompleted = 1;
-    if (totalMobsDefeated > 0) statUpdates.mobsDefeated = totalMobsDefeated;
-    if (totalDealt > 0) statUpdates.damageDealt = totalDealt;
-    if (totalTaken > 0) statUpdates.damageTaken = totalTaken;
-    if (defeatedNow) statUpdates.timesDefeated = 1;
-    // Rachas de victoria
-    if (victory) {
-      statUpdates.currentWinStreak = 1; // increment
-    } else if (defeatedNow) {
-      // reset current streak
-      // No podemos hacer decrement directo, así que setearemos manual luego
-    }
-    await updateStats(userId, guildId, statUpdates as any);
-    if (defeatedNow) {
-      // reset de racha: update directo
+    // Regla: si el jugador no tiene arma (damage <=0) no puede infligir daño real y perderá automáticamente contra cualquier mob.
+    // En lugar de simular rondas irreales con daño mínimo artificial, forzamos derrota directa manteniendo coherencia.
+    if (!eff.damage || eff.damage <= 0) {
+      // Registrar derrota simple contra la lista de mobs (no se derrotan mobs).
+      const mobLogs: CombatSummary["mobs"] = mobsSpawned.map((mk) => ({
+        mobKey: mk,
+        maxHp: 0,
+        defeated: false,
+        totalDamageDealt: 0,
+        totalDamageTakenFromMob: 0,
+        rounds: [],
+      }));
+      // Aplicar daño simulado: mobs atacan una vez (opcional). Aquí asumimos que el jugador cae a 0 directamente para simplificar.
+      const endHp = Math.max(1, Math.floor(eff.maxHp * 0.5));
+      await adjustHP(userId, guildId, endHp - playerState.hp); // regen al 50%
+      await updateStats(userId, guildId, {
+        damageTaken: 0, // opcional: podría ponerse un valor fijo si quieres penalizar
+        timesDefeated: 1,
+      } as any);
+      // Reset de racha si existía
       await prisma.playerStats.update({
         where: { userId_guildId: { userId, guildId } },
         data: { currentWinStreak: 0 },
       });
-    } else if (victory) {
-      // posible actualización de longestWinStreak si superada ya la maneja updateStats parcialmente; reforzar
-      await prisma.$executeRawUnsafe(
-        `UPDATE "PlayerStats" SET "longestWinStreak" = GREATEST("longestWinStreak", "currentWinStreak") WHERE "userId" = $1 AND "guildId" = $2`,
-        userId,
-        guildId
-      );
+      combatSummary = {
+        mobs: mobLogs,
+        totalDamageDealt: 0,
+        totalDamageTaken: 0,
+        mobsDefeated: 0,
+        victory: false,
+        playerStartHp: startHp,
+        playerEndHp: endHp,
+        outcome: "defeat",
+        autoDefeatNoWeapon: true,
+      };
+    } else {
+      let currentHp = startHp;
+      const mobLogs: CombatSummary["mobs"] = [];
+      let totalDealt = 0;
+      let totalTaken = 0;
+      let totalMobsDefeated = 0;
+      // Variación de ±20%
+      const variance = (base: number) => {
+        const factor = 0.8 + Math.random() * 0.4; // 0.8 - 1.2
+        return base * factor;
+      };
+      for (const mobKey of mobsSpawned) {
+        if (currentHp <= 0) break; // jugador derrotado antes de iniciar este mob
+        // Stats simples del mob (placeholder mejorable con tabla real)
+        const mobBaseHp = 10 + Math.floor(Math.random() * 6); // 10-15
+        let mobHp = mobBaseHp;
+        const rounds: any[] = [];
+        let round = 1;
+        let mobDamageDealt = 0; // daño que jugador hace a este mob
+        let mobDamageTakenFromMob = 0; // daño que jugador recibe de este mob
+        while (mobHp > 0 && currentHp > 0 && round <= 12) {
+          // Daño jugador -> mob
+          const playerRaw = variance(eff.damage || 1) + 1; // asegurar >=1
+          const playerDamage = Math.max(1, Math.round(playerRaw));
+          mobHp -= playerDamage;
+          mobDamageDealt += playerDamage;
+          totalDealt += playerDamage;
+          let playerTaken = 0;
+          if (mobHp > 0) {
+            const mobAtkBase = 3 + Math.random() * 4; // 3-7
+            const mobAtk = variance(mobAtkBase);
+            // Mitigación por defensa => defensa reduce linealmente hasta 60% cap
+            const mitigationRatio = Math.min(0.6, (eff.defense || 0) * 0.05); // 5% por punto defensa hasta 60%
+            const mitigated = mobAtk * (1 - mitigationRatio);
+            playerTaken = Math.max(0, Math.round(mitigated));
+            if (playerTaken > 0) {
+              currentHp = Math.max(0, currentHp - playerTaken);
+              mobDamageTakenFromMob += playerTaken;
+              totalTaken += playerTaken;
+            }
+          }
+          rounds.push({
+            mobKey,
+            round,
+            playerDamageDealt: playerDamage,
+            playerDamageTaken: playerTaken,
+            mobRemainingHp: Math.max(0, mobHp),
+            mobDefeated: mobHp <= 0,
+          });
+          if (mobHp <= 0) {
+            totalMobsDefeated++;
+            break;
+          }
+          if (currentHp <= 0) break;
+          round++;
+        }
+        mobLogs.push({
+          mobKey,
+          maxHp: mobBaseHp,
+          defeated: mobHp <= 0,
+          totalDamageDealt: mobDamageDealt,
+          totalDamageTakenFromMob: mobDamageTakenFromMob,
+          rounds,
+        });
+        if (currentHp <= 0) break; // fin combate global
+      }
+      const victory = currentHp > 0 && totalMobsDefeated === mobsSpawned.length;
+      // Persistir HP (si derrota -> regenerar al 50% del maxHp, regla confirmada por usuario)
+      let endHp = currentHp;
+      let defeatedNow = false;
+      if (currentHp <= 0) {
+        defeatedNow = true;
+        const regen = Math.max(1, Math.floor(eff.maxHp * 0.5));
+        endHp = regen;
+        await adjustHP(userId, guildId, regen - playerState.hp); // set a 50% (delta relativo)
+      } else {
+        // almacenar HP restante real
+        await adjustHP(userId, guildId, currentHp - playerState.hp);
+      }
+      // Actualizar estadísticas
+      const statUpdates: Record<string, number> = {};
+      if (area.key.startsWith("mine")) statUpdates.minesCompleted = 1;
+      if (area.key.startsWith("lagoon")) statUpdates.fishingCompleted = 1;
+      if (
+        area.key.startsWith("arena") ||
+        area.key.startsWith("battle") ||
+        area.key.includes("fight")
+      )
+        statUpdates.fightsCompleted = 1;
+      if (totalMobsDefeated > 0) statUpdates.mobsDefeated = totalMobsDefeated;
+      if (totalDealt > 0) statUpdates.damageDealt = totalDealt;
+      if (totalTaken > 0) statUpdates.damageTaken = totalTaken;
+      if (defeatedNow) statUpdates.timesDefeated = 1;
+      // Rachas de victoria
+      if (victory) {
+        statUpdates.currentWinStreak = 1; // increment
+      } else if (defeatedNow) {
+        // reset current streak
+        // No podemos hacer decrement directo, así que setearemos manual luego
+      }
+      await updateStats(userId, guildId, statUpdates as any);
+      if (defeatedNow) {
+        // reset de racha: update directo
+        await prisma.playerStats.update({
+          where: { userId_guildId: { userId, guildId } },
+          data: { currentWinStreak: 0 },
+        });
+      } else if (victory) {
+        // posible actualización de longestWinStreak si superada ya la maneja updateStats parcialmente; reforzar
+        await prisma.$executeRawUnsafe(
+          `UPDATE "PlayerStats" SET "longestWinStreak" = GREATEST("longestWinStreak", "currentWinStreak") WHERE "userId" = $1 AND "guildId" = $2`,
+          userId,
+          guildId
+        );
+      }
+      combatSummary = {
+        mobs: mobLogs,
+        totalDamageDealt: totalDealt,
+        totalDamageTaken: totalTaken,
+        mobsDefeated: totalMobsDefeated,
+        victory,
+        playerStartHp: startHp,
+        playerEndHp: endHp,
+        outcome: victory ? "victory" : "defeat",
+      };
     }
-    combatSummary = {
-      mobs: mobLogs,
-      totalDamageDealt: totalDealt,
-      totalDamageTaken: totalTaken,
-      mobsDefeated: totalMobsDefeated,
-      victory,
-      playerStartHp: startHp,
-      playerEndHp: endHp,
-      outcome: victory ? "victory" : "defeat",
-    };
   }
 
   // Registrar la ejecución
