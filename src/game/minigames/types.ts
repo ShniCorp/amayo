@@ -66,6 +66,8 @@ export type RunResult = {
   rewardModifiers?: {
     fatigueCoinMultiplier?: number; // 0.85 si hay -15%
     fatigueMagnitude?: number; // magnitud original del efecto
+    baseCoinsAwarded?: number; // suma antes de aplicar multiplicador de fatiga
+    coinsAfterPenalty?: number; // suma final depositada en wallet
   };
 };
 

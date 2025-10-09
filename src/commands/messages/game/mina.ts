@@ -103,14 +103,18 @@ export const command: CommandMessage = {
             })
             .join("\n")
         : "• —";
-      if (
-        result.rewardModifiers?.fatigueCoinMultiplier != null &&
-        result.rewardModifiers.fatigueCoinMultiplier < 1
-      ) {
-        const pct = Math.round(
-          (1 - result.rewardModifiers.fatigueCoinMultiplier) * 100
-        );
-        rewardLines += `\n  (⚠️ Fatiga -${pct}% monedas)`;
+      if (result.rewardModifiers?.baseCoinsAwarded != null) {
+        const { baseCoinsAwarded, coinsAfterPenalty, fatigueCoinMultiplier } =
+          result.rewardModifiers;
+        if (
+          fatigueCoinMultiplier != null &&
+          fatigueCoinMultiplier < 1 &&
+          baseCoinsAwarded != null &&
+          coinsAfterPenalty != null
+        ) {
+          const pct = Math.round((1 - fatigueCoinMultiplier) * 100);
+          rewardLines += `\n  (⚠️ Fatiga: monedas base ${baseCoinsAwarded} → ${coinsAfterPenalty} (-${pct}%) )`;
+        }
       }
       const mobsLines = result.mobs.length
         ? result.mobs.map((m) => `• ${m}`).join("\n")
