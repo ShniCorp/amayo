@@ -145,7 +145,7 @@ export const command: CommandMessage = {
       // Añadir metadata del área (imagen/descripcion) si existe
       const metaBlocks = buildAreaMetadataBlocks(area);
       if (metaBlocks.length) {
-        blocks.push(dividerBlock());
+        blocks.push(dividerBlock({ divider: false, spacing: 1 }));
         blocks.push(...metaBlocks);
       }
 

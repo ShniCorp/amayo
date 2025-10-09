@@ -33,14 +33,14 @@ export const command: CommandMessage = {
         textBlock(
           `## <a:0fire:1425690572945100860> Racha diaria de ${message.author.username}`
         ),
-        dividerBlock(),
+        dividerBlock({ divider: false, spacing: 1 }),
         textBlock(
           `**<:stats:1425689271788113991> ESTADÍSTICAS**\n` +
             `<a:0fire:1425690572945100860> Racha Actual: **${streak.currentStreak}** días\n` +
             `<a:bluestargif:1425691124214927452> Mejor Racha: **${streak.longestStreak}** días\n` +
             `<:events:1425691310194561106> Días Activos: **${streak.totalDaysActive}** días`
         ),
-        dividerBlock({ spacing: 1 }),
+        dividerBlock({ spacing: 1, divider: false }),
       ];
 
       // Mensaje de estado
