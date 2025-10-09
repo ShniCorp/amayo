@@ -462,9 +462,12 @@ export async function runMinigame(
     const eff = await getEffectiveStats(userId, guildId);
     const playerState = await ensurePlayerState(userId, guildId);
     const startHp = eff.hp; // HP actual persistente
-    // Regla: si el jugador no tiene arma (damage <=0) no puede infligir daño real y perderá automáticamente contra cualquier mob.
-    // En lugar de simular rondas irreales con daño mínimo artificial, forzamos derrota directa manteniendo coherencia.
-    if (!eff.damage || eff.damage <= 0) {
+
+    // ⚠️ CRÍTICO: Validar que el jugador tenga arma equipada ANTES de iniciar combate
+    // Regla: si el jugador no tiene arma (damage <=0) no puede infligir daño real y perderá automáticamente.
+    const hasWeapon = eff.damage > 0;
+
+    if (!hasWeapon) {
       // Registrar derrota simple contra la lista de mobs (no se derrotan mobs).
       const mobLogs: CombatSummary["mobs"] = mobsSpawned.map((mk) => ({
         mobKey: mk,
