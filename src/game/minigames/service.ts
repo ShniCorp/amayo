@@ -451,7 +451,19 @@ export async function runMinigame(
             });
           }
         }
-        const fatigueMagnitude = 0.15;
+        // Fatiga escalada: base 15%, +1% cada 5 de racha previa (cap +10%)
+        let previousStreak = 0;
+        try {
+          const ps = await prisma.playerStats.findUnique({
+            where: { userId_guildId: { userId, guildId } },
+          });
+          previousStreak = ps?.currentWinStreak || 0;
+        } catch {}
+        const extraFatigue = Math.min(
+          0.1,
+          Math.floor(previousStreak / 5) * 0.01
+        );
+        const fatigueMagnitude = 0.15 + extraFatigue;
         const fatigueMinutes = 5;
         await applyDeathFatigue(
           userId,
@@ -632,7 +644,19 @@ export async function runMinigame(
               });
             }
           }
-          const fatigueMagnitude = 0.15;
+          // Fatiga escalada
+          let previousStreak = 0;
+          try {
+            const ps = await prisma.playerStats.findUnique({
+              where: { userId_guildId: { userId, guildId } },
+            });
+            previousStreak = ps?.currentWinStreak || 0;
+          } catch {}
+          const extraFatigue = Math.min(
+            0.1,
+            Math.floor(previousStreak / 5) * 0.01
+          );
+          const fatigueMagnitude = 0.15 + extraFatigue;
           const fatigueMinutes = 5;
           await applyDeathFatigue(
             userId,

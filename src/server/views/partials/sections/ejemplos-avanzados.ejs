@@ -51,5 +51,74 @@ Props (JSON): {"tool": {"type": "sword", "tier": 3}, "damage": 25}
 Props (JSON): {"damage": 45, "breakable": {"enabled": true, "maxDurability": 300}}
 Receta (modal): steel_sword_base:1, magic_dust:3, dragon_scale:1</pre>
     </div>
+
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">4) Área Avanzada con Riesgo y Mobs</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg"># Área con factor de riesgo (aumenta penalización oro al morir)
+!area-crear arena.blood_pit
+Config (JSON): {"cooldownSeconds": 90, "icon": "⚔️", "riskFactor": 3, "description": "La fosa sangrienta"}
+!area-nivel arena.blood_pit 1
+Requisitos (JSON): {"tool": {"required": true, "toolType": "sword", "minTier": 2}}
+Recompensas (JSON): {"draws": 2, "table": [
+  {"type": "coins", "amount": 120, "weight": 10},
+  {"type": "item",  "itemKey": "blood_shard", "qty": 1, "weight": 4}
+]}
+Mobs (JSON): {"draws": 2, "table": [
+  {"mobKey": "goblin", "weight": 8},
+  {"mobKey": "cave_spider", "weight": 5}
+]}</pre>
+    </div>
+
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">5) Ítem Poción de Purga Local</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg">!item-crear purge_potion
+Props (JSON): {"usable": true, "purgeAllEffects": true, "icon": "🧪"}
+# Se consume al usar: !efectos purgar
+# Para venderla: crear oferta o poner drop en cofre.</pre>
+    </div>
+
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">6) Introducción a Status Effects Manuales</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg"># (Opcional) Aplicar un efecto custom vía comando admin futuro
+# Ejemplo conceptual JSON (guardado server-side):
+{
+  "type": "BLESSING",
+  "magnitude": 0.10,   # +10% daño (interpretación futura)
+  "durationMs": 600000 # 10 min
+}
+# Los efectos actuales: FATIGUE (reduce daño y defensa)
+# Ver activos: !efectos</pre>
+    </div>
+
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">7) Auditoría de Muertes</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg"># Ver últimas muertes y penalizaciones
+!deathlog           # por defecto 10
+!deathlog 20        # máximo 20
+
+# Interpreta columnas
+# HH:MM:SS | areaKey Lnivel | -oro | % | Fatiga | sin arma?
+
+# Ajusta balance si ves pérdidas demasiado altas en cierto nivel/riskFactor.</pre>
+    </div>
+
+    <div class="space-y-2 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">8) Cadena Completa: Creación → Riesgo → Muerte</h3>
+      <pre class="text-indigo-200 text-sm whitespace-pre-wrap bg-slate-900/40 p-3 rounded-lg"># 1. Crear arma y área con riesgo
+!item-crear bone_sword
+Props (JSON): {"tool": {"type": "sword", "tier": 1}, "damage": 9, "breakable": {"enabled": true, "maxDurability": 80}}
+!area-crear arena.bone_trial
+Config (JSON): {"cooldownSeconds": 45, "riskFactor": 1, "icon": "🗡️"}
+!area-nivel arena.bone_trial 1
+Requisitos (JSON): {"tool": {"required": true, "toolType": "sword", "minTier": 1}}
+Mobs (JSON): {"draws":1, "table":[{"mobKey":"goblin","weight":10}]}
+
+# 2. Pelear varias veces para subir racha y ver bonus daño (!player)
+# 3. Morir intencionalmente con monedas => verifica !deathlog
+# 4. Aplicar purga de efectos si acumulaste FATIGUE
+!efectos purgar
+
+# Ajusta riskFactor o nivel si la penalización % es muy baja/alta.</pre>
+    </div>
   </div>
 </section>

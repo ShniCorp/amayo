@@ -1,6 +1,6 @@
 <section id="creacion-contenido" class="rounded-3xl bg-gradient-to-br from-red-900/20 to-orange-900/20 backdrop-blur-xl border border-red-500/30 p-8 shadow-2xl">
   <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-red-200 to-orange-200">🎨 Creación de Contenido</h2>
-  <p class="text-slate-100">Guía técnica paso a paso para crear <strong>items</strong>, <strong>áreas/niveles</strong>, <strong>mobs</strong> y <strong>ofertas</strong> directamente desde Discord. Requiere permiso <span class="font-mono">Manage Guild</span> o rol de staff.</p>
+  <p class="text-slate-100">Guía técnica paso a paso para crear <strong>items</strong>, <strong>áreas/niveles</strong>, <strong>mobs</strong>, <strong>ofertas</strong> y ahora <strong>componentes RPG avanzados</strong> (durabilidad por instancia, efectos de estado, penalizaciones de muerte, rachas, riskFactor de áreas). Requiere permiso <span class="font-mono">Manage Guild</span> o rol de staff.</p>
 
   <div class="grid gap-6 md:grid-cols-2">
     <div class="space-y-3 rounded-2xl border border-white/5 bg-black/20 p-5">
@@ -26,7 +26,15 @@ Ingredientes: iron_ingot:3, wood_plank:1
 4) Guardar → ✅ Item creado
 Prueba: !craftear iron_sword</pre>
       </div>
-      <p class="text-slate-300 text-sm">Usa <span class="font-mono">!item-editar</span>, <span class="font-mono">!item-ver</span>, <span class="font-mono">!items-lista</span> para gestionar.</p>
+      <p class="text-slate-300 text-sm">Usa <span class="font-mono">!item-editar</span>, <span class="font-mono">!item-ver</span>, <span class="font-mono">!items-lista</span>. Para herramientas NO apilables la durabilidad se gestiona por <em>instancias</em> dentro de <span class="font-mono">inventory.state.instances</span>.</p>
+      <div class="mt-3 bg-black/40 rounded-lg p-3 text-xs text-orange-100 space-y-2">
+        <div class="font-semibold">Novedades RPG (Items)</div>
+        <ul class="list-disc pl-5 space-y-1">
+          <li><strong>Durabilidad por instancia:</strong> si <span class="font-mono">stackable=false</span> y <span class="font-mono">breakable.enabled=true</span>, cada unidad es una instancia con su propia durabilidad.</li>
+          <li><strong>Mutaciones / Encantamientos:</strong> se reflejan sumando bonuses (damageBonus, defenseBonus, maxHpBonus).</li>
+          <li><strong>Ítem purga efectos:</strong> puedes crear tu propia poción local: <code>{ "usable": true, "purgeAllEffects": true }</code> y usarla con <span class="font-mono">!efectos purgar</span>.</li>
+        </ul>
+      </div>
     </div>
     <div class="space-y-3 rounded-2xl border border-white/5 bg-black/20 p-5">
       <h3 class="text-lg font-semibold text-white">🧭 Áreas y Niveles (MINE/LAGOON/FIGHT/FARM)</h3>
@@ -36,7 +44,8 @@ Prueba: !craftear iron_sword</pre>
 Config (JSON): {
   "cooldownSeconds": 60,
   "description": "Caverna rica en hierro",
-  "icon": "⛏️"
+  "icon": "⛏️",
+  "riskFactor": 2
 }
 Guardar → ✅ Área creada
 
@@ -64,6 +73,7 @@ Guardar → ✅ Nivel guardado</pre>
           <li><span class="font-mono">mobKey</span> o <span class="font-mono">itemKey</span> inexistente → crea primero o corrige la key</li>
           <li>Pesos mal balanceados → revisa <span class="font-mono">weight</span> (no negativos; no tienen que sumar 100)</li>
           <li>Herramienta requerida mal configurada → revisa <span class="font-mono">toolType</span> y <span class="font-mono">minTier</span></li>
+          <li><span class="font-mono">riskFactor</span> (0-3) afecta % de oro que pierdes al morir (escala hasta 25% total con nivel).</li>
         </ul>
       </div>
     </div>
@@ -87,6 +97,14 @@ Drops (JSON): {
 Guardar → ✅ Mob creado</pre>
       </div>
       <p class="text-slate-300 text-xs">Revisa con <span class="font-mono">!mobs-lista</span> y <span class="font-mono">!mob-eliminar &lt;key&gt;</span> si necesitas limpiar datos de prueba.</p>
+      <div class="mt-3 bg-black/40 rounded-lg p-3 text-xs text-orange-100 space-y-2">
+        <div class="font-semibold">Integración combate</div>
+        <ul class="list-disc pl-5 space-y-1">
+          <li>El daño del jugador usa arma + mutaciones + racha (1% cada 3 victorias, cap 30%).</li>
+          <li>Defensa reduce daño hasta 60% (5% por punto, cap).</li>
+          <li>Si daño efectivo = 0 → derrota automática (flag <span class="font-mono">autoDefeatNoWeapon</span>).</li>
+        </ul>
+      </div>
     </div>
     <div class="space-y-3 rounded-2xl border border-white/5 bg-black/20 p-5">
       <h3 class="text-lg font-semibold text-white">🛒 Ofertas de Tienda</h3>
@@ -110,6 +128,7 @@ Guardar → ✅ Oferta guardada</pre>
           <li><span class="font-mono">itemKey</span> no existe → crea el ítem primero</li>
           <li>Formato de precio inválido → respeta estructura de <span class="font-mono">coins</span> e <span class="font-mono">items</span></li>
           <li>Ventana inválida → usa fechas ISO: <span class="font-mono">YYYY-MM-DDTHH:MM:SSZ</span></li>
+          <li>Para vender una poción de purga local crea un ítem consumible y ofrece en la tienda.</li>
         </ul>
       </div>
     </div>
@@ -120,7 +139,18 @@ Guardar → ✅ Oferta guardada</pre>
     <ul class="list-disc pl-5 space-y-1">
       <li>Usa keys en minúsculas y sin espacios (únicas por servidor).</li>
       <li>Guarda plantillas de Props JSON para acelerar creación.</li>
-      <li>Prueba inmediatamente tras crear: <span class="font-mono">!craftear</span>, <span class="font-mono">!abrir</span>, <span class="font-mono">!equipar</span>.</li>
+      <li>Prueba tras crear: <span class="font-mono">!craftear</span>, <span class="font-mono">!abrir</span>, <span class="font-mono">!equipar</span>, <span class="font-mono">!efectos</span>, <span class="font-mono">!deathlog</span>.</li>
+      <li>Si ajustas valores de riesgo o nivel alto prueba la pérdida real (usa un alt) para validar balance.</li>
+      <li>Consulta auditoría de muertes: <span class="font-mono">!deathlog</span> para detectar abusos o mal balance.</li>
     </ul>
+    <div class="mt-4 bg-black/30 p-3 rounded-lg text-xs space-y-1">
+      <div class="font-semibold">Resumen rápido nuevas claves JSON</div>
+      <code class="block">area.config.riskFactor: 0-3 (aumenta % oro perdido)</code>
+      <code class="block">item.props.breakable.maxDurability / durabilityPerUse</code>
+      <code class="block">item.props.tool { type, tier }</code>
+      <code class="block">item.props.purgeAllEffects = true (ítem purga)</code>
+      <code class="block">status effects: almacenados en DB (PlayerStatusEffect)</code>
+      <code class="block">death penalty: porcentaje dinámico + fatiga escalada</code>
+    </div>
   </div>
 </section>

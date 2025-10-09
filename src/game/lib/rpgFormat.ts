@@ -87,6 +87,7 @@ export function combatSummaryRPG(c: {
     goldLost?: number;
     fatigueAppliedMinutes?: number;
     fatigueMagnitude?: number;
+    percentApplied?: number;
   };
 }) {
   const header = `**Combate (${outcomeLabel(c.outcome)})**`;
@@ -111,6 +112,9 @@ export function combatSummaryRPG(c: {
         ? Math.round(c.deathPenalty.fatigueMagnitude * 100)
         : 15;
       parts.push(`Fatiga ${pct}% ${c.deathPenalty.fatigueAppliedMinutes}m`);
+    }
+    if (typeof c.deathPenalty.percentApplied === "number") {
+      parts.push(`(${Math.round(c.deathPenalty.percentApplied * 100)}% oro)`);
     }
     if (parts.length) lines.push(`• Penalización: ${parts.join(" | ")}`);
   }
