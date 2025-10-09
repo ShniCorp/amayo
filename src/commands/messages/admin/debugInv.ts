@@ -38,6 +38,12 @@ export const command: CommandMessage = {
       output += `• Quantity: ${entry.quantity}\n`;
       output += `• Instances: ${instances.length}\n`;
 
+      if (props?.tool) {
+        output += `• Tool: type=${props.tool.type}, tier=${
+          props.tool.tier ?? 0
+        }\n`;
+      }
+
       if (props?.breakable) {
         output += `• Breakable: enabled=${
           props.breakable.enabled !== false

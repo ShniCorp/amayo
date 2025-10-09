@@ -133,8 +133,26 @@ export const command: CommandMessage = {
       const props = parseItemProps(entry.item.props);
       const tool = fmtTool(props);
       const st = fmtStats(props);
-  const label = formatItemLabel(entry.item);
-  blocks.push(textBlock(`• ${label} — x${entry.quantity}${tool ? ` ${tool}` : ''}${st}`));
+      const label = formatItemLabel(entry.item);
+      
+      // Mostrar durabilidad para items non-stackable con breakable
+      let qtyDisplay = `x${entry.quantity}`;
+      if (!entry.item.stackable && props.breakable && props.breakable.enabled !== false) {
+        const state = entry.state as any;
+        const instances = state?.instances ?? [];
+        if (instances.length > 0 && instances[0]?.durability != null) {
+          const firstDur = instances[0].durability;
+          const maxDur = props.breakable.maxDurability ?? 100;
+          qtyDisplay = `(${firstDur}/${maxDur})`;
+          if (instances.length > 1) {
+            qtyDisplay += ` x${instances.length}`;
+          }
+        } else if (instances.length === 0) {
+          qtyDisplay = `⚠️ CORRUPTO (x${entry.quantity})`;
+        }
+      }
+      
+      blocks.push(textBlock(`• ${label} — ${qtyDisplay}${tool ? ` ${tool}` : ''}${st}`));
       if (index < pageItems.length - 1) {
         blocks.push(dividerBlock({ divider: false, spacing: 1 }));
       }

@@ -59,7 +59,7 @@ async function findBestToolKey(
     where: { userId, guildId, quantity: { gt: 0 } },
     include: { item: true },
   });
-  let best: { key: string; tier: number } | null = null;
+  let best: { key: string; tier: number; isPrimaryTool: boolean } | null = null;
   for (const e of entries) {
     const props = parseItemProps(e.item.props);
     const t = props.tool;
@@ -72,7 +72,16 @@ async function findBestToolKey(
       !opts.allowedKeys.includes(e.item.key)
     )
       continue;
-    if (!best || tier > best.tier) best = { key: e.item.key, tier };
+    // Priorizar items con key que comience con "tool." (herramientas primarias)
+    // sobre armas que también tienen toolType (ej: espada con tool.type:sword)
+    const isPrimaryTool = e.item.key.startsWith("tool.");
+    if (
+      !best ||
+      tier > best.tier ||
+      (tier === best.tier && isPrimaryTool && !best.isPrimaryTool)
+    ) {
+      best = { key: e.item.key, tier, isPrimaryTool };
+    }
   }
   return best?.key ?? null;
 }
