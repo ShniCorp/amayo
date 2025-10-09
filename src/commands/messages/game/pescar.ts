@@ -101,20 +101,45 @@ export const command: CommandMessage = {
       const mobsLines = result.mobs.length
         ? result.mobs.map((m) => `• ${m}`).join("\n")
         : "• —";
+      const durabilityBar = () => {
+        if (
+          !result.tool ||
+          result.tool.remaining == null ||
+          result.tool.max == null
+        )
+          return "";
+        const rem = Math.max(0, result.tool.remaining);
+        const max = Math.max(1, result.tool.max);
+        const ratio = rem / max;
+        const totalSegs = 10;
+        const filled = Math.round(ratio * totalSegs);
+        const bar = Array.from({ length: totalSegs })
+          .map((_, i) => (i < filled ? "█" : "░"))
+          .join("");
+        return `\nDurabilidad: [${bar}] ${rem}/${max}`;
+      };
       const toolInfo = result.tool?.key
-        ? `${formatItemLabel(
-            rewardItems.get(result.tool.key) ?? {
-              key: result.tool.key,
-              name: null,
-              icon: null,
-            },
-            { fallbackIcon: "🎣" }
-          )}${
-            result.tool.broken
-              ? " (rota)"
-              : ` (-${result.tool.durabilityDelta ?? 0} dur.)`
-          }`
+        ? (() => {
+            const base = formatItemLabel(
+              rewardItems.get(result.tool.key) ?? {
+                key: result.tool.key,
+                name: null,
+                icon: null,
+              },
+              { fallbackIcon: "🎣" }
+            );
+            if (result.tool.broken) return `${base} (agotada)${durabilityBar()}`;
+            if (result.tool.brokenInstance)
+              return `${base} (se rompió una instancia, quedan ${result.tool.instancesRemaining}) (-${result.tool.durabilityDelta ?? 0} dur.)${durabilityBar()}`;
+            const multi = result.tool.instancesRemaining && result.tool.instancesRemaining > 1 ? ` (x${result.tool.instancesRemaining})` : "";
+            return `${base}${multi} (-${result.tool.durabilityDelta ?? 0} dur.)${durabilityBar()}`;
+          })()
         : "—";
+      const combatSummary = (() => {
+        if (!result.combat) return null;
+        const c = result.combat;
+        return `**Combate**\n• Mobs: ${c.mobs.length} | Derrotados: ${c.mobsDefeated}/${result.mobs.length}\n• Daño hecho: ${c.totalDamageDealt} | Daño recibido: ${c.totalDamageTaken}`;
+      })();
 
       const blocks = [textBlock("# 🎣 Pesca")];
 
@@ -137,6 +162,10 @@ export const command: CommandMessage = {
       blocks.push(textBlock(`**Recompensas**\n${rewardLines}`));
       blocks.push(dividerBlock({ divider: false, spacing: 1 }));
       blocks.push(textBlock(`**Mobs**\n${mobsLines}`));
+      if (combatSummary) {
+        blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+        blocks.push(textBlock(combatSummary));
+      }
 
       // Añadir metadata del área
       const metaBlocks = buildAreaMetadataBlocks(area);

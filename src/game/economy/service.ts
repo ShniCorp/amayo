@@ -161,7 +161,17 @@ export async function addItemByKey(
       0,
       Math.min(qty, Math.max(0, max - state.instances.length))
     );
-    for (let i = 0; i < canAdd; i++) state.instances.push({});
+    // Inicializar durabilidad si corresponde
+    const props = parseItemProps(item.props);
+    const breakable = props.breakable;
+    const maxDurability = breakable?.enabled !== false ? breakable?.maxDurability : undefined;
+    for (let i = 0; i < canAdd; i++) {
+      if (maxDurability && maxDurability > 0) {
+        state.instances.push({ durability: maxDurability });
+      } else {
+        state.instances.push({});
+      }
+    }
     const updated = await prisma.inventoryEntry.update({
       where: { userId_guildId_itemId: { userId, guildId, itemId: item.id } },
       data: {

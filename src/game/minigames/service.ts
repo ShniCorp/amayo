@@ -12,6 +12,7 @@ import type {
   RunResult,
   RewardsTable,
   MobsTable,
+  CombatSummary,
 } from "./types";
 import type { Prisma } from "@prisma/client";
 
@@ -178,12 +179,27 @@ async function reduceToolDurability(
   toolKey: string
 ) {
   const { item, entry } = await getInventoryEntry(userId, guildId, toolKey);
-  if (!entry) return { broken: false, delta: 0 } as const;
+  if (!entry)
+    return {
+      broken: false,
+      brokenInstance: false,
+      delta: 0,
+      remaining: undefined,
+      max: undefined,
+      instancesRemaining: 0,
+    } as const;
   const props = parseItemProps(item.props);
   const breakable = props.breakable;
   // Si el item no es breakable o la durabilidad está deshabilitada, no hacemos nada
   if (!breakable || breakable.enabled === false) {
-    return { broken: false, delta: 0 } as const;
+    return {
+      broken: false,
+      brokenInstance: false,
+      delta: 0,
+      remaining: undefined,
+      max: undefined,
+      instancesRemaining: entry.quantity ?? 0,
+    } as const;
   }
 
   // Valores base
@@ -197,30 +213,38 @@ async function reduceToolDurability(
   if (item.stackable) {
     // Herramientas deberían ser no apilables; si lo son, solo decrementamos cantidad como fallback
     const consumed = Math.min(1, entry.quantity);
+    let broken = false;
     if (consumed > 0) {
-      await prisma.inventoryEntry.update({
+      const updated = await prisma.inventoryEntry.update({
         where: { userId_guildId_itemId: { userId, guildId, itemId: item.id } },
         data: { quantity: { decrement: consumed } },
       });
+      // Consideramos "rota" sólo si después de consumir ya no queda ninguna unidad
+      broken = (updated.quantity ?? 0) <= 0;
     }
-    return { broken: consumed > 0, delta } as const;
+    return { broken, brokenInstance: broken, delta, remaining: undefined, max: maxConfigured, instancesRemaining: broken ? 0 : (entry.quantity ?? 1) - 1 } as const;
   }
   const state = parseInvState(entry.state);
   state.instances ??= [{}];
   if (state.instances.length === 0) state.instances.push({});
+  // Seleccionar instancia: ahora usamos la primera, en futuro se puede elegir la de mayor durabilidad restante
   const inst = state.instances[0];
   const max = maxConfigured; // ya calculado arriba
+  // Si la instancia no tiene durabilidad inicial, la inicializamos
+  if (inst.durability == null) (inst as any).durability = max;
   const current = Math.min(Math.max(0, inst.durability ?? max), max);
   const next = current - delta;
-  let broken = false;
+  let brokenInstance = false;
   if (next <= 0) {
-    // romper: eliminar instancia
+    // romper sólo esta instancia
     state.instances.shift();
-    broken = true;
+    brokenInstance = true;
   } else {
     (inst as any).durability = next;
     state.instances[0] = inst;
   }
+  const instancesRemaining = state.instances.length;
+  const broken = instancesRemaining === 0; // Ítem totalmente agotado
   await prisma.inventoryEntry.update({
     where: { userId_guildId_itemId: { userId, guildId, itemId: item.id } },
     data: {
@@ -228,7 +252,14 @@ async function reduceToolDurability(
       quantity: state.instances.length,
     },
   });
-  return { broken, delta } as const;
+  // Placeholder: logging de ruptura (migrar a ToolBreakLog futuro)
+  if (brokenInstance) {
+    // eslint-disable-next-line no-console
+    console.log(
+      `[tool-break] user=${userId} guild=${guildId} toolKey=${toolKey}`
+    );
+  }
+  return { broken, brokenInstance, delta, remaining: broken ? 0 : next, max, instancesRemaining } as const;
 }
 
 export { reduceToolDurability };
@@ -280,6 +311,80 @@ export async function runMinigame(
       key: reqRes.toolKeyUsed,
       durabilityDelta: t.delta,
       broken: t.broken,
+      remaining: t.remaining,
+      max: t.max,
+      brokenInstance: t.brokenInstance,
+      instancesRemaining: t.instancesRemaining,
+    };
+  }
+
+  // --- Combate Básico (placeholder) ---
+  // Objetivo: procesar mobs spawneados y generar resumen estadístico simple.
+  // Futuro: stats jugador, equipo, habilidades. Ahora: valores fijos pseudo-aleatorios.
+  let combatSummary: CombatSummary | undefined;
+  if (mobsSpawned.length > 0) {
+    const mobLogs: CombatSummary["mobs"] = [];
+    let totalDealt = 0;
+    let totalTaken = 0;
+    let defeated = 0;
+    const basePlayerAtk = 5 + Math.random() * 3; // placeholder
+    const basePlayerDef = 1 + Math.random() * 2; // placeholder
+    for (const mobKey of mobsSpawned) {
+      // Se podría leer tabla real de mobs (stats json en prisma.mob) en futuro.
+      // Por ahora HP aleatorio controlado.
+      const maxHp = 8 + Math.floor(Math.random() * 8); // 8-15
+      let hp = maxHp;
+      const rounds = [] as any[];
+      let roundIndex = 1;
+      let mobTotalDealt = 0;
+      let mobTotalTaken = 0;
+      while (hp > 0 && roundIndex <= 10) {
+        // limite de 10 rondas por mob
+        const playerDamage = Math.max(
+          1,
+          Math.round(basePlayerAtk + Math.random() * 2)
+        );
+        hp -= playerDamage;
+        mobTotalDealt += playerDamage;
+        totalDealt += playerDamage;
+        let playerTaken = 0;
+        if (hp > 0) {
+          // Mob sólo pega si sigue vivo
+          const mobAtk = 2 + Math.random() * 3; // 2-5
+          const mitigated = Math.max(0, mobAtk - basePlayerDef * 0.5);
+          playerTaken = Math.round(mitigated);
+          totalTaken += playerTaken;
+          mobTotalTaken += playerTaken;
+        }
+        rounds.push({
+          mobKey,
+          round: roundIndex,
+          playerDamageDealt: playerDamage,
+          playerDamageTaken: playerTaken,
+          mobRemainingHp: Math.max(0, hp),
+          mobDefeated: hp <= 0,
+        });
+        if (hp <= 0) {
+          defeated++;
+          break;
+        }
+        roundIndex++;
+      }
+      mobLogs.push({
+        mobKey,
+        maxHp,
+        defeated: hp <= 0,
+        totalDamageDealt: mobTotalDealt,
+        totalDamageTakenFromMob: mobTotalTaken,
+        rounds,
+      });
+    }
+    combatSummary = {
+      mobs: mobLogs,
+      totalDamageDealt: totalDealt,
+      totalDamageTaken: totalTaken,
+      mobsDefeated: defeated,
+      victory: defeated === mobsSpawned.length,
     };
   }
 
@@ -288,6 +393,7 @@ export async function runMinigame(
     rewards: delivered,
     mobs: mobsSpawned,
     tool: toolInfo,
+    combat: combatSummary,
     notes: "auto",
   } as unknown as Prisma.InputJsonValue;
 
@@ -334,6 +440,7 @@ export async function runMinigame(
     rewards: delivered,
     mobs: mobsSpawned,
     tool: toolInfo,
+    combat: combatSummary,
   };
 }
 
