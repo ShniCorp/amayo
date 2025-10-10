@@ -145,8 +145,62 @@ h3 {
     inset 2px 2px 0 0 rgba(255, 255, 255, 0.4),
     0 0 15px rgba(255, 179, 71, 0.4);
   font-weight: bold;
+  overflow: visible;
 }
 
+/* Ornamentos decorativos del botón */
+.pixel-btn::before,
+.pixel-btn::after {
+  content: '';
+  position: absolute;
+  width: 8px;
+  height: 8px;
+  background: var(--pixel-accent-5);
+  border: 2px solid var(--pixel-border);
+  transform: rotate(45deg);
+  opacity: 0.7;
+  transition: all 0.3s;
+}
+
+.pixel-btn::before {
+  top: -6px;
+  left: 10px;
+}
+
+.pixel-btn::after {
+  top: -6px;
+  right: 10px;
+}
+
+.pixel-btn:hover::before,
+.pixel-btn:hover::after {
+  opacity: 1;
+  transform: rotate(45deg) scale(1.2);
+  box-shadow: 0 0 10px var(--pixel-accent-5);
+}
+
+/* SVG icons dentro de botones */
+.pixel-btn svg {
+  filter: drop-shadow(1px 1px 0px rgba(0, 0, 0, 0.5));
+  animation: sparkle 3s ease-in-out infinite;
+}
+
+@keyframes sparkle {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 0.7;
+  }
+  50% { 
+    transform: scale(1.1) rotate(5deg);
+    opacity: 1;
+  }
+}
+
+.pixel-btn:hover svg {
+  animation: sparkle 1.5s ease-in-out infinite;
+}
+
+/* Efecto de resplandor en hover para botones principales */
 .pixel-btn:hover {
   background: linear-gradient(180deg, var(--pixel-warm-glow) 0%, var(--pixel-accent-3) 100%);
   transform: translate(2px, 2px);
@@ -154,7 +208,8 @@ h3 {
     4px 4px 0 0 rgba(0, 0, 0, 0.6),
     inset -2px -2px 0 0 rgba(0, 0, 0, 0.3),
     inset 2px 2px 0 0 rgba(255, 255, 255, 0.4),
-    0 0 20px rgba(255, 179, 71, 0.6);
+    0 0 25px rgba(255, 179, 71, 0.7),
+    0 0 40px rgba(255, 179, 71, 0.3);
 }
 
 .pixel-btn:active {
@@ -661,4 +716,19 @@ tr:hover td {
   body {
     font-size: 18px;
   }
+}
+
+/* Hero Button SVG Enhancement */
+a[href="#primeros-pasos"] img {
+  transition: all 0.3s ease;
+}
+
+a[href="#primeros-pasos"]:hover img {
+  filter: drop-shadow(0 6px 20px rgba(255, 179, 71, 0.6)) brightness(1.1);
+  transform: translateY(-4px);
+}
+
+a[href="#primeros-pasos"]:active img {
+  transform: translateY(-2px);
+  filter: drop-shadow(0 4px 15px rgba(255, 179, 71, 0.5));
 }
