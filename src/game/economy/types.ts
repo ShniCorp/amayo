@@ -3,7 +3,7 @@
 
 export type PriceItemComponent = {
   itemKey?: string; // preferido para lookup
-  itemId?: string;  // fallback directo
+  itemId?: string; // fallback directo
   qty: number;
 };
 
@@ -14,9 +14,15 @@ export type Price = {
 };
 
 export type ChestReward =
-  | { type: 'coins'; amount: number }
-  | { type: 'item'; itemKey?: string; itemId?: string; qty: number }
-  | { type: 'role'; roleId: string };
+  | { type: "coins"; amount: number; probability?: number }
+  | {
+      type: "item";
+      itemKey?: string;
+      itemId?: string;
+      qty: number;
+      probability?: number;
+    }
+  | { type: "role"; roleId: string; probability?: number };
 
 export type PassiveEffect = {
   key: string; // p.ej. "xpBoost", "defenseUp"
@@ -38,8 +44,15 @@ export type CraftableProps = {
 
 export type ChestProps = {
   enabled?: boolean;
-  // Recompensas que el bot debe otorgar al "abrir"
+  // Modo de randomización:
+  // 'all' (default): se procesan todas las recompensas y cada una evalúa su probability (si no hay probability, se asume 100%).
+  // 'single': selecciona UNA recompensa aleatoria ponderada por probability (o 1 si falta) y solo otorga esa.
+  // 'roll-each': similar a 'all' pero probability se trata como chance independiente (igual que all; se mantiene por semántica futura).
+  randomMode?: "all" | "single" | "roll-each";
+  // Recompensas configuradas
   rewards?: ChestReward[];
+  // Roles adicionales fijos (independientes de rewards)
+  roles?: string[];
   // Si true, consume 1 del inventario al abrir
   consumeOnOpen?: boolean;
 };
@@ -60,7 +73,7 @@ export type ShopProps = {
 };
 
 export type ToolProps = {
-  type: 'pickaxe' | 'rod' | 'sword' | 'bow' | 'halberd' | 'net' | string; // extensible
+  type: "pickaxe" | "rod" | "sword" | "bow" | "halberd" | "net" | string; // extensible
   tier?: number; // nivel/calidad de la herramienta
 };
 
@@ -76,6 +89,8 @@ export type ItemProps = {
   breakable?: BreakableProps; // romperse
   craftable?: CraftableProps; // craftear
   chest?: ChestProps; // estilo cofre que al usar da roles/ítems/monedas
+  // Si true, este ítem se considera global (guildId = null) y solo el owner del bot puede editarlo
+  global?: boolean;
   eventCurrency?: EventCurrencyProps; // puede actuar como moneda de evento
   passiveEffects?: PassiveEffect[]; // efectos por tenerlo
   mutationPolicy?: MutationPolicy; // reglas para mutaciones extra

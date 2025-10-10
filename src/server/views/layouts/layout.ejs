@@ -10,88 +10,63 @@
   <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
-  <script>
-    tailwind.config = {
-      theme: {
-        extend: {
-          animation: {
-            'gradient': 'gradient 8s linear infinite',
-            'float': 'float 6s ease-in-out infinite',
-            'glow': 'glow 3s ease-in-out infinite',
-            'slide-in': 'slideIn 0.5s ease-out',
-          },
-          keyframes: {
-            gradient: {
-              '0%, 100%': { backgroundPosition: '0% 50%' },
-              '50%': { backgroundPosition: '100% 50%' },
-            },
-            float: {
-              '0%, 100%': { transform: 'translateY(0)' },
-              '50%': { transform: 'translateY(-20px)' },
-            },
-            glow: {
-              '0%, 100%': { opacity: '0.4' },
-              '50%': { opacity: '0.8' },
-            },
-            slideIn: {
-              '0%': { transform: 'translateY(20px)', opacity: '0' },
-              '100%': { transform: 'translateY(0)', opacity: '1' },
-            },
-          },
-        },
-      },
-    };
-  </script>
-  <link rel="stylesheet" href="/assets/css/styles.css">
+  
+  <!-- Modern Pixel Art CSS -->
+  <link rel="stylesheet" href="/assets/css/modern-pixel.css?v=<%= version || '2.0.0' %>">
+  <link rel="stylesheet" href="/assets/css/modern-sections.css?v=<%= version || '2.0.0' %>">
+  <link rel="stylesheet" href="/assets/css/styles.css?v=<%= version || '2.0.0' %>">
   <% if (typeof head !== 'undefined' && head) { %>
     <%= head %>
   <% } %>
 </head>
-<body class="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 text-slate-100 antialiased pt-14">
+<body class="min-h-screen pixel-grid-bg pt-14" style="background-image: url('/assets/images/background.svg'); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;">
 
   <%- await include('../partials/navbar', { appName }) %>
-
-  <!-- Animated Background Blobs -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="absolute top-0 left-1/4 w-96 h-96 bg-purple-500/20 rounded-full mix-blend-screen filter blur-3xl animate-float"></div>
-    <div class="absolute top-1/3 right-1/4 w-96 h-96 bg-indigo-500/20 rounded-full mix-blend-screen filter blur-3xl animate-float" style="animation-delay: 2s;"></div>
-    <div class="absolute bottom-0 left-1/3 w-96 h-96 bg-pink-500/15 rounded-full mix-blend-screen filter blur-3xl animate-float" style="animation-delay: 4s;"></div>
-  </div>
 
   <div class="relative z-10">
     <%- body %>
   </div>
 
-  <footer class="border-t border-white/5 bg-slate-950/80 py-10 text-center">
-    <div class="mx-auto max-w-5xl px-6">
-      <div class="mb-6">
-        <p class="text-2xl font-bold text-white mb-2"><%= appName %></p>
-        <p class="text-sm text-slate-400">Sistema completo de juego, economía y gestión para Discord</p>
+    <footer class="pixel-box mt-16 mx-4 mb-8">
+    <div class="max-w-6xl mx-auto">
+      <div class="text-center mb-8">
+        <h3 class="mb-4">Amayo Bot</h3>
+        <p class="text-sm pixel-text-dim">Sistema completo de juego, economía y gestión para Discord</p>
       </div>
       
-      <div class="flex flex-wrap justify-center gap-4 mb-6 text-sm">
-        <a href="#primeros-pasos" class="text-indigo-300 transition hover:text-indigo-200">Primeros Pasos</a>
-        <span class="text-slate-600">•</span>
-        <a href="#comandos-basicos" class="text-indigo-300 transition hover:text-indigo-200">Comandos</a>
-        <span class="text-slate-600">•</span>
-        <a href="#minijuegos" class="text-indigo-300 transition hover:text-indigo-200">Minijuegos</a>
-        <span class="text-slate-600">•</span>
-        <a href="#faq" class="text-indigo-300 transition hover:text-indigo-200">FAQ</a>
+      <div class="flex flex-wrap justify-center gap-4 mb-6 text-sm items-center">
+        <span class="pixel-leaf" style="width: 16px; height: 10px;"></span>
+        <a href="#primeros-pasos">Primeros Pasos</a>
+        <span>✦</span>
+        <a href="#comandos-basicos">Comandos</a>
+        <span>✦</span>
+        <a href="#minijuegos">Minijuegos</a>
+        <span>✦</span>
+        <a href="#faq">FAQ</a>
+        <span class="pixel-leaf" style="width: 16px; height: 10px; transform: rotate(20deg);"></span>
       </div>
 
-      <div class="border-t border-white/5 pt-6">
-        <p class="text-xs text-slate-400 mb-3">
-          Versión <%= version %> • Discord.js <%= djsVersion %> • <%= currentDateHuman %>
-        </p>
-        <p class="text-xs text-slate-500">
-          Amayo © <%= new Date().getFullYear() %> — Documentación para usuarios finales de Discord
-        </p>
+      <div class="pixel-border p-4 mb-6" style="background: linear-gradient(135deg, var(--pixel-bg-dark) 0%, var(--pixel-bg-medium) 100%);">
+        <div class="flex items-center justify-center gap-4 text-sm" style="color: var(--text-secondary);">
+          <span class="pixel-pumpkin" style="width: 16px; height: 16px;"></span>
+          <span>VER <%= version %></span>
+          <span>•</span>
+          <span>DJS <%= djsVersion %></span>
+          <span>•</span>
+          <span><%= currentDateHuman %></span>
+          <span class="pixel-ghost" style="width: 16px; height: 20px;"></span>
+        </div>
       </div>
 
-      <div class="mt-6">
-        <a class="inline-flex items-center gap-2 text-indigo-300 transition hover:text-indigo-200" href="#primeros-pasos">
-          <span aria-hidden="true">↑</span>
-          Volver arriba
+      <p class="text-center text-sm mb-6 flex items-center justify-center gap-3" style="color: var(--text-muted);">
+        <span class="pixel-star-halloween">✦</span>
+        <span>Amayo © <%= new Date().getFullYear() %> — Documentación para usuarios finales de Discord</span>
+        <span class="pixel-star-halloween">✦</span>
+      </p>
+
+      <div class="text-center">
+        <a class="pixel-btn-secondary pixel-btn inline-block" href="#primeros-pasos">
+          ↑ Volver arriba
         </a>
       </div>
     </div>

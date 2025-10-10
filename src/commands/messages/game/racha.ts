@@ -13,6 +13,7 @@ export const command: CommandMessage = {
   name: "racha",
   type: "message",
   aliases: ["streak", "daily"],
+  category: "Economía",
   cooldown: 10,
   description: "Ver tu racha diaria y reclamar recompensa",
   usage: "racha",
@@ -29,15 +30,17 @@ export const command: CommandMessage = {
 
       // Construir bloques de display (evitando type:9 sin accessory)
       const blocks: any[] = [
-        textBlock(`# 🔥 Racha Diaria de ${message.author.username}`),
-        dividerBlock(),
         textBlock(
-          `**📊 ESTADÍSTICAS**\n` +
-            `🔥 Racha Actual: **${streak.currentStreak}** días\n` +
-            `⭐ Mejor Racha: **${streak.longestStreak}** días\n` +
-            `📅 Días Activos: **${streak.totalDaysActive}** días`
+          `## <a:0fire:1425690572945100860> Racha diaria de ${message.author.username}`
         ),
-        dividerBlock({ spacing: 1 }),
+        dividerBlock({ divider: false, spacing: 1 }),
+        textBlock(
+          `**<:stats:1425689271788113991> ESTADÍSTICAS**\n` +
+            `<a:0fire:1425690572945100860> Racha Actual: **${streak.currentStreak}** días\n` +
+            `<a:bluestargif:1425691124214927452> Mejor Racha: **${streak.longestStreak}** días\n` +
+            `<:events:1425691310194561106> Días Activos: **${streak.totalDaysActive}** días`
+        ),
+        dividerBlock({ spacing: 1, divider: false }),
       ];
 
       // Mensaje de estado
@@ -45,22 +48,23 @@ export const command: CommandMessage = {
         if (daysIncreased) {
           blocks.push(
             textBlock(
-              `**✅ ¡RACHA INCREMENTADA!**\nHas mantenido tu racha por **${streak.currentStreak}** días seguidos.`
+              `**<:Sup_res:1420535051162095747> ¡RACHA INCREMENTADA!**\nHas mantenido tu racha por **${streak.currentStreak}** días seguidos.`
             )
           );
         } else {
           blocks.push(
             textBlock(
-              `**⚠️ RACHA REINICIADA**\nPasó más de un día sin actividad. Tu racha se ha reiniciado.`
+              `**<:Sup_urg:1420535068056748042> RACHA REINICIADA**\nPasó más de un día sin actividad. Tu racha se ha reiniciado.`
             )
           );
         }
 
         // Mostrar recompensas
         if (rewards) {
-          let rewardsText = "**🎁 RECOMPENSA DEL DÍA**\n";
+          let rewardsText =
+            "**<a:Chest:1425691840614764645> RECOMPENSA DEL DÍA**\n";
           if (rewards.coins)
-            rewardsText += `💰 **${rewards.coins.toLocaleString()}** monedas\n`;
+            rewardsText += `<:coin:1425667511013081169> **${rewards.coins.toLocaleString()}** monedas\n`;
           if (rewards.items && rewards.items.length) {
             const basics = await fetchItemBasics(
               guildId,
@@ -77,13 +81,13 @@ export const command: CommandMessage = {
             });
           }
 
-          blocks.push(dividerBlock({ spacing: 1 }));
+          blocks.push(dividerBlock({ spacing: 1, divider: false }));
           blocks.push(textBlock(rewardsText));
         }
       } else {
         blocks.push(
           textBlock(
-            `**ℹ️ YA RECLAMASTE HOY**\nYa has reclamado tu recompensa diaria. Vuelve mañana para continuar tu racha.`
+            `**<:apin:1336533845541126174> YA RECLAMASTE HOY**\nYa has reclamado tu recompensa diaria. Vuelve mañana para continuar tu racha.`
           )
         );
       }
@@ -94,7 +98,7 @@ export const command: CommandMessage = {
 
       if (nextMilestone) {
         const remaining = nextMilestone - streak.currentStreak;
-        blocks.push(dividerBlock({ spacing: 1 }));
+        blocks.push(dividerBlock({ spacing: 1, divider: false }));
         blocks.push(
           textBlock(
             `**🎯 PRÓXIMO HITO**\nFaltan **${remaining}** días para alcanzar el día **${nextMilestone}**`
@@ -107,7 +111,9 @@ export const command: CommandMessage = {
       await sendDisplayReply(message, display);
     } catch (error) {
       console.error("Error en comando racha:", error);
-      await message.reply("❌ Error al obtener tu racha diaria.");
+      await message.reply(
+        "<:Cross:1420535096208920576> Error al obtener tu racha diaria."
+      );
     }
   },
 };

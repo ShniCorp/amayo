@@ -1,71 +1,90 @@
-<header class="relative overflow-hidden ">
-  <div class="absolute inset-0 bg-gradient-to-b from-indigo-500/5 via-purple-500/5 to-transparent"></div>
-  
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 relative">
-    <div class="max-w-5xl mx-auto text-center space-y-8">
-      <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-500/30 backdrop-blur-sm">
-        <span class="relative flex h-2.5 w-2.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-r from-indigo-400 to-purple-400"></span>
-        </span>
-        <span class="text-sm font-bold tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 to-purple-200">
+<header class="relative overflow-hidden py-20 sm:py-28">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+    <div class="max-w-5xl mx-auto text-center space-y-12">
+      <!-- Badge Moderno con decoraciones sutiles -->
+      <div class="inline-block relative">
+        <img src="/assets/images/fantasma.svg" alt="fantasma" class="absolute" style="left: -40px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; animation: softFloat 3.5s ease-in-out infinite;">
+        <div class="pixel-badge">
           <%= appName %> • v<%= version %>
-        </span>
+        </div>
+        <img src="/assets/images/fantasma.svg" alt="fantasma" class="absolute" style="right: -40px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; animation: softFloat 3.5s ease-in-out infinite;">
       </div>
 
-      <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-tight">
-        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-purple-100">
+      <!-- Título Principal -->
+      <div class="space-y-4">
+        <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-tight">
           Guía Completa
-        </span>
-        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+        </h1>
+        <h2 class="text-4xl sm:text-5xl md:text-6xl" style="font-family: 'Press Start 2P', monospace; background: linear-gradient(135deg, #a78bfa, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
           <%= appName %>
-        </span>
-      </h1>
+        </h2>
+      </div>
 
-      <p class="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-light">
-        Sistema completo de <span class="font-semibold text-indigo-300">economía</span>, <span class="font-semibold text-purple-300">minijuegos</span>, <span class="font-semibold text-pink-300">misiones</span> y <span class="font-semibold text-blue-300">IA</span> para Discord
-      </p>
+      <!-- Decoraciones sutiles -->
+      <div class="flex justify-center gap-6 items-center">
+        <span class="pixel-star-halloween">✦</span>
+        <img src="/assets/images/calabaza.svg" alt="calabaza" style="width: 32px; height: 32px; animation: softBounce 3s ease-in-out infinite;">
+        <span class="pixel-star-halloween" style="animation-delay: 0.5s;">✦</span>
+        <img src="/assets/images/fantasma.svg" alt="fantasma" style="width: 32px; height: 32px; animation: softFloat 3.5s ease-in-out infinite; animation-delay: 1s;">
+        <span class="pixel-star-halloween" style="animation-delay: 1.5s;">✦</span>
+      </div>
 
-      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-        <a href="#primeros-pasos" class="group relative px-10 py-4 text-lg font-bold text-white overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105">
-          <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 transition-transform duration-300 group-hover:scale-110"></div>
-          <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <span class="relative flex items-center gap-2">
-            Comenzar ahora
-            <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-            </svg>
-          </span>
+      <!-- Botones de Acción -->
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center pt-4">
+        <a href="#primeros-pasos" class="block hover:scale-105 transition-transform duration-300">
+          <img src="/assets/images/boton_entrar.svg" alt="Comenzar ahora" class="w-full h-auto" style="max-width: 450px; filter: drop-shadow(0 4px 12px rgba(255, 179, 71, 0.3));">
         </a>
       </div>
 
-      <div class="flex flex-wrap justify-center gap-3 pt-6">
-        <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
-          Discord.js <%= djsVersion %>
-        </span>
-        <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
-          <%= currentDateHuman %>
-        </span>
-        <span class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 text-sm font-bold text-indigo-200 hover:from-indigo-500/20 hover:to-purple-500/20 transition-all">
-          23 Secciones • Creación de Contenido Incluida
-        </span>
+      <!-- Stats Footer con SVG Backgrounds mejorados -->
+      <!-- Stats Footer con SVG Backgrounds más pequeños -->
+      <div class="flex flex-wrap md:flex-nowrap justify-center gap-4 pt-8 px-4 w-full max-w-6xl mx-auto">
+          <!-- Discord.js Version -->
+          <div class="relative flex-1 min-w-[240px] max-w-[320px]">
+            <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4" style="min-height: 64px;">
+              <span class="pixel-leaf text-xl" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></span>
+              <div class="text-center">
+                <p class="text-[10px] pixel-text-dim mb-1 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Discord.js</p>
+                <p class="text-sm font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= djsVersion %></p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Fecha de actualización -->
+          <div class="relative flex-1 min-w-[240px] max-w-[320px]">
+            <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4" style="min-height: 64px;">
+              <span class="text-xl" style="filter: drop-shadow(0 2px 4px rgba(255,179,71,0.4));">✦</span>
+              <div class="text-center">
+                <p class="text-[10px] pixel-text-dim mb-1 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Actualizado</p>
+                <p class="text-sm font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= currentDateHuman %></p>
+              </div>
+            </div>
+          </div>
+          <!-- Tercer badge: Secciones -->
+          <div class="relative flex-1 min-w-[240px] max-w-[320px]">
+            <img src="/assets/images/snap2.svg" alt="card background" class="w-full h-auto" style="display: block;">
+            <div class="absolute inset-0 flex items-center justify-center gap-2 py-4 px-4" style="min-height: 64px;">
+              <span class="text-xl" aria-hidden="true" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">🎮</span>
+              <p class="text-sm font-semibold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">23 Secciones</p>
+            </div>
+          </div>
       </div>
     </div>
   </div>
 </header>
 
-<div class="mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 max-w-[120rem]">
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
   <div class="flex min-h-screen flex-col">
 
-  <div class="mx-auto flex w-full max-w-[120rem] flex-1 flex-col gap-10 px-0 md:px-6 pb-16 lg:flex-row lg:px-10">
-      <%- await include('../partials/toc') %>
+    <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 pb-16 lg:flex-row lg:px-10">
+  <%- await include('../partials/toc') %>
 
-  <main class="w-full flex-1 min-w-0 lg:max-w-none xl:max-w-none 2xl:max-w-none">
-        <div class="mx-auto flex w-full flex-col gap-8">
+      <main class="flex-1">
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
           <%- await include('../partials/sections/primeros-pasos') %>
           <%- await include('../partials/sections/comandos-basicos') %>
-          <%- await include('../partials/sections/ejemplos-basicos') %>
-          <%- await include('../partials/sections/ejemplos-avanzados') %>
           <%- await include('../partials/sections/sistema-juego') %>
           <%- await include('../partials/sections/minijuegos') %>
           <%- await include('../partials/sections/inventario-equipo') %>
@@ -84,16 +103,13 @@
           <%- await include('../partials/sections/alianzas') %>
           <%- await include('../partials/sections/admin') %>
           <%- await include('../partials/sections/creacion-contenido') %>
+          <%- await include('../partials/sections/ejemplos-avanzados') %>
           <%- await include('../partials/sections/configuracion') %>
           <%- await include('../partials/sections/estadisticas') %>
           <%- await include('../partials/sections/tips') %>
           <%- await include('../partials/sections/faq') %>
         </div>
       </main>
-
-      <aside class="hidden lg:block lg:w-80 xl:w-96 2xl:w-[28rem] lg:sticky lg:top-24 lg:h-fit lg:self-start">
-        <%- await include('../partials/rightSidebar') %>
-      </aside>
     </div>
   </div>
 </div>

@@ -1,0 +1,929 @@
+/* ============================================
+   PIXEL ART RETRO THEME
+   Diseño inspirado en RPGs de 8/16 bits
+   ============================================ */
+
+/* Fuentes Pixel Art */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
+
+/* ============================================
+   MODERN PIXEL ART CSS - AMAYO BOT
+   Diseño moderno con toques pixel art y Halloween
+   ============================================ */
+
+/* Fuentes - Solo títulos pixel art */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap');
+
+/* Variables CSS - Modern Halloween */
+:root {
+  /* Fondos glassmorphism */
+  --bg-primary: rgba(30, 20, 45, 0.95);
+  --bg-secondary: rgba(50, 35, 70, 0.8);
+  --bg-card: rgba(70, 50, 95, 0.6);
+  --bg-hover: rgba(90, 65, 120, 0.7);
+  
+  /* Acentos modernos */
+  --accent-primary: #a78bfa;    /* Púrpura suave */
+  --accent-secondary: #f59e0b;  /* Naranja Halloween */
+  --accent-tertiary: #ec4899;   /* Rosa */
+  --accent-success: #10b981;    /* Verde */
+  
+  /* Texto */
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
+  
+  /* Bordes y sombras */
+  --border-color: rgba(167, 139, 250, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glow-purple: 0 0 30px rgba(167, 139, 250, 0.3);
+  --glow-orange: 0 0 30px rgba(245, 158, 11, 0.3);
+}
+
+/* Reset y Base */
+* {
+  image-rendering: pixelated;
+  image-rendering: -moz-crisp-edges;
+  image-rendering: crisp-edges;
+}
+
+body {
+  font-family: 'VT323', monospace;
+  font-size: 20px;
+  line-height: 1.4;
+  background: linear-gradient(180deg, var(--pixel-night-sky) 0%, var(--pixel-bg-dark) 60%, #2a1a3a 100%);
+  color: var(--pixel-text);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+/* Headings Pixel Art */
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Press Start 2P', cursive;
+  text-transform: uppercase;
+  letter-spacing: 2px;
+  text-shadow: 
+    3px 3px 0px rgba(0, 0, 0, 0.8),
+    -1px -1px 0px rgba(255, 255, 255, 0.1);
+}
+
+h1 {
+  font-size: 32px;
+  line-height: 1.6;
+  animation: softGlow 3s ease-in-out infinite;
+  color: var(--pixel-pumpkin);
+}
+
+h2 {
+  font-size: 24px;
+  line-height: 1.6;
+  color: var(--pixel-accent-3);
+  text-shadow: 
+    2px 2px 0px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 198, 92, 0.4);
+}
+
+h3 {
+  font-size: 18px;
+  line-height: 1.6;
+  color: var(--pixel-accent-2);
+}
+
+/* Pixel Border Effect */
+.pixel-border {
+  border: 4px solid var(--pixel-border);
+  border-image: 
+    repeating-linear-gradient(
+      0deg,
+      var(--pixel-border) 0px,
+      var(--pixel-border) 4px,
+      transparent 4px,
+      transparent 8px
+    ) 4;
+  box-shadow: 
+    0 0 0 4px var(--pixel-bg-dark),
+    8px 8px 0 0 var(--pixel-shadow),
+    inset 0 0 20px rgba(0, 0, 0, 0.5);
+}
+
+/* Pixel Box (Contenedores) */
+/* Pixel Box Containers */
+.pixel-box {
+  background: linear-gradient(135deg, 
+    var(--pixel-bg-2) 0%, 
+    var(--pixel-bg-3) 100%);
+  border: 3px solid var(--pixel-border);
+  border-radius: 8px;
+  padding: 24px;
+  box-shadow: 
+    4px 4px 12px rgba(0, 0, 0, 0.4),
+    inset 0 0 30px rgba(155, 123, 181, 0.1);
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+.pixel-box:hover {
+  transform: translateY(-3px);
+  box-shadow: 
+    6px 6px 16px rgba(0, 0, 0, 0.5),
+    inset 0 0 35px rgba(155, 123, 181, 0.15),
+    0 0 30px rgba(255, 154, 86, 0.2);
+}
+
+.pixel-box::before {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  background: linear-gradient(
+    45deg,
+    var(--pixel-pumpkin) 0%,
+    var(--pixel-accent-2) 50%,
+    var(--pixel-accent-4) 100%
+  );
+  opacity: 0.1;
+  z-index: -1;
+  animation: softPulse 4s ease-in-out infinite;
+}
+
+/* Botones Pixel Art */
+.pixel-btn {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 14px;
+  padding: 16px 32px;
+  border: 3px solid var(--pixel-border);
+  background: linear-gradient(135deg, var(--pixel-pumpkin) 0%, var(--pixel-accent-2) 100%);
+  color: white;
+  text-transform: uppercase;
+  cursor: pointer;
+  position: relative;
+  transition: all 0.3s ease;
+  border-radius: 8px;
+  box-shadow: 
+    4px 4px 10px rgba(0, 0, 0, 0.4),
+    inset 2px 2px 4px rgba(255, 255, 255, 0.15),
+    inset -2px -2px 4px rgba(0, 0, 0, 0.15);
+  font-weight: bold;
+  overflow: visible;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+/* Ornamentos decorativos del botón */
+.pixel-btn::before,
+.pixel-btn::after {
+  content: '✦';
+  position: absolute;
+  font-size: 12px;
+  color: var(--pixel-accent-3);
+  text-shadow: 0 0 10px var(--pixel-accent-3);
+  opacity: 0.6;
+  transition: all 0.3s ease;
+}
+
+.pixel-btn::before {
+  top: -8px;
+  left: 10px;
+}
+
+.pixel-btn::after {
+  top: -8px;
+  right: 10px;
+}
+
+.pixel-btn:hover::before,
+.pixel-btn:hover::after {
+  opacity: 1;
+  transform: scale(1.2);
+  text-shadow: 0 0 15px var(--pixel-accent-3);
+}
+
+/* SVG icons dentro de botones */
+.pixel-btn svg {
+  filter: drop-shadow(1px 1px 2px rgba(0, 0, 0, 0.5));
+  animation: softSparkle 3s ease-in-out infinite;
+}
+
+@keyframes softSparkle {
+  0%, 100% { 
+    transform: scale(1) rotate(0deg);
+    opacity: 0.8;
+  }
+  50% { 
+    transform: scale(1.05) rotate(3deg);
+    opacity: 1;
+  }
+}
+
+.pixel-btn:hover svg {
+  animation: softSparkle 1.8s ease-in-out infinite;
+}
+
+/* Efecto de resplandor en hover para botones principales */
+.pixel-btn:hover {
+  background: linear-gradient(135deg, var(--pixel-accent-2) 0%, var(--pixel-pumpkin) 100%);
+  transform: translateY(-3px);
+  box-shadow: 
+    6px 6px 16px rgba(0, 0, 0, 0.5),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.2),
+    0 0 30px rgba(255, 154, 86, 0.5);
+  filter: brightness(1.1);
+}
+
+.pixel-btn:active {
+  transform: translateY(-1px);
+  box-shadow: 
+    3px 3px 8px rgba(0, 0, 0, 0.5),
+    inset 1px 1px 3px rgba(255, 255, 255, 0.1);
+  filter: brightness(0.95);
+}
+
+.pixel-btn-secondary {
+  background: linear-gradient(135deg, var(--pixel-accent-2) 0%, var(--pixel-accent-4) 100%);
+  border-color: var(--pixel-border);
+  color: white;
+}
+
+.pixel-btn-secondary:hover {
+  background: linear-gradient(135deg, var(--pixel-accent-4) 0%, var(--pixel-accent-2) 100%);
+  color: white;
+  transform: translateY(-3px);
+  box-shadow: 
+    6px 6px 16px rgba(0, 0, 0, 0.5),
+    0 0 30px rgba(155, 123, 181, 0.4);
+  filter: brightness(1.1);
+}
+
+/* Navbar Pixel Art */
+.pixel-navbar {
+  background: linear-gradient(180deg, var(--pixel-bg-2) 0%, var(--pixel-bg-dark) 100%);
+  border-bottom: 3px solid var(--pixel-border);
+  box-shadow: 
+    0 6px 12px rgba(0, 0, 0, 0.4),
+    0 0 25px rgba(155, 123, 181, 0.15);
+  position: relative;
+}
+
+.pixel-navbar::after {
+  content: '';
+  position: absolute;
+  bottom: -6px;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: repeating-linear-gradient(
+    90deg,
+    var(--pixel-pumpkin) 0px,
+    var(--pixel-pumpkin) 8px,
+    var(--pixel-accent-2) 8px,
+    var(--pixel-accent-2) 16px,
+    var(--pixel-accent-4) 16px,
+    var(--pixel-accent-4) 24px
+  );
+  animation: softScroll 4s linear infinite;
+}
+
+/* Código Pixel Art */
+pre, code {
+  font-family: 'VT323', monospace;
+  font-size: 18px;
+  background: var(--pixel-bg-dark);
+  border: 2px solid var(--pixel-border);
+  padding: 2px 6px;
+  border-radius: 0;
+}
+
+pre {
+  padding: 20px;
+  overflow-x: auto;
+  box-shadow: 
+    inset 4px 4px 0 0 rgba(0, 0, 0, 0.5),
+    inset -4px -4px 0 0 rgba(255, 255, 255, 0.05);
+}
+
+/* Links Pixel Art */
+a {
+  color: var(--pixel-pumpkin);
+  text-decoration: none;
+  position: relative;
+  transition: all 0.3s ease;
+}
+
+a:hover {
+  color: var(--pixel-accent-3);
+  text-shadow: 0 0 12px var(--pixel-accent-3);
+}
+
+a::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: linear-gradient(90deg, var(--pixel-pumpkin), var(--pixel-accent-2));
+  transform: scaleX(0);
+  transform-origin: right;
+  transition: transform 0.3s ease;
+}
+
+a:hover::after {
+  transform: scaleX(1);
+  transform-origin: left;
+  box-shadow: 0 0 10px var(--pixel-accent-2);
+}
+
+/* Badges Pixel Art */
+.pixel-badge {
+  font-family: 'Press Start 2P', cursive;
+  font-size: 10px;
+  padding: 8px 16px;
+  background: linear-gradient(135deg, var(--pixel-pumpkin) 0%, var(--pixel-accent-2) 100%);
+  color: white;
+  border: 2px solid var(--pixel-border);
+  border-radius: 6px;
+  display: inline-block;
+  text-transform: uppercase;
+  box-shadow: 
+    4px 4px 10px rgba(0, 0, 0, 0.4),
+    inset 1px 1px 2px rgba(255, 255, 255, 0.2),
+    0 0 20px rgba(255, 154, 86, 0.3);
+  animation: softFloat 3.5s ease-in-out infinite;
+  position: relative;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+}
+
+.pixel-badge::before {
+  content: '✦';
+  position: absolute;
+  left: -12px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--pixel-accent-3);
+  text-shadow: 0 0 10px var(--pixel-accent-3);
+  animation: twinkle 2s ease-in-out infinite;
+}
+
+/* Tablas Pixel Art */
+table {
+  border-collapse: separate;
+  border-spacing: 4px;
+  width: 100%;
+}
+
+th, td {
+  border: 3px solid var(--pixel-border);
+  padding: 12px;
+  background: var(--pixel-bg-light);
+  text-align: left;
+}
+
+th {
+  background: var(--pixel-accent-2);
+  color: white;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+tr:hover td {
+  background: var(--pixel-bg-medium);
+  box-shadow: inset 0 0 10px rgba(0, 255, 165, 0.3);
+}
+
+/* Scrollbar Pixel Art */
+::-webkit-scrollbar {
+  width: 16px;
+  height: 16px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--pixel-bg-dark);
+  border: 2px solid var(--pixel-border);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--pixel-accent-2);
+  border: 2px solid var(--pixel-border);
+  box-shadow: inset 2px 2px 0 0 rgba(255, 255, 255, 0.3);
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--pixel-accent-3);
+}
+
+/* Animaciones Pixel Art */
+@keyframes softGlow {
+  0%, 100% {
+    text-shadow: 
+      2px 2px 2px rgba(0, 0, 0, 0.6),
+      0 0 25px rgba(255, 154, 86, 0.4);
+  }
+  50% {
+    text-shadow: 
+      2px 2px 2px rgba(0, 0, 0, 0.6),
+      0 0 35px rgba(255, 154, 86, 0.6),
+      0 0 50px rgba(155, 123, 181, 0.3);
+  }
+}
+
+@keyframes softPulse {
+  0%, 100% { 
+    opacity: 0.1;
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.15;
+    transform: scale(1.01);
+  }
+}
+
+@keyframes softScroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 24px 0; }
+}
+
+@keyframes softBounce {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+}
+
+@keyframes softFloat {
+  0%, 100% { 
+    transform: translateY(0) rotate(0deg);
+  }
+  25% {
+    transform: translateY(-8px) rotate(2deg);
+  }
+  75% {
+    transform: translateY(8px) rotate(-2deg);
+  }
+}
+
+/* Grid Background Pixel */
+.pixel-grid-bg {
+  background: 
+    linear-gradient(rgba(155, 123, 181, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(155, 123, 181, 0.03) 1px, transparent 1px),
+    linear-gradient(180deg, var(--pixel-bg-dark) 0%, var(--pixel-bg-2) 50%, var(--pixel-bg-3) 100%);
+  background-size: 16px 16px, 16px 16px, 100% 100%;
+  position: relative;
+}
+
+.pixel-grid-bg::before {
+  content: '';
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: radial-gradient(
+    circle at 50% 20%,
+    rgba(255, 154, 86, 0.08) 0%,
+    transparent 60%
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+/* Decoraciones Pixel */
+.pixel-corner {
+  position: relative;
+}
+
+.pixel-corner::before,
+.pixel-corner::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  border: 4px solid var(--pixel-accent-4);
+}
+
+.pixel-corner::before {
+  top: -4px;
+  left: -4px;
+  border-right: none;
+  border-bottom: none;
+}
+
+.pixel-corner::after {
+  bottom: -4px;
+  right: -4px;
+  border-left: none;
+  border-top: none;
+}
+
+/* Hearts/HP Bar Pixel */
+.pixel-hp-bar {
+  display: flex;
+  gap: 4px;
+}
+
+.pixel-heart {
+  width: 16px;
+  height: 16px;
+  background: var(--pixel-accent-1);
+  position: relative;
+  transform: rotate(45deg);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.5);
+}
+
+.pixel-heart::before,
+.pixel-heart::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--pixel-accent-1);
+  border-radius: 50%;
+}
+
+.pixel-heart::before {
+  top: -8px;
+  left: 0;
+}
+
+.pixel-heart::after {
+  left: 8px;
+  top: 0;
+}
+
+/* Coins/Items Pixel */
+.pixel-coin {
+  display: inline-block;
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, var(--pixel-accent-3) 0%, var(--pixel-warm-glow) 50%, var(--pixel-accent-3) 100%);
+  border-radius: 50%;
+  border: 3px solid var(--pixel-border);
+  box-shadow: 
+    inset 2px 2px 0 0 rgba(255, 255, 255, 0.5),
+    inset -2px -2px 0 0 rgba(0, 0, 0, 0.5),
+    3px 3px 0 0 rgba(0, 0, 0, 0.5),
+    0 0 15px var(--pixel-warm-glow);
+  animation: cozyFloat 4s ease-in-out infinite;
+}
+
+/* Candle/Light effect */
+.pixel-candle {
+  display: inline-block;
+  width: 12px;
+  height: 20px;
+  background: linear-gradient(180deg, var(--pixel-accent-3) 0%, var(--pixel-warm-glow) 100%);
+  border: 2px solid var(--pixel-border);
+  position: relative;
+  box-shadow: 0 0 20px var(--pixel-warm-glow);
+}
+
+.pixel-candle::before {
+  content: '✨';
+  position: absolute;
+  top: -12px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  animation: candleFlicker 2s ease-in-out infinite;
+}
+
+@keyframes candleFlicker {
+  0%, 100% { opacity: 1; transform: translateX(-50%) scale(1); }
+  50% { opacity: 0.8; transform: translateX(-50%) scale(1.1); }
+}
+
+/* Star decoration */
+.pixel-star {
+  display: inline-block;
+  width: 16px;
+  height: 16px;
+  background: var(--pixel-accent-3);
+  position: relative;
+  transform: rotate(45deg);
+  box-shadow: 0 0 10px var(--pixel-accent-3);
+  animation: twinkle 3s ease-in-out infinite;
+}
+
+.pixel-star::before,
+.pixel-star::after {
+  content: '';
+  position: absolute;
+  width: 16px;
+  height: 16px;
+  background: var(--pixel-accent-3);
+}
+
+.pixel-star::before {
+  transform: rotate(90deg);
+}
+
+@keyframes twinkle {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.3; }
+}
+
+/* Leaf decoration */
+.pixel-leaf {
+  display: inline-block;
+  width: 20px;
+  height: 12px;
+  background: var(--pixel-accent-4);
+  border-radius: 0 50% 0 50%;
+  border: 2px solid var(--pixel-border);
+  transform: rotate(-20deg);
+  box-shadow: 2px 2px 0 0 rgba(0, 0, 0, 0.5);
+  animation: cozyFloat 5s ease-in-out infinite;
+}
+
+/* Status Bar Pixel */
+.pixel-status-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 20px;
+  background: var(--pixel-bg-medium);
+  border: 3px solid var(--pixel-border);
+  font-family: 'Press Start 2P', cursive;
+  font-size: 12px;
+}
+
+.pixel-status-bar-fill {
+  height: 24px;
+  background: linear-gradient(
+    90deg,
+    var(--pixel-accent-4) 0%,
+    var(--pixel-accent-3) 100%
+  );
+  border: 2px solid var(--pixel-border);
+  box-shadow: inset 2px 2px 0 0 rgba(255, 255, 255, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.pixel-status-bar-fill::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0px,
+    transparent 6px,
+    rgba(0, 0, 0, 0.1) 6px,
+    rgba(0, 0, 0, 0.1) 8px
+  );
+  animation: pixelBarScroll 1s linear infinite;
+}
+
+@keyframes pixelBarScroll {
+  0% { background-position: 0 0; }
+  100% { background-position: 8px 0; }
+}
+
+/* Tooltips Pixel */
+.pixel-tooltip {
+  position: relative;
+  cursor: help;
+}
+
+.pixel-tooltip::after {
+  content: attr(data-tooltip);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(-8px);
+  padding: 12px 16px;
+  background: var(--pixel-bg-dark);
+  border: 3px solid var(--pixel-accent-4);
+  font-family: 'Press Start 2P', cursive;
+  font-size: 10px;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s, transform 0.3s;
+  z-index: 1000;
+  box-shadow: 6px 6px 0 0 rgba(0, 0, 0, 0.5);
+}
+
+.pixel-tooltip:hover::after {
+  opacity: 1;
+  transform: translateX(-50%) translateY(-12px);
+}
+
+/* Responsive Pixel Adjustments */
+@media (max-width: 768px) {
+  h1 {
+    font-size: 20px;
+  }
+  
+  h2 {
+    font-size: 16px;
+  }
+  
+  h3 {
+    font-size: 14px;
+  }
+  
+  .pixel-btn {
+    font-size: 12px;
+    padding: 12px 24px;
+  }
+  
+  body {
+    font-size: 18px;
+  }
+}
+
+/* Hero Button SVG Enhancement */
+a[href="#primeros-pasos"] img {
+  transition: all 0.3s ease;
+}
+
+a[href="#primeros-pasos"]:hover img {
+  filter: drop-shadow(0 6px 25px rgba(255, 154, 86, 0.6)) brightness(1.15);
+  transform: translateY(-6px) scale(1.05);
+}
+
+a[href="#primeros-pasos"]:active img {
+  transform: translateY(-3px) scale(1.02);
+  filter: drop-shadow(0 4px 18px rgba(255, 154, 86, 0.5));
+}
+
+/* ========================================
+   DECORACIONES DE HALLOWEEN
+   ======================================== */
+
+/* Calabaza Pixel Art */
+.pixel-pumpkin {
+  display: inline-block;
+  width: 32px;
+  height: 32px;
+  background: var(--pixel-pumpkin);
+  border-radius: 50%;
+  border: 3px solid var(--pixel-border);
+  position: relative;
+  box-shadow: 
+    3px 3px 8px rgba(0, 0, 0, 0.4),
+    inset -2px -2px 6px rgba(0, 0, 0, 0.3),
+    inset 2px 2px 6px rgba(255, 255, 255, 0.2);
+  animation: softBounce 3s ease-in-out infinite;
+}
+
+.pixel-pumpkin::before {
+  content: '';
+  position: absolute;
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 10px;
+  background: var(--pixel-accent-5);
+  border: 2px solid var(--pixel-border);
+  border-radius: 2px;
+}
+
+.pixel-pumpkin::after {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 20px;
+  height: 16px;
+  background: 
+    linear-gradient(to right, transparent 6px, var(--pixel-border) 6px, var(--pixel-border) 8px, transparent 8px, transparent 12px, var(--pixel-border) 12px, var(--pixel-border) 14px, transparent 14px),
+    linear-gradient(to bottom, transparent 4px, var(--pixel-border) 4px, var(--pixel-border) 6px, transparent 6px);
+  box-shadow: 
+    -2px 10px 0 0 var(--pixel-border),
+    2px 10px 0 0 var(--pixel-border);
+}
+
+/* Fantasma Pixel Art */
+.pixel-ghost {
+  display: inline-block;
+  width: 28px;
+  height: 36px;
+  background: var(--pixel-ghost);
+  border: 2px solid var(--pixel-border);
+  border-radius: 50% 50% 0 0;
+  position: relative;
+  box-shadow: 
+    2px 2px 8px rgba(0, 0, 0, 0.3),
+    inset 0 0 15px rgba(255, 255, 255, 0.4);
+  animation: softFloat 3.5s ease-in-out infinite;
+}
+
+.pixel-ghost::before {
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: 
+    radial-gradient(circle at 25% 0, transparent 40%, var(--pixel-ghost) 40%),
+    radial-gradient(circle at 75% 0, transparent 40%, var(--pixel-ghost) 40%);
+  border-left: 2px solid var(--pixel-border);
+  border-right: 2px solid var(--pixel-border);
+}
+
+.pixel-ghost::after {
+  content: '';
+  position: absolute;
+  top: 12px;
+  left: 6px;
+  width: 14px;
+  height: 6px;
+  background: 
+    linear-gradient(to right, var(--pixel-border) 4px, transparent 4px, transparent 6px, var(--pixel-border) 6px, var(--pixel-border) 10px, transparent 10px);
+  box-shadow: 0 8px 0 0 var(--pixel-border);
+}
+
+/* Murciélago Pixel Art */
+.pixel-bat {
+  display: inline-block;
+  width: 40px;
+  height: 20px;
+  position: relative;
+  animation: batFly 4s ease-in-out infinite;
+}
+
+.pixel-bat::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 8px;
+  height: 10px;
+  background: var(--pixel-border);
+  border-radius: 50%;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+}
+
+.pixel-bat::after {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 0;
+  right: 0;
+  height: 8px;
+  background: 
+    linear-gradient(to right, 
+      transparent 0, 
+      var(--pixel-border) 4px, 
+      var(--pixel-border) 8px, 
+      transparent 8px,
+      transparent 12px,
+      var(--pixel-border) 12px,
+      var(--pixel-border) 16px,
+      transparent 16px,
+      transparent 24px,
+      var(--pixel-border) 24px,
+      var(--pixel-border) 28px,
+      transparent 28px,
+      transparent 32px,
+      var(--pixel-border) 32px,
+      var(--pixel-border) 36px,
+      transparent 36px
+    );
+  clip-path: polygon(
+    0% 100%, 10% 0%, 20% 100%, 30% 50%, 50% 50%, 70% 50%, 80% 100%, 90% 0%, 100% 100%
+  );
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.3));
+}
+
+@keyframes batFly {
+  0%, 100% {
+    transform: translateX(0) translateY(0);
+  }
+  25% {
+    transform: translateX(-8px) translateY(-4px);
+  }
+  75% {
+    transform: translateX(8px) translateY(4px);
+  }
+}
+
+/* Estrella Halloween */
+.pixel-star-halloween {
+  display: inline-block;
+  color: var(--pixel-accent-3);
+  font-size: 20px;
+  animation: twinkle 2.5s ease-in-out infinite;
+  text-shadow: 0 0 12px var(--pixel-accent-3);
+}
+
+@keyframes twinkle {
+  0%, 100% { 
+    opacity: 1; 
+    transform: scale(1);
+  }
+  50% { 
+    opacity: 0.4;
+    transform: scale(0.9);
+  }
+}

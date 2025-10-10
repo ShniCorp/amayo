@@ -247,9 +247,10 @@ const sendResponse = async (
 ): Promise<void> => {
   const extension = path.extname(filePath).toLowerCase();
   const mimeType = MIME_TYPES[extension] || "application/octet-stream";
-  const cacheControl = extension.match(/\.(?:html)$/)
-    ? "no-cache"
-    : "public, max-age=86400, immutable";
+    const cacheControl = extension.match(/\.(?:html)$/)
+      ? "no-cache"
+      : "public, max-age=86400, immutable";
+
 
   const stat = await fs.stat(filePath).catch(() => undefined);
   const data = await fs.readFile(filePath);

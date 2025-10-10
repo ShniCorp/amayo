@@ -19,6 +19,7 @@ import {
   dividerBlock,
   textBlock,
 } from "../../../core/lib/componentsV2";
+import { formatToolLabel, combatSummaryRPG } from "../../../game/lib/rpgFormat";
 import { buildAreaMetadataBlocks } from "./_helpers";
 
 const FIGHT_ACCENT = 0x992d22;
@@ -28,6 +29,7 @@ export const command: CommandMessage = {
   type: "message",
   aliases: ["fight", "arena"],
   cooldown: 8,
+  category: "Minijuegos",
   description: "Entra a la arena y pelea (usa espada si está disponible).",
   usage:
     "pelear [nivel] [toolKey] [area:clave] (ej: pelear 1 weapon.sword.iron)",
@@ -75,6 +77,7 @@ export const command: CommandMessage = {
         )
         .map((r) => r.itemKey!);
       if (result.tool?.key) rewardKeys.push(result.tool.key);
+      if (result.weaponTool?.key) rewardKeys.push(result.weaponTool.key);
       const rewardItems = await fetchItemBasics(guildId, rewardKeys);
 
       // Actualizar stats y misiones
@@ -99,7 +102,7 @@ export const command: CommandMessage = {
         "fight_count"
       );
 
-      const rewardLines = result.rewards.length
+      let rewardLines = result.rewards.length
         ? result.rewards
             .map((r) => {
               if (r.type === "coins") return `• 🪙 +${r.amount}`;
@@ -111,23 +114,53 @@ export const command: CommandMessage = {
             })
             .join("\n")
         : "• —";
+      if (result.rewardModifiers?.baseCoinsAwarded != null) {
+        const { baseCoinsAwarded, coinsAfterPenalty, fatigueCoinMultiplier } =
+          result.rewardModifiers;
+        if (
+          fatigueCoinMultiplier != null &&
+          fatigueCoinMultiplier < 1 &&
+          baseCoinsAwarded != null &&
+          coinsAfterPenalty != null
+        ) {
+          const pct = Math.round((1 - fatigueCoinMultiplier) * 100);
+          rewardLines += `\n  (⚠️ Fatiga: monedas base ${baseCoinsAwarded} → ${coinsAfterPenalty} (-${pct}%) )`;
+        }
+      }
       const mobsLines = result.mobs.length
         ? result.mobs.map((m) => `• ${m}`).join("\n")
         : "• —";
       const toolInfo = result.tool?.key
-        ? `${formatItemLabel(
-            rewardItems.get(result.tool.key) ?? {
-              key: result.tool.key,
-              name: null,
-              icon: null,
-            },
-            { fallbackIcon: "🗡️" }
-          )}${
-            result.tool.broken
-              ? " (rota)"
-              : ` (-${result.tool.durabilityDelta ?? 0} dur.)`
-          }`
+        ? formatToolLabel({
+            key: result.tool.key,
+            displayName: formatItemLabel(
+              rewardItems.get(result.tool.key) ?? {
+                key: result.tool.key,
+                name: null,
+                icon: null,
+              },
+              { fallbackIcon: "🗡️" }
+            ),
+            instancesRemaining: result.tool.instancesRemaining,
+            broken: result.tool.broken,
+            brokenInstance: result.tool.brokenInstance,
+            durabilityDelta: result.tool.durabilityDelta,
+            remaining: result.tool.remaining,
+            max: result.tool.max,
+            source: result.tool.toolSource,
+          })
         : "—";
+      const combatSummary = result.combat
+        ? combatSummaryRPG({
+            mobs: result.mobs.length,
+            mobsDefeated: result.combat.mobsDefeated,
+            totalDamageDealt: result.combat.totalDamageDealt,
+            totalDamageTaken: result.combat.totalDamageTaken,
+            playerStartHp: result.combat.playerStartHp,
+            playerEndHp: result.combat.playerEndHp,
+            outcome: result.combat.outcome,
+          })
+        : null;
 
       const blocks = [textBlock("# ⚔️ Arena")];
 
@@ -150,6 +183,10 @@ export const command: CommandMessage = {
       blocks.push(textBlock(`**Recompensas**\n${rewardLines}`));
       blocks.push(dividerBlock({ divider: false, spacing: 1 }));
       blocks.push(textBlock(`**Enemigos**\n${mobsLines}`));
+      if (combatSummary) {
+        blocks.push(dividerBlock({ divider: false, spacing: 1 }));
+        blocks.push(textBlock(combatSummary));
+      }
 
       // Añadir metadata del área
       const metaBlocks = buildAreaMetadataBlocks(area);

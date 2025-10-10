@@ -1,0 +1,381 @@
+/* ============================================
+   SOFT HALLOWEEN PIXEL ART - SECTIONS OVERRIDES
+   Diseño suave con temática de Halloween
+   ============================================ */
+
+/* Secciones Principales */
+section {
+  background: linear-gradient(135deg, var(--pixel-bg-2) 0%, var(--pixel-bg-3) 100%) !important;
+  border: 3px solid var(--pixel-border) !important;
+  border-radius: 8px !important;
+  box-shadow: 
+    4px 4px 12px rgba(0, 0, 0, 0.4) !important,
+    inset 0 0 30px rgba(155, 123, 181, 0.1) !important,
+    0 0 25px rgba(255, 154, 86, 0.15) !important;
+  padding: 32px !important;
+  margin-bottom: 32px;
+  position: relative;
+  backdrop-filter: none !important;
+}
+
+section::before {
+  content: '';
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  right: 8px;
+  bottom: 8px;
+  border: 2px solid rgba(155, 123, 181, 0.08);
+  border-radius: 4px;
+  pointer-events: none;
+}
+
+/* Títulos de Secciones */
+section h2 {
+  font-family: 'Press Start 2P', cursive !important;
+  font-size: 24px !important;
+  line-height: 1.6 !important;
+  color: var(--pixel-accent-3) !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+  text-shadow: 
+    2px 2px 0px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 198, 92, 0.4) !important;
+  margin-bottom: 24px !important;
+}
+
+section h3 {
+  font-family: 'Press Start 2P', cursive !important;
+  font-size: 16px !important;
+  line-height: 1.6 !important;
+  color: var(--pixel-accent-2) !important;
+  margin-bottom: 16px !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+}
+
+section h4 {
+  font-family: 'VT323', monospace !important;
+  font-size: 22px !important;
+  font-weight: bold !important;
+  color: var(--pixel-pumpkin) !important;
+  margin-bottom: 12px !important;
+}
+
+/* Párrafos en Secciones */
+section p {
+  color: var(--pixel-text) !important;
+  margin-bottom: 16px;
+}
+
+section p strong {
+  color: var(--pixel-pumpkin) !important;
+  font-weight: bold;
+}
+
+/* Cajas de Información */
+section > div[class*="space-y"] {
+  background: var(--pixel-bg-3) !important;
+  border: 3px solid var(--pixel-border) !important;
+  border-radius: 6px !important;
+  padding: 20px !important;
+  box-shadow: 
+    inset 0 0 20px rgba(0, 0, 0, 0.3),
+    4px 4px 10px rgba(0, 0, 0, 0.4) !important;
+}
+
+section > div[class*="border-indigo"] {
+  border-color: var(--pixel-accent-2) !important;
+  background: var(--pixel-bg-3) !important;
+}
+
+/* Grid de Cards */
+section .grid > div {
+  background: var(--pixel-bg-3) !important;
+  border: 3px solid var(--pixel-border) !important;
+  border-radius: 6px !important;
+  box-shadow: 
+    4px 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(155, 123, 181, 0.08) !important;
+  padding: 20px !important;
+}
+
+/* Listas */
+section ul {
+  list-style: none !important;
+  padding-left: 0 !important;
+}
+
+section ul li {
+  position: relative;
+  padding-left: 24px;
+  margin-bottom: 12px;
+  color: var(--pixel-text) !important;
+}
+
+section ul li::before {
+  content: '✦';
+  position: absolute;
+  left: 0;
+  color: var(--pixel-pumpkin);
+  font-size: 12px;
+}
+
+section ol {
+  list-style: none !important;
+  counter-reset: pixel-counter;
+  padding-left: 0 !important;
+}
+
+section ol li {
+  position: relative;
+  padding-left: 32px;
+  margin-bottom: 12px;
+  counter-increment: pixel-counter;
+  color: var(--pixel-text) !important;
+}
+
+section ol li::before {
+  content: counter(pixel-counter) '.';
+  position: absolute;
+  left: 0;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 12px;
+  color: var(--pixel-pumpkin);
+}
+
+/* Code Blocks en Secciones */
+section code {
+  background: var(--pixel-bg-dark) !important;
+  border: 2px solid var(--pixel-accent-2) !important;
+  color: var(--pixel-accent-3) !important;
+  padding: 4px 8px !important;
+  font-family: 'VT323', monospace !important;
+  font-size: 18px !important;
+  border-radius: 4px !important;
+}
+
+section pre {
+  background: var(--pixel-bg-dark) !important;
+  border: 3px solid var(--pixel-border) !important;
+  padding: 20px !important;
+  border-radius: 6px !important;
+  box-shadow: 
+    inset 3px 3px 8px rgba(0, 0, 0, 0.5) !important;
+  overflow-x: auto;
+}
+
+section pre code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: var(--pixel-accent-3) !important;
+}
+
+/* Tablas en Secciones */
+section table {
+  border-collapse: separate !important;
+  border-spacing: 4px !important;
+  width: 100% !important;
+  margin: 20px 0;
+}
+
+section th {
+  background: var(--pixel-accent-2) !important;
+  color: white !important;
+  border: 3px solid var(--pixel-border) !important;
+  padding: 12px !important;
+  font-family: 'Press Start 2P', cursive !important;
+  font-size: 12px !important;
+  text-transform: uppercase !important;
+  text-align: left !important;
+  border-radius: 4px !important;
+}
+
+section td {
+  background: var(--pixel-bg-3) !important;
+  border: 3px solid var(--pixel-border) !important;
+  padding: 12px !important;
+  color: var(--pixel-text) !important;
+  border-radius: 4px !important;
+}
+
+section tr:hover td {
+  background: var(--pixel-bg-medium) !important;
+  box-shadow: inset 0 0 10px rgba(6, 255, 165, 0.3) !important;
+}
+
+/* Badges y Tags */
+section span[class*="bg-indigo"],
+section span[class*="bg-purple"],
+section span[class*="bg-pink"] {
+  display: inline-block;
+  padding: 6px 12px !important;
+  background: var(--pixel-accent-2) !important;
+  border: 2px solid var(--pixel-border) !important;
+  color: white !important;
+  font-family: 'Press Start 2P', cursive !important;
+  font-size: 10px !important;
+  box-shadow: 3px 3px 0 0 rgba(0, 0, 0, 0.5) !important;
+  border-radius: 0 !important;
+}
+
+/* Links en Secciones */
+section a:not(.pixel-btn) {
+  color: var(--pixel-accent-4) !important;
+  text-decoration: none;
+  position: relative;
+  transition: all 0.2s;
+}
+
+section a:not(.pixel-btn):hover {
+  color: var(--pixel-accent-3) !important;
+  text-shadow: 0 0 8px var(--pixel-accent-3);
+}
+
+/* Imágenes */
+section img {
+  border: 4px solid var(--pixel-border) !important;
+  box-shadow: 8px 8px 0 0 rgba(0, 0, 0, 0.5) !important;
+  image-rendering: pixelated !important;
+}
+
+/* Dividers */
+section hr {
+  border: none;
+  height: 4px;
+  background: var(--pixel-border);
+  margin: 32px 0;
+  position: relative;
+}
+
+section hr::after {
+  content: '◆';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background: var(--pixel-bg-medium);
+  padding: 0 16px;
+  color: var(--pixel-accent-4);
+  font-size: 20px;
+}
+
+/* Blockquotes */
+section blockquote {
+  border-left: 6px solid var(--pixel-accent-4);
+  background: var(--pixel-bg-light);
+  padding: 20px;
+  margin: 20px 0;
+  position: relative;
+  box-shadow: 
+    4px 4px 0 0 rgba(0, 0, 0, 0.5),
+    inset 0 0 20px rgba(0, 0, 0, 0.3);
+}
+
+section blockquote::before {
+  content: '"';
+  position: absolute;
+  top: -10px;
+  left: 10px;
+  font-family: 'Press Start 2P', cursive;
+  font-size: 48px;
+  color: var(--pixel-accent-4);
+  opacity: 0.3;
+}
+
+/* Alerts y Warnings */
+section .alert,
+section [class*="bg-yellow"],
+section [class*="bg-red"],
+section [class*="bg-green"] {
+  border: 4px solid var(--pixel-border) !important;
+  border-radius: 0 !important;
+  padding: 16px !important;
+  margin: 16px 0;
+  box-shadow: 4px 4px 0 0 rgba(0, 0, 0, 0.5) !important;
+  background: var(--pixel-bg-light) !important;
+}
+
+section [class*="bg-yellow"] {
+  border-left: 8px solid #ffd700 !important;
+}
+
+section [class*="bg-red"] {
+  border-left: 8px solid var(--pixel-accent-1) !important;
+}
+
+section [class*="bg-green"] {
+  border-left: 8px solid var(--pixel-accent-4) !important;
+}
+
+/* Botones en Secciones */
+section button,
+section a[class*="bg-"] {
+  font-family: 'Press Start 2P', cursive !important;
+  font-size: 12px !important;
+  padding: 12px 24px !important;
+  border: 3px solid var(--pixel-border) !important;
+  background: linear-gradient(135deg, var(--pixel-pumpkin), var(--pixel-accent-2)) !important;
+  color: white !important;
+  text-transform: uppercase !important;
+  cursor: pointer !important;
+  border-radius: 8px !important;
+  box-shadow: 
+    4px 4px 10px rgba(0, 0, 0, 0.4) !important,
+    inset 2px 2px 4px rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.3s ease !important;
+  backdrop-filter: none !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5) !important;
+}
+
+section button:hover,
+section a[class*="bg-"]:hover {
+  background: linear-gradient(135deg, var(--pixel-accent-2), var(--pixel-pumpkin)) !important;
+  transform: translateY(-3px) !important;
+  box-shadow: 
+    6px 6px 16px rgba(0, 0, 0, 0.5) !important,
+    inset 2px 2px 6px rgba(255, 255, 255, 0.2) !important,
+    0 0 30px rgba(255, 154, 86, 0.4) !important;
+  filter: brightness(1.1) !important;
+}
+
+/* Formularios */
+section input,
+section textarea,
+section select {
+  font-family: 'VT323', monospace !important;
+  font-size: 20px !important;
+  background: var(--pixel-bg-dark) !important;
+  border: 3px solid var(--pixel-border) !important;
+  color: var(--pixel-text) !important;
+  padding: 12px !important;
+  border-radius: 0 !important;
+  box-shadow: inset 2px 2px 0 0 rgba(0, 0, 0, 0.5) !important;
+}
+
+section input:focus,
+section textarea:focus,
+section select:focus {
+  outline: none !important;
+  border-color: var(--pixel-accent-4) !important;
+  box-shadow: 
+    inset 2px 2px 0 0 rgba(0, 0, 0, 0.5),
+    0 0 0 3px var(--pixel-accent-4) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  section {
+    padding: 20px !important;
+  }
+  
+  section h2 {
+    font-size: 18px !important;
+  }
+  
+  section h3 {
+    font-size: 14px !important;
+  }
+}

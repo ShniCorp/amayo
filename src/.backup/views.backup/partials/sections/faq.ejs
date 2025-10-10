@@ -1,0 +1,67 @@
+<section id="faq" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10">
+  <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">❓ Preguntas Frecuentes</h2>
+  <div class="space-y-4 text-slate-200">
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4 open:bg-slate-900/60">
+      <summary class="cursor-pointer font-semibold text-white">¿Puedo editar un item después de crearlo?</summary>
+      <div class="mt-2 text-sm">
+        Sí, usa <span class="font-mono">!item-editar &lt;key&gt;</span>. Para ver detalles sin editar: <span class="font-mono">!item-ver &lt;key&gt;</span>.
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Cómo elimino un item?</summary>
+      <div class="mt-2 text-sm">
+        Usa <span class="font-mono">!item-eliminar &lt;key&gt;</span>. Atención: es permanente y no se puede deshacer.
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Cómo veo todos los items creados?</summary>
+      <div class="mt-2 text-sm">
+        <span class="font-mono">!items-lista [página]</span> muestra una lista paginada con botones para ver detalles.
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Qué formato tienen las fechas ISO?</summary>
+      <div class="mt-2 text-sm">
+        Usa <span class="font-mono">YYYY-MM-DDTHH:MM:SSZ</span>. Ejemplos: <span class="font-mono">2025-01-15T00:00:00Z</span>, <span class="font-mono">2025-12-25T23:59:59Z</span>.
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Puedo crear items globales?</summary>
+      <div class="mt-2 text-sm">
+        Solo los administradores del bot pueden crear items globales. Los items que crees serán locales a tu servidor.
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Cuántos niveles puedo crear por área?</summary>
+      <div class="mt-2 text-sm">
+        No hay límite técnico; se recomiendan 5–10 por área para una progresión balanceada.
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Qué pasa si un jugador no tiene la herramienta requerida?</summary>
+      <div class="mt-2 text-sm">
+        El bot indica la herramienta y el tier mínimo necesarios según los requisitos del nivel.
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Cómo funcionan los pesos (weights)?</summary>
+      <div class="mt-2 text-sm">
+        Son probabilidades relativas. Si A tiene peso 10 y B peso 5, A es el doble de probable (10/15 vs 5/15).
+      </div>
+    </details>
+
+    <details class="group rounded-2xl border border-white/10 bg-slate-900/50 p-4">
+      <summary class="cursor-pointer font-semibold text-white">¿Puedo hacer que un ítem cure porcentaje de vida?</summary>
+      <div class="mt-2 text-sm">
+        Sí, en props usa <span class="font-mono">food.healPercent</span> (ej. 50) y un cooldown con <span class="font-mono">food.cooldownSeconds</span>.
+      </div>
+    </details>
+  </div>
+</section>
