@@ -63,7 +63,7 @@ export async function updateStats(
 
     return stats;
   } catch (error) {
-    console.error(`Error updating stats for ${userId} in ${guildId}:`, error);
+    console.error("Error updating player stats", error);
     throw error;
   }
 }
