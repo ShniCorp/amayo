@@ -36,58 +36,43 @@
         </a>
       </div>
 
-      <!-- Stats Footer con SVG Backgrounds separados -->
-      <div class="flex flex-wrap justify-center gap-6 pt-8">
+      <!-- Stats Footer con SVG Backgrounds mejorados -->
+      <div class="flex flex-wrap justify-center gap-8 pt-12 px-4">
         <!-- Primera fila: Discord.js y Fecha -->
-        <div class="flex flex-wrap justify-center gap-6 w-full max-w-5xl">
-          <!-- Discord.js Version - Usa snap.svg -->
-          <div class="relative flex-1 min-w-[320px] max-w-[480px]" 
-               style="background-image: url('/assets/images/snap.svg'); 
-                      background-size: 100% 100%; 
-                      background-position: center; 
-                      background-repeat: no-repeat;
-                      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
-            <div class="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
-            <div class="relative z-10 py-8 px-8 flex flex-col items-center justify-center gap-3" style="min-height: 140px;">
-              <span class="pixel-leaf text-2xl"></span>
+        <div class="flex flex-wrap justify-center gap-8 w-full max-w-6xl">
+          <!-- Discord.js Version -->
+          <div class="relative flex-1 min-w-[340px] max-w-[500px]">
+            <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 py-6 px-6">
+              <span class="pixel-leaf text-3xl" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></span>
               <div class="text-center">
-                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-wider">Discord.js</p>
-                <p class="text-lg font-bold text-white"><%= djsVersion %></p>
+                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Discord.js</p>
+                <p class="text-xl font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= djsVersion %></p>
               </div>
             </div>
           </div>
 
-          <!-- Fecha de actualización - Usa snap1.svg -->
-          <div class="relative flex-1 min-w-[320px] max-w-[480px]" 
-               style="background-image: url('/assets/images/snap1.svg'); 
-                      background-size: 100% 100%; 
-                      background-position: center; 
-                      background-repeat: no-repeat;
-                      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
-            <div class="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
-            <div class="relative z-10 py-8 px-8 flex flex-col items-center justify-center gap-3" style="min-height: 140px;">
-              <span class="text-2xl">✦</span>
+          <!-- Fecha de actualización -->
+          <div class="relative flex-1 min-w-[340px] max-w-[500px]">
+            <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 py-6 px-6">
+              <span class="text-3xl" style="filter: drop-shadow(0 2px 4px rgba(255,179,71,0.4));">✦</span>
               <div class="text-center">
-                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-wider">Actualizado</p>
-                <p class="text-lg font-bold text-white"><%= currentDateHuman %></p>
+                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Actualizado</p>
+                <p class="text-xl font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= currentDateHuman %></p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Segunda fila: Secciones - Usa snap.svg -->
-        <div class="relative w-full max-w-5xl" 
-             style="background-image: url('/assets/images/snap.svg'); 
-                    background-size: 100% 100%; 
-                    background-position: center; 
-                    background-repeat: no-repeat;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
-          <div class="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
-          <div class="relative z-10 py-10 px-8 flex flex-col items-center justify-center gap-4" style="min-height: 160px;">
-            <span class="text-4xl">🎮</span>
+        <!-- Segunda fila: Secciones -->
+        <div class="relative w-full max-w-6xl">
+          <img src="/assets/images/snap2.svg" alt="card background" class="w-full h-auto" style="display: block;">
+          <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 py-8 px-6">
+            <span class="text-5xl" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">🎮</span>
             <div class="text-center space-y-2">
-              <p class="text-3xl font-bold" style="color: var(--pixel-accent-3);">23 Secciones</p>
-              <p class="text-base text-white/90">Sistema Completo • Creación de Contenido</p>
+              <p class="text-4xl font-bold" style="color: var(--pixel-accent-3); text-shadow: 0 2px 6px rgba(0,0,0,0.5);">23 Secciones</p>
+              <p class="text-lg text-white/95 font-medium" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Sistema Completo • Creación de Contenido</p>
             </div>
           </div>
         </div>
