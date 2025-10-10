@@ -42,7 +42,7 @@
           <!-- Discord.js Version -->
           <div class="relative flex-1 min-w-[240px] max-w-[320px]">
             <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
-            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4" style="min-height: 64px;">
               <span class="pixel-leaf text-xl" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></span>
               <div class="text-center">
                 <p class="text-[10px] pixel-text-dim mb-1 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Discord.js</p>
@@ -54,7 +54,7 @@
           <!-- Fecha de actualización -->
           <div class="relative flex-1 min-w-[240px] max-w-[320px]">
             <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
-            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4">
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4" style="min-height: 64px;">
               <span class="text-xl" style="filter: drop-shadow(0 2px 4px rgba(255,179,71,0.4));">✦</span>
               <div class="text-center">
                 <p class="text-[10px] pixel-text-dim mb-1 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Actualizado</p>
@@ -65,7 +65,7 @@
           <!-- Tercer badge: Secciones -->
           <div class="relative flex-1 min-w-[240px] max-w-[320px]">
             <img src="/assets/images/snap2.svg" alt="card background" class="w-full h-auto" style="display: block;">
-            <div class="absolute inset-0 flex items-center gap-3 py-3 px-4">
+            <div class="absolute inset-0 flex items-center justify-center gap-2 py-4 px-4" style="min-height: 64px;">
               <span class="text-xl" aria-hidden="true" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));">🎮</span>
               <p class="text-sm font-semibold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);">23 Secciones</p>
             </div>
@@ -103,6 +103,7 @@
           <%- await include('../partials/sections/alianzas') %>
           <%- await include('../partials/sections/admin') %>
           <%- await include('../partials/sections/creacion-contenido') %>
+          <%- await include('../partials/sections/ejemplos-avanzados') %>
           <%- await include('../partials/sections/configuracion') %>
           <%- await include('../partials/sections/estadisticas') %>
           <%- await include('../partials/sections/tips') %>
