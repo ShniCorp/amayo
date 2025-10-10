@@ -1,0 +1,122 @@
+<% const pageTitle = `${appName} | Guía Completa`; %>
+<% const head = null; %>
+<% const scripts = null; %>
+<% const title = pageTitle; %>
+<% layout('layouts/layout', { title, head, scripts, appName, version, djsVersion, currentDateHuman }); %>
+
+<header class="relative overflow-hidden py-20 sm:py-28">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+    <div class="max-w-5xl mx-auto text-center space-y-12">
+      <!-- Badge Moderno con decoraciones sutiles -->
+      <div class="inline-block relative">
+        <span class="pixel-pumpkin absolute" style="left: -40px; top: 50%; transform: translateY(-50%);"></span>
+        <div class="pixel-badge">
+          <%= appName %> • v<%= version %>
+        </div>
+        <span class="pixel-ghost absolute" style="right: -40px; top: 50%; transform: translateY(-50%);"></span>
+      </div>
+
+      <!-- Título Principal -->
+      <div class="space-y-4">
+        <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-tight">
+          Guía Completa
+        </h1>
+        <h2 class="text-4xl sm:text-5xl md:text-6xl" style="font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #a78bfa, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
+          <%= appName %>
+        </h2>
+      </div>
+
+      <!-- Decoraciones sutiles -->
+      <div class="flex justify-center gap-6 items-center">
+        <span class="pixel-star-halloween">✦</span>
+        <span class="pixel-pumpkin"></span>
+        <span class="pixel-star-halloween" style="animation-delay: 0.5s;">✦</span>
+        <span class="pixel-ghost" style="animation-delay: 1s;"></span>
+        <span class="pixel-star-halloween" style="animation-delay: 1.5s;">✦</span>
+      </div>
+
+      <!-- Descripción con diseño moderno -->
+      <div class="pixel-box max-w-3xl mx-auto">
+        <p class="text-xl sm:text-2xl leading-relaxed" style="color: var(--text-secondary);">
+          Sistema completo de 
+          <span class="gradient-text font-semibold">economía</span>, 
+          <span class="gradient-text font-semibold">minijuegos</span>, 
+          <span class="gradient-text font-semibold">misiones</span> y 
+          <span class="gradient-text font-semibold">IA</span> 
+          para Discord
+        </p>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center pt-4">
+        <a href="#primeros-pasos" class="block hover:scale-105 transition-transform duration-300">
+          <img src="/assets/images/boton_entrar.svg" alt="Comenzar ahora" class="w-full h-auto" style="max-width: 350px; filter: drop-shadow(0 4px 12px rgba(255, 179, 71, 0.3));">
+        </a>
+        
+        <button id="toggle-nav" class="pixel-btn pixel-btn-secondary flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="5" width="18" height="2" fill="currentColor" rx="1"/>
+            <rect x="3" y="11" width="18" height="2" fill="currentColor" rx="1"/>
+            <rect x="3" y="17" width="18" height="2" fill="currentColor" rx="1"/>
+          </svg>
+          <span>Ver comandos</span>
+        </button>
+      </div>
+        </button>
+      </div>
+
+      <!-- Stats Footer con decoración -->
+      <div class="flex flex-wrap justify-center gap-4 pt-8">
+        <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
+          <span class="pixel-leaf"></span>
+          <span><span class="pixel-text-dim">Discord.js</span> <%= djsVersion %></span>
+        </div>
+        <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
+          <span>✦</span>
+          <span><span class="pixel-text-dim">Actualizado:</span> <%= currentDateHuman %></span>
+        </div>
+        <div class="pixel-box py-3 px-6 text-sm">
+          <span style="color: var(--pixel-accent-3); font-weight: bold;">23 Secciones</span> • Creación de Contenido
+        </div>
+      </div>
+    </div>
+  </div>
+</header>
+
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
+  <div class="flex min-h-screen flex-col">
+
+    <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 pb-16 lg:flex-row lg:px-10">
+      <%- include('partials/toc') %>
+
+      <main class="flex-1">
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
+          <%- include('partials/sections/primeros-pasos') %>
+          <%- include('partials/sections/comandos-basicos') %>
+          <%- include('partials/sections/sistema-juego') %>
+          <%- include('partials/sections/minijuegos') %>
+          <%- include('partials/sections/inventario-equipo') %>
+          <%- include('partials/sections/economia') %>
+          <%- include('partials/sections/tienda') %>
+          <%- include('partials/sections/crafteo') %>
+          <%- include('partials/sections/logros') %>
+          <%- include('partials/sections/misiones') %>
+          <%- include('partials/sections/racha') %>
+          <%- include('partials/sections/consumibles') %>
+          <%- include('partials/sections/cofres') %>
+          <%- include('partials/sections/encantamientos') %>
+          <%- include('partials/sections/fundicion') %>
+          <%- include('partials/sections/ia') %>
+          <%- include('partials/sections/recordatorios') %>
+          <%- include('partials/sections/alianzas') %>
+          <%- include('partials/sections/admin') %>
+          <%- include('partials/sections/creacion-contenido') %>
+          <%- include('partials/sections/configuracion') %>
+          <%- include('partials/sections/estadisticas') %>
+          <%- include('partials/sections/tips') %>
+          <%- include('partials/sections/faq') %>
+        </div>
+      </main>
+    </div>
+  </div>
+</div>
