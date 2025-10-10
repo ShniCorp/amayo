@@ -1,3 +1,9 @@
+<% const pageTitle = `${appName} | Guía Completa`; %>
+<% const head = null; %>
+<% const scripts = null; %>
+<% const title = pageTitle; %>
+<% layout('../layouts/layout.ejs', { title, head, scripts, appName, version, djsVersion, currentDateHuman }); %>
+
 <header class="relative overflow-hidden py-20 sm:py-28">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
     <div class="max-w-5xl mx-auto text-center space-y-12">
@@ -43,72 +49,74 @@
 
       <!-- Botones de Acción -->
       <div class="flex flex-col sm:flex-row gap-6 justify-center items-center pt-4">
-        <a href="#primeros-pasos" class="pixel-btn flex items-center gap-2">
-          <span>Comenzar ahora</span>
-          <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-          </svg>
+        <a href="#primeros-pasos" class="block hover:scale-105 transition-transform duration-300">
+          <img src="/assets/images/boton_entrar.svg" alt="Comenzar ahora" class="w-full h-auto" style="max-width: 350px; filter: drop-shadow(0 4px 12px rgba(255, 179, 71, 0.3));">
         </a>
+        
+        <button id="toggle-nav" class="pixel-btn pixel-btn-secondary flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect x="3" y="5" width="18" height="2" fill="currentColor" rx="1"/>
+            <rect x="3" y="11" width="18" height="2" fill="currentColor" rx="1"/>
+            <rect x="3" y="17" width="18" height="2" fill="currentColor" rx="1"/>
+          </svg>
+          <span>Ver comandos</span>
+        </button>
+      </div>
+        </button>
       </div>
 
-      <!-- Stats Footer -->
+      <!-- Stats Footer con decoración -->
       <div class="flex flex-wrap justify-center gap-4 pt-8">
         <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
-          <span class="pixel-star-halloween">✦</span>
-          <span style="color: var(--text-secondary);">Discord.js <%= djsVersion %></span>
+          <span class="pixel-leaf"></span>
+          <span><span class="pixel-text-dim">Discord.js</span> <%= djsVersion %></span>
         </div>
         <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
-          <span class="pixel-star-halloween">✦</span>
-          <span style="color: var(--text-secondary);"><%= currentDateHuman %></span>
+          <span>✦</span>
+          <span><span class="pixel-text-dim">Actualizado:</span> <%= currentDateHuman %></span>
         </div>
         <div class="pixel-box py-3 px-6 text-sm">
-          <span class="gradient-text font-semibold">23 Secciones</span>
+          <span style="color: var(--pixel-accent-3); font-weight: bold;">23 Secciones</span> • Creación de Contenido
         </div>
       </div>
     </div>
   </div>
 </header>
 
-<div class="mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16 max-w-[120rem]">
+<div class="container mx-auto px-4 sm:px-6 lg:px-8 py-12 lg:py-16">
   <div class="flex min-h-screen flex-col">
 
-  <div class="mx-auto flex w-full max-w-[120rem] flex-1 flex-col gap-10 px-0 md:px-6 pb-16 lg:flex-row lg:px-10">
-      <%- await include('../partials/toc') %>
+    <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 pb-16 lg:flex-row lg:px-10">
+      <%- include('partials/toc') %>
 
-  <main class="w-full flex-1 min-w-0 lg:max-w-none xl:max-w-none 2xl:max-w-none">
-        <div class="mx-auto flex w-full flex-col gap-8">
-          <%- await include('../partials/sections/primeros-pasos') %>
-          <%- await include('../partials/sections/comandos-basicos') %>
-          <%- await include('../partials/sections/ejemplos-basicos') %>
-          <%- await include('../partials/sections/ejemplos-avanzados') %>
-          <%- await include('../partials/sections/sistema-juego') %>
-          <%- await include('../partials/sections/minijuegos') %>
-          <%- await include('../partials/sections/inventario-equipo') %>
-          <%- await include('../partials/sections/economia') %>
-          <%- await include('../partials/sections/tienda') %>
-          <%- await include('../partials/sections/crafteo') %>
-          <%- await include('../partials/sections/logros') %>
-          <%- await include('../partials/sections/misiones') %>
-          <%- await include('../partials/sections/racha') %>
-          <%- await include('../partials/sections/consumibles') %>
-          <%- await include('../partials/sections/cofres') %>
-          <%- await include('../partials/sections/encantamientos') %>
-          <%- await include('../partials/sections/fundicion') %>
-          <%- await include('../partials/sections/ia') %>
-          <%- await include('../partials/sections/recordatorios') %>
-          <%- await include('../partials/sections/alianzas') %>
-          <%- await include('../partials/sections/admin') %>
-          <%- await include('../partials/sections/creacion-contenido') %>
-          <%- await include('../partials/sections/configuracion') %>
-          <%- await include('../partials/sections/estadisticas') %>
-          <%- await include('../partials/sections/tips') %>
-          <%- await include('../partials/sections/faq') %>
+      <main class="flex-1">
+        <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
+          <%- include('partials/sections/primeros-pasos') %>
+          <%- include('partials/sections/comandos-basicos') %>
+          <%- include('partials/sections/sistema-juego') %>
+          <%- include('partials/sections/minijuegos') %>
+          <%- include('partials/sections/inventario-equipo') %>
+          <%- include('partials/sections/economia') %>
+          <%- include('partials/sections/tienda') %>
+          <%- include('partials/sections/crafteo') %>
+          <%- include('partials/sections/logros') %>
+          <%- include('partials/sections/misiones') %>
+          <%- include('partials/sections/racha') %>
+          <%- include('partials/sections/consumibles') %>
+          <%- include('partials/sections/cofres') %>
+          <%- include('partials/sections/encantamientos') %>
+          <%- include('partials/sections/fundicion') %>
+          <%- include('partials/sections/ia') %>
+          <%- include('partials/sections/recordatorios') %>
+          <%- include('partials/sections/alianzas') %>
+          <%- include('partials/sections/admin') %>
+          <%- include('partials/sections/creacion-contenido') %>
+          <%- include('partials/sections/configuracion') %>
+          <%- include('partials/sections/estadisticas') %>
+          <%- include('partials/sections/tips') %>
+          <%- include('partials/sections/faq') %>
         </div>
       </main>
-
-      <aside class="hidden lg:block lg:w-80 xl:w-96 2xl:w-[28rem] lg:sticky lg:top-24 lg:h-fit lg:self-start">
-        <%- await include('../partials/rightSidebar') %>
-      </aside>
     </div>
   </div>
 </div>
