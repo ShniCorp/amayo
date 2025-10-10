@@ -1,9 +1,3 @@
-<% const pageTitle = `${appName} | Guía Completa`; %>
-<% const head = null; %>
-<% const scripts = null; %>
-<% const title = pageTitle; %>
-<% layout('../layouts/layout.ejs', { title, head, scripts, appName, version, djsVersion, currentDateHuman }); %>
-
 <header class="relative overflow-hidden py-20 sm:py-28">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
     <div class="max-w-5xl mx-auto text-center space-y-12">
@@ -87,34 +81,34 @@
   <div class="flex min-h-screen flex-col">
 
     <div class="mx-auto flex w-full max-w-6xl flex-1 flex-col gap-10 px-6 pb-16 lg:flex-row lg:px-10">
-      <%- include('partials/toc') %>
+      <%- include('../partials/toc') %>
 
       <main class="flex-1">
         <div class="mx-auto flex w-full max-w-3xl flex-col gap-8">
-          <%- include('partials/sections/primeros-pasos') %>
-          <%- include('partials/sections/comandos-basicos') %>
-          <%- include('partials/sections/sistema-juego') %>
-          <%- include('partials/sections/minijuegos') %>
-          <%- include('partials/sections/inventario-equipo') %>
-          <%- include('partials/sections/economia') %>
-          <%- include('partials/sections/tienda') %>
-          <%- include('partials/sections/crafteo') %>
-          <%- include('partials/sections/logros') %>
-          <%- include('partials/sections/misiones') %>
-          <%- include('partials/sections/racha') %>
-          <%- include('partials/sections/consumibles') %>
-          <%- include('partials/sections/cofres') %>
-          <%- include('partials/sections/encantamientos') %>
-          <%- include('partials/sections/fundicion') %>
-          <%- include('partials/sections/ia') %>
-          <%- include('partials/sections/recordatorios') %>
-          <%- include('partials/sections/alianzas') %>
-          <%- include('partials/sections/admin') %>
-          <%- include('partials/sections/creacion-contenido') %>
-          <%- include('partials/sections/configuracion') %>
-          <%- include('partials/sections/estadisticas') %>
-          <%- include('partials/sections/tips') %>
-          <%- include('partials/sections/faq') %>
+          <%- include('../partials/sections/primeros-pasos') %>
+          <%- include('../partials/sections/comandos-basicos') %>
+          <%- include('../partials/sections/sistema-juego') %>
+          <%- include('../partials/sections/minijuegos') %>
+          <%- include('../partials/sections/inventario-equipo') %>
+          <%- include('../partials/sections/economia') %>
+          <%- include('../partials/sections/tienda') %>
+          <%- include('../partials/sections/crafteo') %>
+          <%- include('../partials/sections/logros') %>
+          <%- include('../partials/sections/misiones') %>
+          <%- include('../partials/sections/racha') %>
+          <%- include('../partials/sections/consumibles') %>
+          <%- include('../partials/sections/cofres') %>
+          <%- include('../partials/sections/encantamientos') %>
+          <%- include('../partials/sections/fundicion') %>
+          <%- include('../partials/sections/ia') %>
+          <%- include('../partials/sections/recordatorios') %>
+          <%- include('../partials/sections/alianzas') %>
+          <%- include('../partials/sections/admin') %>
+          <%- include('../partials/sections/creacion-contenido') %>
+          <%- include('../partials/sections/configuracion') %>
+          <%- include('../partials/sections/estadisticas') %>
+          <%- include('../partials/sections/tips') %>
+          <%- include('../partials/sections/faq') %>
         </div>
       </main>
     </div>
