@@ -1,17 +1,17 @@
 /* ============================================
-   COZY PIXEL ART - SECTIONS OVERRIDES
-   Diseño witchy/fantasy acogedor
+   SOFT HALLOWEEN PIXEL ART - SECTIONS OVERRIDES
+   Diseño suave con temática de Halloween
    ============================================ */
 
 /* Secciones Principales */
 section {
-  background: linear-gradient(135deg, var(--pixel-bg-medium) 0%, var(--pixel-bg-light) 100%) !important;
-  border: 4px solid var(--pixel-border) !important;
-  border-radius: 0 !important;
+  background: linear-gradient(135deg, var(--pixel-bg-2) 0%, var(--pixel-bg-3) 100%) !important;
+  border: 3px solid var(--pixel-border) !important;
+  border-radius: 8px !important;
   box-shadow: 
-    8px 8px 0 0 rgba(0, 0, 0, 0.5) !important,
-    inset 0 0 0 2px rgba(255, 179, 71, 0.15) !important,
-    0 0 20px rgba(255, 179, 71, 0.2) !important;
+    4px 4px 12px rgba(0, 0, 0, 0.4) !important,
+    inset 0 0 30px rgba(155, 123, 181, 0.1) !important,
+    0 0 25px rgba(255, 154, 86, 0.15) !important;
   padding: 32px !important;
   margin-bottom: 32px;
   position: relative;
@@ -25,7 +25,8 @@ section::before {
   left: 8px;
   right: 8px;
   bottom: 8px;
-  border: 2px solid rgba(255, 179, 71, 0.1);
+  border: 2px solid rgba(155, 123, 181, 0.08);
+  border-radius: 4px;
   pointer-events: none;
 }
 
@@ -40,8 +41,8 @@ section h2 {
   background-clip: unset !important;
   -webkit-text-fill-color: unset !important;
   text-shadow: 
-    2px 2px 0px var(--pixel-border),
-    0 0 20px var(--pixel-warm-glow) !important;
+    2px 2px 0px rgba(0, 0, 0, 0.4),
+    0 0 20px rgba(255, 198, 92, 0.4) !important;
   margin-bottom: 24px !important;
 }
 
@@ -49,16 +50,16 @@ section h3 {
   font-family: 'Press Start 2P', cursive !important;
   font-size: 16px !important;
   line-height: 1.6 !important;
-  color: var(--pixel-accent-5) !important;
+  color: var(--pixel-accent-2) !important;
   margin-bottom: 16px !important;
-  text-shadow: 1px 1px 0px var(--pixel-border);
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
 }
 
 section h4 {
   font-family: 'VT323', monospace !important;
   font-size: 22px !important;
   font-weight: bold !important;
-  color: var(--pixel-accent-4) !important;
+  color: var(--pixel-pumpkin) !important;
   margin-bottom: 12px !important;
 }
 
@@ -69,34 +70,34 @@ section p {
 }
 
 section p strong {
-  color: var(--pixel-accent-4) !important;
+  color: var(--pixel-pumpkin) !important;
   font-weight: bold;
 }
 
 /* Cajas de Información */
 section > div[class*="space-y"] {
-  background: var(--pixel-bg-light) !important;
+  background: var(--pixel-bg-3) !important;
   border: 3px solid var(--pixel-border) !important;
-  border-radius: 0 !important;
+  border-radius: 6px !important;
   padding: 20px !important;
   box-shadow: 
     inset 0 0 20px rgba(0, 0, 0, 0.3),
-    4px 4px 0 0 rgba(0, 0, 0, 0.5) !important;
+    4px 4px 10px rgba(0, 0, 0, 0.4) !important;
 }
 
 section > div[class*="border-indigo"] {
-  border-color: var(--pixel-accent-3) !important;
-  background: var(--pixel-bg-light) !important;
+  border-color: var(--pixel-accent-2) !important;
+  background: var(--pixel-bg-3) !important;
 }
 
 /* Grid de Cards */
 section .grid > div {
-  background: var(--pixel-bg-light) !important;
+  background: var(--pixel-bg-3) !important;
   border: 3px solid var(--pixel-border) !important;
-  border-radius: 0 !important;
+  border-radius: 6px !important;
   box-shadow: 
-    4px 4px 0 0 rgba(0, 0, 0, 0.5),
-    inset 0 0 0 1px rgba(255, 255, 255, 0.05) !important;
+    4px 4px 10px rgba(0, 0, 0, 0.4),
+    inset 0 0 20px rgba(155, 123, 181, 0.08) !important;
   padding: 20px !important;
 }
 
@@ -114,10 +115,10 @@ section ul li {
 }
 
 section ul li::before {
-  content: '■';
+  content: '✦';
   position: absolute;
   left: 0;
-  color: var(--pixel-accent-4);
+  color: var(--pixel-pumpkin);
   font-size: 12px;
 }
 
@@ -141,27 +142,27 @@ section ol li::before {
   left: 0;
   font-family: 'Press Start 2P', cursive;
   font-size: 12px;
-  color: var(--pixel-accent-4);
+  color: var(--pixel-pumpkin);
 }
 
 /* Code Blocks en Secciones */
 section code {
   background: var(--pixel-bg-dark) !important;
   border: 2px solid var(--pixel-accent-2) !important;
-  color: var(--pixel-accent-4) !important;
+  color: var(--pixel-accent-3) !important;
   padding: 4px 8px !important;
   font-family: 'VT323', monospace !important;
   font-size: 18px !important;
-  border-radius: 0 !important;
+  border-radius: 4px !important;
 }
 
 section pre {
   background: var(--pixel-bg-dark) !important;
   border: 3px solid var(--pixel-border) !important;
   padding: 20px !important;
-  border-radius: 0 !important;
+  border-radius: 6px !important;
   box-shadow: 
-    inset 4px 4px 0 0 rgba(0, 0, 0, 0.5) !important;
+    inset 3px 3px 8px rgba(0, 0, 0, 0.5) !important;
   overflow-x: auto;
 }
 
@@ -169,7 +170,7 @@ section pre code {
   background: transparent !important;
   border: none !important;
   padding: 0 !important;
-  color: var(--pixel-accent-4) !important;
+  color: var(--pixel-accent-3) !important;
 }
 
 /* Tablas en Secciones */
@@ -189,13 +190,15 @@ section th {
   font-size: 12px !important;
   text-transform: uppercase !important;
   text-align: left !important;
+  border-radius: 4px !important;
 }
 
 section td {
-  background: var(--pixel-bg-light) !important;
+  background: var(--pixel-bg-3) !important;
   border: 3px solid var(--pixel-border) !important;
   padding: 12px !important;
   color: var(--pixel-text) !important;
+  border-radius: 4px !important;
 }
 
 section tr:hover td {
@@ -313,28 +316,29 @@ section a[class*="bg-"] {
   font-family: 'Press Start 2P', cursive !important;
   font-size: 12px !important;
   padding: 12px 24px !important;
-  border: 4px solid var(--pixel-border) !important;
-  background: var(--pixel-accent-2) !important;
+  border: 3px solid var(--pixel-border) !important;
+  background: linear-gradient(135deg, var(--pixel-pumpkin), var(--pixel-accent-2)) !important;
   color: white !important;
   text-transform: uppercase !important;
   cursor: pointer !important;
-  border-radius: 0 !important;
+  border-radius: 8px !important;
   box-shadow: 
-    6px 6px 0 0 rgba(0, 0, 0, 0.6) !important,
-    inset -2px -2px 0 0 rgba(0, 0, 0, 0.3) !important,
-    inset 2px 2px 0 0 rgba(255, 255, 255, 0.2) !important;
-  transition: all 0.1s !important;
+    4px 4px 10px rgba(0, 0, 0, 0.4) !important,
+    inset 2px 2px 4px rgba(255, 255, 255, 0.15) !important;
+  transition: all 0.3s ease !important;
   backdrop-filter: none !important;
+  text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5) !important;
 }
 
 section button:hover,
 section a[class*="bg-"]:hover {
-  background: var(--pixel-accent-3) !important;
-  transform: translate(2px, 2px) !important;
+  background: linear-gradient(135deg, var(--pixel-accent-2), var(--pixel-pumpkin)) !important;
+  transform: translateY(-3px) !important;
   box-shadow: 
-    4px 4px 0 0 rgba(0, 0, 0, 0.6) !important,
-    inset -2px -2px 0 0 rgba(0, 0, 0, 0.3) !important,
-    inset 2px 2px 0 0 rgba(255, 255, 255, 0.2) !important;
+    6px 6px 16px rgba(0, 0, 0, 0.5) !important,
+    inset 2px 2px 6px rgba(255, 255, 255, 0.2) !important,
+    0 0 30px rgba(255, 154, 86, 0.4) !important;
+  filter: brightness(1.1) !important;
 }
 
 /* Formularios */
