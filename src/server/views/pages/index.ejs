@@ -36,18 +36,55 @@
         </a>
       </div>
 
-      <!-- Stats Footer con decoración -->
+      <!-- Stats Footer con decoración y SVG background -->
       <div class="flex flex-wrap justify-center gap-4 pt-8">
-        <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
-          <span class="pixel-leaf"></span>
-          <span><span class="pixel-text-dim">Discord.js</span> <%= djsVersion %></span>
+        <!-- Discord.js Version -->
+        <div class="relative overflow-hidden py-3 px-6 text-sm flex items-center gap-2" 
+             style="background-image: url('/assets/images/snap.svg'); 
+                    background-size: cover; 
+                    background-position: center; 
+                    background-repeat: no-repeat;
+                    min-width: 180px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm rounded-xl"></div>
+          <div class="relative z-10 flex items-center gap-2 flex-wrap justify-center">
+            <span class="pixel-leaf"></span>
+            <span class="whitespace-nowrap"><span class="pixel-text-dim">Discord.js</span> <%= djsVersion %></span>
+          </div>
         </div>
-        <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
-          <span>✦</span>
-          <span><span class="pixel-text-dim">Actualizado:</span> <%= currentDateHuman %></span>
+
+        <!-- Fecha de actualización -->
+        <div class="relative overflow-hidden py-3 px-6 text-sm flex items-center gap-2" 
+             style="background-image: url('/assets/images/snap.svg'); 
+                    background-size: cover; 
+                    background-position: center; 
+                    background-repeat: no-repeat;
+                    min-width: 200px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm rounded-xl"></div>
+          <div class="relative z-10 flex items-center gap-2 flex-wrap justify-center">
+            <span>✦</span>
+            <span class="whitespace-nowrap"><span class="pixel-text-dim">Actualizado:</span> <%= currentDateHuman %></span>
+          </div>
         </div>
-        <div class="pixel-box py-3 px-6 text-sm">
-          <span style="color: var(--pixel-accent-3); font-weight: bold;">23 Secciones</span> • Creación de Contenido
+
+        <!-- Secciones -->
+        <div class="relative overflow-hidden py-3 px-6 text-sm" 
+             style="background-image: url('/assets/images/snap.svg'); 
+                    background-size: cover; 
+                    background-position: center; 
+                    background-repeat: no-repeat;
+                    min-width: 220px;
+                    border-radius: 12px;
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+          <div class="absolute inset-0 bg-black/40 backdrop-blur-sm rounded-xl"></div>
+          <div class="relative z-10 flex items-center justify-center gap-2 flex-wrap">
+            <span style="color: var(--pixel-accent-3); font-weight: bold;">23 Secciones</span>
+            <span>•</span>
+            <span class="whitespace-nowrap">Creación de Contenido</span>
+          </div>
         </div>
       </div>
     </div>
