@@ -3,11 +3,11 @@
     <div class="max-w-5xl mx-auto text-center space-y-12">
       <!-- Badge Moderno con decoraciones sutiles -->
       <div class="inline-block relative">
-        <span class="pixel-ghost absolute" style="left: -40px; top: 50%; transform: translateY(-50%);"></span>
+        <img src="/assets/images/fantasma.svg" alt="fantasma" class="absolute" style="left: -40px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; animation: softFloat 3.5s ease-in-out infinite;">
         <div class="pixel-badge">
           <%= appName %> • v<%= version %>
         </div>
-        <span class="pixel-ghost absolute" style="right: -40px; top: 50%; transform: translateY(-50%);"></span>
+        <img src="/assets/images/fantasma.svg" alt="fantasma" class="absolute" style="right: -40px; top: 50%; transform: translateY(-50%); width: 32px; height: 32px; animation: softFloat 3.5s ease-in-out infinite;">
       </div>
 
       <!-- Título Principal -->
@@ -23,9 +23,9 @@
       <!-- Decoraciones sutiles -->
       <div class="flex justify-center gap-6 items-center">
         <span class="pixel-star-halloween">✦</span>
-        <span class="pixel-pumpkin"></span>
+        <img src="/assets/images/calabaza.svg" alt="calabaza" style="width: 32px; height: 32px; animation: softBounce 3s ease-in-out infinite;">
         <span class="pixel-star-halloween" style="animation-delay: 0.5s;">✦</span>
-        <span class="pixel-ghost" style="animation-delay: 1s;"></span>
+        <img src="/assets/images/fantasma.svg" alt="fantasma" style="width: 32px; height: 32px; animation: softFloat 3.5s ease-in-out infinite; animation-delay: 1s;">
         <span class="pixel-star-halloween" style="animation-delay: 1.5s;">✦</span>
       </div>
 
@@ -39,58 +39,55 @@
       <!-- Stats Footer con SVG Backgrounds separados -->
       <div class="flex flex-wrap justify-center gap-6 pt-8">
         <!-- Primera fila: Discord.js y Fecha -->
-        <div class="flex flex-wrap justify-center gap-6 w-full max-w-4xl">
+        <div class="flex flex-wrap justify-center gap-6 w-full max-w-5xl">
           <!-- Discord.js Version - Usa snap.svg -->
-          <div class="relative overflow-hidden flex-1 min-w-[280px] max-w-[400px]" 
+          <div class="relative flex-1 min-w-[320px] max-w-[480px]" 
                style="background-image: url('/assets/images/snap.svg'); 
-                      background-size: cover; 
+                      background-size: 100% 100%; 
                       background-position: center; 
                       background-repeat: no-repeat;
-                      border-radius: 16px;
-                      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);">
-            <div class="absolute inset-0 bg-gradient-to-br from-black/50 via-black/40 to-transparent backdrop-blur-[2px] rounded-2xl"></div>
-            <div class="relative z-10 py-4 px-6 flex flex-col items-center justify-center gap-2 min-h-[100px]">
+                      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+            <div class="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
+            <div class="relative z-10 py-8 px-8 flex flex-col items-center justify-center gap-3" style="min-height: 140px;">
               <span class="pixel-leaf text-2xl"></span>
               <div class="text-center">
-                <p class="text-sm pixel-text-dim mb-1">Discord.js</p>
-                <p class="text-xl font-bold text-white"><%= djsVersion %></p>
+                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-wider">Discord.js</p>
+                <p class="text-lg font-bold text-white"><%= djsVersion %></p>
               </div>
             </div>
           </div>
 
           <!-- Fecha de actualización - Usa snap1.svg -->
-          <div class="relative overflow-hidden flex-1 min-w-[280px] max-w-[400px]" 
+          <div class="relative flex-1 min-w-[320px] max-w-[480px]" 
                style="background-image: url('/assets/images/snap1.svg'); 
-                      background-size: cover; 
+                      background-size: 100% 100%; 
                       background-position: center; 
                       background-repeat: no-repeat;
-                      border-radius: 16px;
-                      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);">
-            <div class="absolute inset-0 bg-gradient-to-br from-black/50 via-black/40 to-transparent backdrop-blur-[2px] rounded-2xl"></div>
-            <div class="relative z-10 py-4 px-6 flex flex-col items-center justify-center gap-2 min-h-[100px]">
+                      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+            <div class="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
+            <div class="relative z-10 py-8 px-8 flex flex-col items-center justify-center gap-3" style="min-height: 140px;">
               <span class="text-2xl">✦</span>
               <div class="text-center">
-                <p class="text-sm pixel-text-dim mb-1">Actualizado</p>
-                <p class="text-xl font-bold text-white"><%= currentDateHuman %></p>
+                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-wider">Actualizado</p>
+                <p class="text-lg font-bold text-white"><%= currentDateHuman %></p>
               </div>
             </div>
           </div>
         </div>
 
-        <!-- Segunda fila: Secciones - Usa snap.svg (o puedes alternar) -->
-        <div class="relative overflow-hidden w-full max-w-4xl" 
+        <!-- Segunda fila: Secciones - Usa snap.svg -->
+        <div class="relative w-full max-w-5xl" 
              style="background-image: url('/assets/images/snap.svg'); 
-                    background-size: cover; 
+                    background-size: 100% 100%; 
                     background-position: center; 
                     background-repeat: no-repeat;
-                    border-radius: 16px;
-                    box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);">
-          <div class="absolute inset-0 bg-gradient-to-br from-black/50 via-black/40 to-transparent backdrop-blur-[2px] rounded-2xl"></div>
-          <div class="relative z-10 py-6 px-8 flex flex-col items-center justify-center gap-3 min-h-[120px]">
-            <span class="text-3xl">🎮</span>
-            <div class="text-center space-y-1">
-              <p class="text-2xl font-bold" style="color: var(--pixel-accent-3);">23 Secciones</p>
-              <p class="text-lg text-white/90">Sistema Completo • Creación de Contenido</p>
+                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);">
+          <div class="absolute inset-0 bg-gradient-to-br from-black/30 via-black/20 to-transparent"></div>
+          <div class="relative z-10 py-10 px-8 flex flex-col items-center justify-center gap-4" style="min-height: 160px;">
+            <span class="text-4xl">🎮</span>
+            <div class="text-center space-y-2">
+              <p class="text-3xl font-bold" style="color: var(--pixel-accent-3);">23 Secciones</p>
+              <p class="text-base text-white/90">Sistema Completo • Creación de Contenido</p>
             </div>
           </div>
         </div>
