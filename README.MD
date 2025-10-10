@@ -14,7 +14,9 @@
 
 ---
 
-> 📝 **Nota importante:** Para crear y editar Items, Mobs, Áreas, Niveles y Ofertas con los editores interactivos, consulta la guía: [CREACION_DE_CONTENIDO.md](./CREACION_DE_CONTENIDO.md)
+> 📝 **Nota importante:** Favor de leer la licencia: [LICENSE](./LICENSE)
+
+> 📝 **Nota importante:** Para crear y editar Items, Mobs, Áreas, Niveles y Ofertas con los editores interactivos, consulta la guía: [CREACION_DE_CONTENIDO.md](./README/CREACION_DE_CONTENIDO.md)
 
 ---
 
