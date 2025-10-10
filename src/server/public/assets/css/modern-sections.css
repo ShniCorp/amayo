@@ -1,0 +1,281 @@
+/* ============================================
+   MODERN SECTIONS - AMAYO BOT
+   Estilos para secciones de contenido
+   ============================================ */
+
+/* Secciones Principales */
+section {
+  background: rgba(30, 20, 45, 0.6) !important;
+  backdrop-filter: blur(20px) !important;
+  -webkit-backdrop-filter: blur(20px) !important;
+  border: 1px solid rgba(167, 139, 250, 0.15) !important;
+  border-radius: 24px !important;
+  padding: 2.5rem !important;
+  margin-bottom: 2rem;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.05) !important;
+  transition: all 0.3s ease !important;
+}
+
+section:hover {
+  transform: translateY(-4px);
+  border-color: rgba(167, 139, 250, 0.3) !important;
+  box-shadow: 
+    0 12px 48px rgba(0, 0, 0, 0.4),
+    0 0 40px rgba(167, 139, 250, 0.2) !important;
+}
+
+/* Títulos en Secciones */
+section h2 {
+  font-family: 'Inter', sans-serif !important;
+  font-size: clamp(1.5rem, 3vw, 2rem) !important;
+  font-weight: 700 !important;
+  color: #a78bfa !important;
+  margin-bottom: 1.5rem !important;
+  letter-spacing: -0.02em !important;
+  text-shadow: none !important;
+  background: none !important;
+  -webkit-background-clip: unset !important;
+  -webkit-text-fill-color: unset !important;
+}
+
+section h3 {
+  font-family: 'Inter', sans-serif !important;
+  font-size: clamp(1.2rem, 2.5vw, 1.5rem) !important;
+  font-weight: 600 !important;
+  color: #f9fafb !important;
+  margin-bottom: 1rem !important;
+  text-shadow: none !important;
+}
+
+section h4 {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1.1rem !important;
+  font-weight: 600 !important;
+  color: #d1d5db !important;
+  margin-bottom: 0.75rem !important;
+}
+
+/* Párrafos */
+section p {
+  color: #d1d5db !important;
+  line-height: 1.7 !important;
+  margin-bottom: 1rem;
+}
+
+section p strong {
+  color: #f59e0b !important;
+  font-weight: 600;
+}
+
+/* Listas */
+section ul {
+  list-style: none !important;
+  padding-left: 0 !important;
+  margin-bottom: 1.5rem;
+}
+
+section ul li {
+  position: relative;
+  padding-left: 2rem;
+  margin-bottom: 0.75rem;
+  color: #d1d5db !important;
+  line-height: 1.6;
+}
+
+section ul li::before {
+  content: '→';
+  position: absolute;
+  left: 0;
+  color: #a78bfa;
+  font-weight: bold;
+  font-size: 1.2rem;
+}
+
+section ol {
+  list-style: none !important;
+  counter-reset: item;
+  padding-left: 0 !important;
+  margin-bottom: 1.5rem;
+}
+
+section ol li {
+  position: relative;
+  padding-left: 2.5rem;
+  margin-bottom: 0.75rem;
+  counter-increment: item;
+  color: #d1d5db !important;
+  line-height: 1.6;
+}
+
+section ol li::before {
+  content: counter(item) ".";
+  position: absolute;
+  left: 0;
+  font-weight: 600;
+  color: #f59e0b;
+  font-family: 'Inter', sans-serif;
+}
+
+/* Cajas de Información */
+section > div[class*="space-y"],
+section > div[class*="border"] {
+  background: rgba(50, 35, 70, 0.5) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+  border-radius: 16px !important;
+  padding: 1.5rem !important;
+  margin-bottom: 1rem;
+  backdrop-filter: blur(10px) !important;
+}
+
+/* Grid de Cards */
+section .grid > div {
+  background: rgba(50, 35, 70, 0.5) !important;
+  border: 1px solid rgba(167, 139, 250, 0.15) !important;
+  border-radius: 16px !important;
+  padding: 1.5rem !important;
+  backdrop-filter: blur(10px) !important;
+  transition: all 0.3s ease !important;
+}
+
+section .grid > div:hover {
+  border-color: rgba(167, 139, 250, 0.3) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3) !important;
+}
+
+/* Code Blocks */
+section code {
+  background: rgba(15, 10, 30, 0.8) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+  color: #a78bfa !important;
+  padding: 0.25rem 0.5rem !important;
+  border-radius: 6px !important;
+  font-family: 'Monaco', 'Menlo', monospace !important;
+  font-size: 0.9rem !important;
+}
+
+section pre {
+  background: rgba(15, 10, 30, 0.8) !important;
+  border: 1px solid rgba(167, 139, 250, 0.2) !important;
+  border-radius: 12px !important;
+  padding: 1.5rem !important;
+  overflow-x: auto;
+  margin-bottom: 1.5rem;
+  backdrop-filter: blur(10px) !important;
+}
+
+section pre code {
+  background: transparent !important;
+  border: none !important;
+  padding: 0 !important;
+  color: #d1d5db !important;
+  font-size: 0.875rem !important;
+}
+
+/* Tablas */
+section table {
+  width: 100% !important;
+  border-collapse: separate !important;
+  border-spacing: 0 !important;
+  margin: 1.5rem 0;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+section th {
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa) !important;
+  color: white !important;
+  padding: 1rem !important;
+  text-align: left !important;
+  font-family: 'Inter', sans-serif !important;
+  font-size: 0.9rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border: none !important;
+}
+
+section td {
+  background: rgba(50, 35, 70, 0.5) !important;
+  border-bottom: 1px solid rgba(167, 139, 250, 0.1) !important;
+  padding: 1rem !important;
+  color: #d1d5db !important;
+}
+
+section tr:last-child td {
+  border-bottom: none !important;
+}
+
+section tr:hover td {
+  background: rgba(70, 50, 95, 0.6) !important;
+}
+
+/* Botones en Secciones */
+section button,
+section a[class*="bg-"],
+section .pixel-btn {
+  font-family: 'Inter', sans-serif !important;
+  font-size: 1rem !important;
+  font-weight: 600 !important;
+  padding: 0.875rem 1.75rem !important;
+  background: linear-gradient(135deg, #8b5cf6, #a78bfa) !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 12px !important;
+  cursor: pointer !important;
+  transition: all 0.3s ease !important;
+  box-shadow: 0 4px 16px rgba(139, 92, 246, 0.3) !important;
+  text-transform: none !important;
+  letter-spacing: 0 !important;
+}
+
+section button:hover,
+section a[class*="bg-"]:hover,
+section .pixel-btn:hover {
+  transform: translateY(-2px) scale(1.02) !important;
+  box-shadow: 0 8px 24px rgba(139, 92, 246, 0.5) !important;
+  background: linear-gradient(135deg, #a78bfa, #8b5cf6) !important;
+}
+
+/* Alertas y Notas */
+section .alert,
+section .note {
+  padding: 1.25rem !important;
+  border-radius: 12px !important;
+  border-left: 4px solid #a78bfa !important;
+  background: rgba(167, 139, 250, 0.1) !important;
+  margin-bottom: 1rem;
+}
+
+section .alert-warning {
+  border-left-color: #f59e0b !important;
+  background: rgba(245, 158, 11, 0.1) !important;
+}
+
+section .alert-success {
+  border-left-color: #10b981 !important;
+  background: rgba(16, 185, 129, 0.1) !important;
+}
+
+section .alert-error {
+  border-left-color: #ef4444 !important;
+  background: rgba(239, 68, 68, 0.1) !important;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  section {
+    padding: 1.5rem !important;
+    border-radius: 16px !important;
+  }
+  
+  section h2 {
+    font-size: 1.5rem !important;
+  }
+  
+  section h3 {
+    font-size: 1.25rem !important;
+  }
+}

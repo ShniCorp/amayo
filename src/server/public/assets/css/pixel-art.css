@@ -6,32 +6,40 @@
 /* Fuentes Pixel Art */
 @import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap');
 
-/* Variables de Color Pixel Art - Soft Halloween Theme */
+/* ============================================
+   MODERN PIXEL ART CSS - AMAYO BOT
+   Diseño moderno con toques pixel art y Halloween
+   ============================================ */
+
+/* Fuentes - Solo títulos pixel art */
+@import url('https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Inter:wght@400;500;600;700&display=swap');
+
+/* Variables CSS - Modern Halloween */
 :root {
-  /* Backgrounds suaves de Halloween */
-  --pixel-bg-dark: #2d1b3d;        /* Púrpura oscuro suave */
-  --pixel-bg-medium: #3f2a4f;      /* Púrpura medio */
-  --pixel-bg-light: #544163;       /* Lavanda oscuro */
+  /* Fondos glassmorphism */
+  --bg-primary: rgba(30, 20, 45, 0.95);
+  --bg-secondary: rgba(50, 35, 70, 0.8);
+  --bg-card: rgba(70, 50, 95, 0.6);
+  --bg-hover: rgba(90, 65, 120, 0.7);
   
-  /* Acentos de Halloween suaves */
-  --pixel-accent-1: #ff9a56;       /* Naranja calabaza suave */
-  --pixel-accent-2: #9b7bb5;       /* Púrpura pastel */
-  --pixel-accent-3: #ffc65c;       /* Amarillo calabaza */
-  --pixel-accent-4: #8dd4a8;       /* Verde menta suave */
-  --pixel-accent-5: #e89ac7;       /* Rosa Halloween */
-  --pixel-accent-6: #7ec4cf;       /* Turquesa fantasma */
+  /* Acentos modernos */
+  --accent-primary: #a78bfa;    /* Púrpura suave */
+  --accent-secondary: #f59e0b;  /* Naranja Halloween */
+  --accent-tertiary: #ec4899;   /* Rosa */
+  --accent-success: #10b981;    /* Verde */
   
-  /* Tonos de texto suaves */
-  --pixel-text: #f5e6d3;           /* Crema suave */
-  --pixel-text-dim: #d4b8a8;       /* Beige rosado */
-  --pixel-border: #4a2f5a;         /* Púrpura oscuro borde */
-  --pixel-shadow: rgba(29, 15, 41, 0.6);
+  /* Texto */
+  --text-primary: #f3f4f6;
+  --text-secondary: #d1d5db;
+  --text-muted: #9ca3af;
   
-  /* Tonos especiales Halloween */
-  --pixel-warm-glow: #ffb86c;      /* Naranja brillante suave */
-  --pixel-night-sky: #564375;      /* Cielo nocturno Halloween */
-  --pixel-pumpkin: #ff9a56;        /* Calabaza */
-  --pixel-ghost: #e8dff5;          /* Fantasma */
+  /* Bordes y sombras */
+  --border-color: rgba(167, 139, 250, 0.2);
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.2);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.3);
+  --glow-purple: 0 0 30px rgba(167, 139, 250, 0.3);
+  --glow-orange: 0 0 30px rgba(245, 158, 11, 0.3);
 }
 
 /* Reset y Base */

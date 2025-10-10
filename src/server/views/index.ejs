@@ -7,13 +7,13 @@
 <header class="relative overflow-hidden py-20 sm:py-28">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
     <div class="max-w-5xl mx-auto text-center space-y-12">
-      <!-- Badge Pixel Art con decoración de Halloween -->
+      <!-- Badge Moderno con decoraciones sutiles -->
       <div class="inline-block relative">
-        <span class="pixel-pumpkin absolute -left-12 top-0"></span>
+        <span class="pixel-pumpkin absolute" style="left: -40px; top: 50%; transform: translateY(-50%);"></span>
         <div class="pixel-badge">
           <%= appName %> • v<%= version %>
         </div>
-        <span class="pixel-ghost absolute -right-12 top-0" style="animation-delay: 1s;"></span>
+        <span class="pixel-ghost absolute" style="right: -40px; top: 50%; transform: translateY(-50%);"></span>
       </div>
 
       <!-- Título Principal -->
@@ -21,28 +21,28 @@
         <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-tight">
           Guía Completa
         </h1>
-        <h2 class="text-4xl sm:text-5xl md:text-6xl">
+        <h2 class="text-4xl sm:text-5xl md:text-6xl" style="font-family: 'Inter', sans-serif; background: linear-gradient(135deg, #a78bfa, #f59e0b); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">
           <%= appName %>
         </h2>
       </div>
 
-      <!-- Decoración de Halloween con murciélagos y estrellas -->
-      <div class="flex justify-center gap-8 items-center">
-        <span class="pixel-bat"></span>
+      <!-- Decoraciones sutiles -->
+      <div class="flex justify-center gap-6 items-center">
         <span class="pixel-star-halloween">✦</span>
-        <span class="pixel-pumpkin" style="animation-delay: 0.5s;"></span>
-        <span class="pixel-star-halloween" style="animation-delay: 0.8s;">✦</span>
+        <span class="pixel-pumpkin"></span>
+        <span class="pixel-star-halloween" style="animation-delay: 0.5s;">✦</span>
         <span class="pixel-ghost" style="animation-delay: 1s;"></span>
+        <span class="pixel-star-halloween" style="animation-delay: 1.5s;">✦</span>
       </div>
 
-      <!-- Descripción -->
+      <!-- Descripción con diseño moderno -->
       <div class="pixel-box max-w-3xl mx-auto">
-        <p class="text-xl sm:text-2xl leading-relaxed">
+        <p class="text-xl sm:text-2xl leading-relaxed" style="color: var(--text-secondary);">
           Sistema completo de 
-          <span style="color: var(--pixel-accent-1); font-weight: bold;">economía</span>, 
-          <span style="color: var(--pixel-accent-3); font-weight: bold;">minijuegos</span>, 
-          <span style="color: var(--pixel-accent-5); font-weight: bold;">misiones</span> y 
-          <span style="color: var(--pixel-accent-2); font-weight: bold;">IA</span> 
+          <span class="gradient-text font-semibold">economía</span>, 
+          <span class="gradient-text font-semibold">minijuegos</span>, 
+          <span class="gradient-text font-semibold">misiones</span> y 
+          <span class="gradient-text font-semibold">IA</span> 
           para Discord
         </p>
       </div>

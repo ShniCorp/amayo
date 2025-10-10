@@ -1,15 +1,14 @@
 <nav class="fixed inset-x-0 top-0 z-50 pixel-navbar">
-  <div class="mx-auto max-w-[120rem] px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-    <a href="#" class="flex items-center gap-3">
-      <div class="pixel-pumpkin" style="width: 20px; height: 20px;"></div>
-      <span class="font-['Press_Start_2P'] text-sm" style="color: var(--pixel-pumpkin);"><%= appName %></span>
-      <span class="pixel-star-halloween">✦</span>
+  <div class="mx-auto max-w-[120rem] px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+    <a href="#" class="flex items-center gap-3 group">
+      <div class="pixel-pumpkin transition-transform group-hover:scale-110" style="width: 24px; height: 24px;"></div>
+      <span class="font-['Press_Start_2P'] text-sm gradient-text"><%= appName %></span>
     </a>
-    <div class="hidden md:flex items-center gap-6">
-      <a href="#primeros-pasos" class="pixel-tooltip" data-tooltip="🎃 Empieza aquí">Guía</a>
-      <a href="#minijuegos" class="pixel-tooltip" data-tooltip="🎮 Juega">Minijuegos</a>
-      <a href="#economia" class="pixel-tooltip" data-tooltip="💰 Gana">Economía</a>
-      <a href="#faq" class="pixel-tooltip" data-tooltip="👻 Ayuda">FAQ</a>
+    <div class="hidden md:flex items-center gap-8">
+      <a href="#primeros-pasos" class="text-sm font-medium hover:text-purple-400 transition-colors" style="color: var(--text-secondary);">Guía</a>
+      <a href="#minijuegos" class="text-sm font-medium hover:text-purple-400 transition-colors" style="color: var(--text-secondary);">Minijuegos</a>
+      <a href="#economia" class="text-sm font-medium hover:text-purple-400 transition-colors" style="color: var(--text-secondary);">Economía</a>
+      <a href="#faq" class="text-sm font-medium hover:text-purple-400 transition-colors" style="color: var(--text-secondary);">FAQ</a>
     </div>
     <button id="toggle-nav" class="md:hidden" aria-label="Abrir navegación">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">

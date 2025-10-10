@@ -11,9 +11,9 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/styles/github-dark.min.css" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <script defer src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.9.0/highlight.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
   
-  <!-- Pixel Art CSS -->
-  <link rel="stylesheet" href="/assets/css/pixel-art.css?v=<%= version || '2.0.0' %>">
-  <link rel="stylesheet" href="/assets/css/pixel-sections.css?v=<%= version || '2.0.0' %>">
+  <!-- Modern Pixel Art CSS -->
+  <link rel="stylesheet" href="/assets/css/modern-pixel.css?v=<%= version || '2.0.0' %>">
+  <link rel="stylesheet" href="/assets/css/modern-sections.css?v=<%= version || '2.0.0' %>">
   <link rel="stylesheet" href="/assets/css/styles.css?v=<%= version || '2.0.0' %>">
   <% if (typeof head !== 'undefined' && head) { %>
     <%= head %>
@@ -47,26 +47,26 @@
       </div>
 
       <div class="pixel-border p-4 mb-6" style="background: linear-gradient(135deg, var(--pixel-bg-dark) 0%, var(--pixel-bg-medium) 100%);">
-        <div class="pixel-status-bar justify-center">
+        <div class="flex items-center justify-center gap-4 text-sm" style="color: var(--text-secondary);">
           <span class="pixel-pumpkin" style="width: 16px; height: 16px;"></span>
           <span>VER <%= version %></span>
-          <span>✦</span>
+          <span>•</span>
           <span>DJS <%= djsVersion %></span>
-          <span>✦</span>
+          <span>•</span>
           <span><%= currentDateHuman %></span>
-          <span class="pixel-ghost" style="width: 16px; height: 20px; animation-delay: 1.5s;"></span>
+          <span class="pixel-ghost" style="width: 16px; height: 20px;"></span>
         </div>
       </div>
 
-      <p class="text-center text-xs pixel-text-dim mb-6 flex items-center justify-center gap-2">
-        <span class="pixel-bat" style="width: 24px; height: 12px;"></span>
+      <p class="text-center text-sm mb-6 flex items-center justify-center gap-3" style="color: var(--text-muted);">
+        <span class="pixel-star-halloween">✦</span>
         <span>Amayo © <%= new Date().getFullYear() %> — Documentación para usuarios finales de Discord</span>
         <span class="pixel-star-halloween">✦</span>
       </p>
 
       <div class="text-center">
         <a class="pixel-btn-secondary pixel-btn inline-block" href="#primeros-pasos">
-          <span aria-hidden="true">🎃</span> Volver arriba <span aria-hidden="true">👻</span>
+          ↑ Volver arriba
         </a>
       </div>
     </div>
