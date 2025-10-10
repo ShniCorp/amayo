@@ -1,16 +1,20 @@
-<nav class="fixed inset-x-0 top-0 z-50 border-b border-white/10 bg-slate-950/70 backdrop-blur">
+<nav class="fixed inset-x-0 top-0 z-50 pixel-navbar">
   <div class="mx-auto max-w-[120rem] px-4 sm:px-6 lg:px-8 h-14 flex items-center justify-between">
-    <a href="#" class="text-white font-bold tracking-wide"><%= appName %></a>
-    <div class="hidden md:flex items-center gap-4 text-sm">
-      <a href="#primeros-pasos" class="text-slate-300 hover:text-white">Guía</a>
-      <a href="#minijuegos" class="text-slate-300 hover:text-white">Minijuegos</a>
-      <a href="#economia" class="text-slate-300 hover:text-white">Economía</a>
-      <a href="#faq" class="text-slate-300 hover:text-white">FAQ</a>
+    <a href="#" class="flex items-center gap-2">
+      <div class="pixel-coin" style="width: 20px; height: 20px;"></div>
+      <span class="font-['Press_Start_2P'] text-sm"><%= appName %></span>
+    </a>
+    <div class="hidden md:flex items-center gap-6">
+      <a href="#primeros-pasos" class="pixel-tooltip" data-tooltip="Empieza aquí">Guía</a>
+      <a href="#minijuegos" class="pixel-tooltip" data-tooltip="Juega">Minijuegos</a>
+      <a href="#economia" class="pixel-tooltip" data-tooltip="Gana dinero">Economía</a>
+      <a href="#faq" class="pixel-tooltip" data-tooltip="Ayuda">FAQ</a>
     </div>
-    <button id="toggle-nav" class="md:hidden text-slate-300 hover:text-white" aria-label="Abrir navegación">
+    <button id="toggle-nav" class="md:hidden" aria-label="Abrir navegación">
       <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
       </svg>
     </button>
   </div>
 </nav>
+

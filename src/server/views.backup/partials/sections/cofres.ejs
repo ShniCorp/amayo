@@ -1,0 +1,29 @@
+<section id="cofres" class="rounded-3xl bg-gradient-to-br from-slate-800/50 to-slate-900/50 backdrop-blur-xl border border-white/10 p-8 shadow-2xl shadow-indigo-500/10">
+  <h2 class="text-3xl sm:text-4xl font-bold mb-3 bg-clip-text text-transparent bg-gradient-to-r from-white to-indigo-200">🎁 Cofres y Recompensas</h2>
+  <p class="text-slate-200">Abre cofres para conseguir recompensas aleatorias: monedas, items o incluso roles.</p>
+
+  <div class="grid gap-6 md:grid-cols-2">
+    <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">🗝️ Abrir Cofres</h3>
+      <div class="bg-slate-900/50 p-3 rounded-lg text-sm">
+        <code class="text-indigo-200">!abrir &lt;itemKey&gt;</code>
+      </div>
+      <p class="text-slate-300 text-sm">Ejemplo: <span class="font-mono">!abrir daily_chest</span></p>
+    </div>
+    <div class="space-y-3 rounded-2xl border border-white/5 bg-slate-900/60 p-5">
+      <h3 class="text-lg font-semibold text-white">⚙️ Definición de recompensas</h3>
+      <div class="bg-slate-900/50 p-3 rounded-lg text-xs overflow-x-auto">
+        <pre class="text-indigo-200 whitespace-pre-wrap">{
+  "chest": {
+    "enabled": true,
+    "rewards": [
+      { "type": "coins", "amount": 500 },
+      { "type": "item", "itemKey": "health_potion", "qty": 3 }
+    ],
+    "consumeOnOpen": true
+  }
+}</pre>
+      </div>
+    </div>
+  </div>
+</section>

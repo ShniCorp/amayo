@@ -4,66 +4,71 @@
 <% const title = pageTitle; %>
 <% layout('layouts/layout', { title, head, scripts, appName, version, djsVersion, currentDateHuman }); %>
 
-<header class="relative overflow-hidden ">
-  <div class="absolute inset-0 bg-gradient-to-b from-indigo-500/5 via-purple-500/5 to-transparent"></div>
-  
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8 py-20 sm:py-28 relative">
-    <div class="max-w-5xl mx-auto text-center space-y-8">
-      <div class="inline-flex items-center gap-3 px-5 py-2.5 rounded-full bg-gradient-to-r from-indigo-500/10 via-purple-500/10 to-pink-500/10 border border-indigo-500/30 backdrop-blur-sm">
-        <span class="relative flex h-2.5 w-2.5">
-          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
-          <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-gradient-to-r from-indigo-400 to-purple-400"></span>
-        </span>
-        <span class="text-sm font-bold tracking-wider uppercase bg-clip-text text-transparent bg-gradient-to-r from-indigo-200 to-purple-200">
+<header class="relative overflow-hidden py-20 sm:py-28 pixel-corner">
+  <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
+    <div class="max-w-5xl mx-auto text-center space-y-12">
+      <!-- Badge Pixel Art -->
+      <div class="inline-block">
+        <div class="pixel-badge">
           <%= appName %> • v<%= version %>
-        </span>
+        </div>
       </div>
 
-      <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl font-black leading-tight">
-        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-white via-indigo-100 to-purple-100">
+      <!-- Título Principal -->
+      <div class="space-y-4">
+        <h1 class="text-5xl sm:text-6xl md:text-7xl lg:text-8xl leading-tight">
           Guía Completa
-        </span>
-        <span class="block bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400">
+        </h1>
+        <h2 class="text-4xl sm:text-5xl md:text-6xl">
           <%= appName %>
-        </span>
-      </h1>
+        </h2>
+      </div>
 
-      <p class="text-xl sm:text-2xl text-slate-300 max-w-3xl mx-auto leading-relaxed font-light">
-        Sistema completo de <span class="font-semibold text-indigo-300">economía</span>, <span class="font-semibold text-purple-300">minijuegos</span>, <span class="font-semibold text-pink-300">misiones</span> y <span class="font-semibold text-blue-300">IA</span> para Discord
-      </p>
+      <!-- HP Bar decorativo -->
+      <div class="flex justify-center">
+        <div class="pixel-hp-bar">
+          <div class="pixel-heart"></div>
+          <div class="pixel-heart"></div>
+          <div class="pixel-heart"></div>
+          <div class="pixel-heart"></div>
+          <div class="pixel-heart"></div>
+        </div>
+      </div>
 
-      <div class="flex flex-col sm:flex-row gap-4 justify-center items-center pt-4">
-        <a href="#primeros-pasos" class="group relative px-10 py-4 text-lg font-bold text-white overflow-hidden rounded-2xl transition-all duration-300 hover:scale-105">
-          <div class="absolute inset-0 bg-gradient-to-r from-indigo-600 to-purple-600 transition-transform duration-300 group-hover:scale-110"></div>
-          <div class="absolute inset-0 bg-gradient-to-r from-indigo-500 to-purple-500 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
-          <span class="relative flex items-center gap-2">
-            Comenzar ahora
-            <svg class="w-5 h-5 transition-transform group-hover:translate-x-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7l5 5m0 0l-5 5m5-5H6"></path>
-            </svg>
-          </span>
+      <!-- Descripción -->
+      <div class="pixel-box max-w-3xl mx-auto">
+        <p class="text-xl sm:text-2xl leading-relaxed">
+          Sistema completo de 
+          <span class="text-pixel-accent-4 font-bold">economía</span>, 
+          <span class="text-pixel-accent-3 font-bold">minijuegos</span>, 
+          <span class="text-pixel-accent-1 font-bold">misiones</span> y 
+          <span class="text-pixel-accent-2 font-bold">IA</span> 
+          para Discord
+        </p>
+      </div>
+
+      <!-- Botones de Acción -->
+      <div class="flex flex-col sm:flex-row gap-6 justify-center items-center pt-4">
+        <a href="#primeros-pasos" class="pixel-btn">
+          ► Comenzar ahora
         </a>
         
-        <button id="toggle-nav" class="group px-10 py-4 text-lg font-bold text-white backdrop-blur-xl bg-white/5 border-2 border-white/10 rounded-2xl hover:bg-white/10 hover:border-white/20 hover:scale-105 transition-all duration-300">
-          <span class="flex items-center gap-2">
-            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-            </svg>
-            Ver índice
-          </span>
+        <button id="toggle-nav" class="pixel-btn pixel-btn-secondary">
+          ☰ Ver comandos
         </button>
       </div>
 
-      <div class="flex flex-wrap justify-center gap-3 pt-6">
-        <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
-          Discord.js <%= djsVersion %>
-        </span>
-        <span class="px-5 py-2 rounded-xl bg-white/5 backdrop-blur-sm border border-white/10 text-sm font-medium text-slate-300 hover:bg-white/10 transition-all">
-          <%= currentDateHuman %>
-        </span>
-        <span class="px-5 py-2 rounded-xl bg-gradient-to-r from-indigo-500/10 to-purple-500/10 border border-indigo-500/30 text-sm font-bold text-indigo-200 hover:from-indigo-500/20 hover:to-purple-500/20 transition-all">
-          23 Secciones • Creación de Contenido Incluida
-        </span>
+      <!-- Stats Footer -->
+      <div class="flex flex-wrap justify-center gap-4 pt-8">
+        <div class="pixel-box py-3 px-6 text-sm">
+          <span class="pixel-text-dim">Discord.js</span> <%= djsVersion %>
+        </div>
+        <div class="pixel-box py-3 px-6 text-sm">
+          <span class="pixel-text-dim">Actualizado:</span> <%= currentDateHuman %>
+        </div>
+        <div class="pixel-box py-3 px-6 text-sm pixel-corner">
+          <span class="text-pixel-accent-4 font-bold">23 Secciones</span> • Creación de Contenido Incluida
+        </div>
       </div>
     </div>
   </div>
