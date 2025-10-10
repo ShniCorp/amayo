@@ -39,7 +39,7 @@ export async function ensureUserAndGuildExist(
       }
     });
   } catch (error) {
-    logger.error({ userId, guildId, error }, 'Error ensuring User and Guild exist');
+    logger.error({ error }, 'Error ensuring User and Guild exist');
     throw error;
   }
 }
