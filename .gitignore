@@ -1,10 +1,13 @@
+# Dependencias
 node_modules
 .env
 .env.test
 qodana.yaml
 
-.github
-.vscode
-.idea
+# Carpetas de metadatos/IDE (ancladas a la raíz)
+/.github/
+/.vscode/
+/.idea/
 
-/src/generated/prisma
+# Generados
+/src/generated/prisma/
