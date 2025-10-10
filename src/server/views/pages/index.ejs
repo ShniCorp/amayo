@@ -37,42 +37,43 @@
       </div>
 
       <!-- Stats Footer con SVG Backgrounds mejorados -->
-      <div class="flex flex-wrap justify-center gap-8 pt-12 px-4">
+      <!-- Stats Footer con SVG Backgrounds más pequeños -->
+      <div class="flex flex-wrap justify-center gap-4 pt-8 px-4">
         <!-- Primera fila: Discord.js y Fecha -->
-        <div class="flex flex-wrap justify-center gap-8 w-full max-w-6xl">
+        <div class="flex flex-wrap justify-center gap-4 w-full max-w-4xl">
           <!-- Discord.js Version -->
-          <div class="relative flex-1 min-w-[340px] max-w-[500px]">
+          <div class="relative flex-1 min-w-[240px] max-w-[320px]">
             <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
-            <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 py-6 px-6">
-              <span class="pixel-leaf text-3xl" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></span>
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4">
+              <span class="pixel-leaf text-xl" style="filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));"></span>
               <div class="text-center">
-                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Discord.js</p>
-                <p class="text-xl font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= djsVersion %></p>
+                <p class="text-[10px] pixel-text-dim mb-1 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Discord.js</p>
+                <p class="text-sm font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= djsVersion %></p>
               </div>
             </div>
           </div>
 
           <!-- Fecha de actualización -->
-          <div class="relative flex-1 min-w-[340px] max-w-[500px]">
+          <div class="relative flex-1 min-w-[240px] max-w-[320px]">
             <img src="/assets/images/snap1.svg" alt="card background" class="w-full h-auto" style="display: block;">
-            <div class="absolute inset-0 flex flex-col items-center justify-center gap-3 py-6 px-6">
-              <span class="text-3xl" style="filter: drop-shadow(0 2px 4px rgba(255,179,71,0.4));">✦</span>
+            <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-4 px-4">
+              <span class="text-xl" style="filter: drop-shadow(0 2px 4px rgba(255,179,71,0.4));">✦</span>
               <div class="text-center">
-                <p class="text-xs pixel-text-dim mb-2 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Actualizado</p>
-                <p class="text-xl font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= currentDateHuman %></p>
+                <p class="text-[10px] pixel-text-dim mb-1 uppercase tracking-widest font-semibold" style="text-shadow: 0 1px 2px rgba(0,0,0,0.5);">Actualizado</p>
+                <p class="text-sm font-bold text-white" style="text-shadow: 0 2px 4px rgba(0,0,0,0.5);"><%= currentDateHuman %></p>
               </div>
             </div>
           </div>
         </div>
 
         <!-- Segunda fila: Secciones -->
-        <div class="relative w-full max-w-6xl">
+        <div class="relative w-full max-w-4xl">
           <img src="/assets/images/snap2.svg" alt="card background" class="w-full h-auto" style="display: block;">
-          <div class="absolute inset-0 flex flex-col items-center justify-center gap-4 py-8 px-6">
-            <span class="text-5xl" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">🎮</span>
-            <div class="text-center space-y-2">
-              <p class="text-4xl font-bold" style="color: var(--pixel-accent-3); text-shadow: 0 2px 6px rgba(0,0,0,0.5);">23 Secciones</p>
-              <p class="text-lg text-white/95 font-medium" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Sistema Completo • Creación de Contenido</p>
+          <div class="absolute inset-0 flex flex-col items-center justify-center gap-2 py-6 px-4">
+            <span class="text-3xl" style="filter: drop-shadow(0 4px 8px rgba(0,0,0,0.4));">🎮</span>
+            <div class="text-center space-y-1">
+              <p class="text-2xl font-bold" style="color: var(--pixel-accent-3); text-shadow: 0 2px 6px rgba(0,0,0,0.5);">23 Secciones</p>
+              <p class="text-sm text-white/95 font-medium" style="text-shadow: 0 1px 3px rgba(0,0,0,0.5);">Sistema Completo • Creación de Contenido</p>
             </div>
           </div>
         </div>
