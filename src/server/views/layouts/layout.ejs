@@ -34,34 +34,39 @@
         <p class="text-sm pixel-text-dim">Sistema completo de juego, economía y gestión para Discord</p>
       </div>
       
-      <div class="flex flex-wrap justify-center gap-4 mb-6 text-sm">
+      <div class="flex flex-wrap justify-center gap-4 mb-6 text-sm items-center">
+        <span class="pixel-leaf" style="width: 16px; height: 10px;"></span>
         <a href="#primeros-pasos">Primeros Pasos</a>
-        <span>•</span>
+        <span>✦</span>
         <a href="#comandos-basicos">Comandos</a>
-        <span>•</span>
+        <span>✦</span>
         <a href="#minijuegos">Minijuegos</a>
-        <span>•</span>
+        <span>✦</span>
         <a href="#faq">FAQ</a>
+        <span class="pixel-leaf" style="width: 16px; height: 10px; transform: rotate(20deg);"></span>
       </div>
 
-      <div class="pixel-border p-4 mb-6">
+      <div class="pixel-border p-4 mb-6" style="background: linear-gradient(135deg, var(--pixel-bg-dark) 0%, var(--pixel-bg-medium) 100%);">
         <div class="pixel-status-bar justify-center">
+          <span class="pixel-star" style="width: 12px; height: 12px;"></span>
           <span>VER <%= version %></span>
-          <span>•</span>
+          <span>✦</span>
           <span>DJS <%= djsVersion %></span>
-          <span>•</span>
+          <span>✦</span>
           <span><%= currentDateHuman %></span>
+          <span class="pixel-star" style="width: 12px; height: 12px; animation-delay: 1.5s;"></span>
         </div>
       </div>
 
-      <p class="text-center text-xs pixel-text-dim mb-6">
-        <span class="pixel-coin"></span>
-        Amayo © <%= new Date().getFullYear() %> — Documentación para usuarios finales de Discord
+      <p class="text-center text-xs pixel-text-dim mb-6 flex items-center justify-center gap-2">
+        <span class="pixel-coin" style="width: 16px; height: 16px;"></span>
+        <span>Amayo © <%= new Date().getFullYear() %> — Documentación para usuarios finales de Discord</span>
+        <span class="pixel-candle" style="width: 8px; height: 12px;"></span>
       </p>
 
       <div class="text-center">
         <a class="pixel-btn-secondary pixel-btn inline-block" href="#primeros-pasos">
-          <span aria-hidden="true">↑</span> Volver arriba
+          <span aria-hidden="true">✦</span> Volver arriba <span aria-hidden="true">✦</span>
         </a>
       </div>
     </div>

@@ -4,14 +4,16 @@
 <% const title = pageTitle; %>
 <% layout('layouts/layout', { title, head, scripts, appName, version, djsVersion, currentDateHuman }); %>
 
-<header class="relative overflow-hidden py-20 sm:py-28 pixel-corner">
+<header class="relative overflow-hidden py-20 sm:py-28">
   <div class="container mx-auto px-4 sm:px-6 lg:px-8 relative">
     <div class="max-w-5xl mx-auto text-center space-y-12">
-      <!-- Badge Pixel Art -->
-      <div class="inline-block">
+      <!-- Badge Pixel Art con decoración -->
+      <div class="inline-block relative">
+        <span class="pixel-star absolute -left-8 top-0"></span>
         <div class="pixel-badge">
           <%= appName %> • v<%= version %>
         </div>
+        <span class="pixel-star absolute -right-8 top-0" style="animation-delay: 1s;"></span>
       </div>
 
       <!-- Título Principal -->
@@ -24,25 +26,21 @@
         </h2>
       </div>
 
-      <!-- HP Bar decorativo -->
-      <div class="flex justify-center">
-        <div class="pixel-hp-bar">
-          <div class="pixel-heart"></div>
-          <div class="pixel-heart"></div>
-          <div class="pixel-heart"></div>
-          <div class="pixel-heart"></div>
-          <div class="pixel-heart"></div>
-        </div>
+      <!-- Decoración con velas -->
+      <div class="flex justify-center gap-8">
+        <span class="pixel-candle"></span>
+        <span class="pixel-candle" style="animation-delay: 0.5s;"></span>
+        <span class="pixel-candle" style="animation-delay: 1s;"></span>
       </div>
 
       <!-- Descripción -->
       <div class="pixel-box max-w-3xl mx-auto">
         <p class="text-xl sm:text-2xl leading-relaxed">
           Sistema completo de 
-          <span class="text-pixel-accent-4 font-bold">economía</span>, 
-          <span class="text-pixel-accent-3 font-bold">minijuegos</span>, 
-          <span class="text-pixel-accent-1 font-bold">misiones</span> y 
-          <span class="text-pixel-accent-2 font-bold">IA</span> 
+          <span style="color: var(--pixel-accent-1); font-weight: bold;">economía</span>, 
+          <span style="color: var(--pixel-accent-3); font-weight: bold;">minijuegos</span>, 
+          <span style="color: var(--pixel-accent-5); font-weight: bold;">misiones</span> y 
+          <span style="color: var(--pixel-accent-2); font-weight: bold;">IA</span> 
           para Discord
         </p>
       </div>
@@ -50,7 +48,7 @@
       <!-- Botones de Acción -->
       <div class="flex flex-col sm:flex-row gap-6 justify-center items-center pt-4">
         <a href="#primeros-pasos" class="pixel-btn">
-          ► Comenzar ahora
+          ▶ Comenzar ahora
         </a>
         
         <button id="toggle-nav" class="pixel-btn pixel-btn-secondary">
@@ -58,16 +56,18 @@
         </button>
       </div>
 
-      <!-- Stats Footer -->
+      <!-- Stats Footer con decoración -->
       <div class="flex flex-wrap justify-center gap-4 pt-8">
-        <div class="pixel-box py-3 px-6 text-sm">
-          <span class="pixel-text-dim">Discord.js</span> <%= djsVersion %>
+        <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
+          <span class="pixel-leaf"></span>
+          <span><span class="pixel-text-dim">Discord.js</span> <%= djsVersion %></span>
+        </div>
+        <div class="pixel-box py-3 px-6 text-sm flex items-center gap-2">
+          <span>✦</span>
+          <span><span class="pixel-text-dim">Actualizado:</span> <%= currentDateHuman %></span>
         </div>
         <div class="pixel-box py-3 px-6 text-sm">
-          <span class="pixel-text-dim">Actualizado:</span> <%= currentDateHuman %>
-        </div>
-        <div class="pixel-box py-3 px-6 text-sm pixel-corner">
-          <span class="text-pixel-accent-4 font-bold">23 Secciones</span> • Creación de Contenido Incluida
+          <span style="color: var(--pixel-accent-3); font-weight: bold;">23 Secciones</span> • Creación de Contenido
         </div>
       </div>
     </div>
