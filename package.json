@@ -18,7 +18,7 @@
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "seed:minigames": "npx tsx src/game/minigames/seed.ts",
-    "start:optimize-relic": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NEW_RELIC_APP_NAME=amayo NEW_RELIC_LICENSE_KEY=85ef833e676ed6ea726e23b3e373397dFFFFNRAL NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx --experimental-loader=newrelic/esm-loader.mjs src/main.ts"
+    "start:optimize-relic": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NEW_RELIC_APP_NAME=amayo NEW_RELIC_LICENSE_KEY= NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx --experimental-loader=newrelic/esm-loader.mjs src/main.ts"
   },
   "keywords": [],
   "author": "",
