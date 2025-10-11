@@ -74,48 +74,9 @@ export async function alliance(message: Message) {
 
 function extractValidLinks(content: string): string[] {
   const matches = content.match(URL_REGEX);
-  if (!matches) return [];
-
-  const results: string[] = [];
-  for (const raw of matches) {
-    try {
-      const url = new URL(raw);
-
-      // Sólo http/https
-      if (url.protocol !== "http:" && url.protocol !== "https:") continue;
-
-      // Rechazar URLs con query string o fragment (ej: ?event=...)
-      if (url.search || url.hash) continue;
-
-      // Normalizar hostname y pathname
-      const host = url.hostname.toLowerCase();
-      const pathname = url.pathname.replace(/\/+/g, "/");
-
-      // Validar formatos de invitación de Discord estrictos
-      if (host === "discord.gg") {
-        // debe ser /<codigo>
-        if (!/^\/[A-Za-z0-9]+$/.test(pathname)) continue;
-      } else if (
-        host === "discord.com" ||
-        host === "www.discord.com" ||
-        host === "discordapp.com" ||
-        host === "www.discordapp.com"
-      ) {
-        // debe ser /invite/<codigo>
-        if (!/^\/invite\/[A-Za-z0-9]+$/.test(pathname)) continue;
-      }
-
-      // Si llegó hasta aquí, es aceptable
-      results.push(url.toString());
-    } catch {
-      // ignorar coincidencias inválidas
-      continue;
-    }
-  }
-
-  return results;
+  return matches || [];
 }
-// ...existing code...
+
 function validateDiscordLinks(links: string[]): string[] {
   return links.filter((link) => {
     return DISCORD_DOMAINS.some((domain) => link.includes(domain));
@@ -600,7 +561,7 @@ async function processConfigVariables(
   }
 
   if (Array.isArray(config)) {
-    const processedArray: any[] = [];
+    const processedArray = [];
     for (const item of config) {
       // @ts-ignore
       processedArray.push(
