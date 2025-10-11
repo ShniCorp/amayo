@@ -1,1 +1,1 @@
-web: npm run start:prod-optimized
+web: npm run dev:ultra
