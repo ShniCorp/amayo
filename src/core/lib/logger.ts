@@ -1,31 +1,13 @@
-import fs from "fs";
-import path from "path";
-import dotenv from "dotenv";
 import pino from "pino";
 
-// 🩹 Extender el tipo global de process para evitar error de TS
-declare global {
-  namespace NodeJS {
-    interface Process {
-      pkg?: any;
-      BUN_COMPILED?: boolean;
-    }
-  }
-}
+// Detecta si el proceso está compilado (pkg o Bun)
+const isCompiled =
+  // @ts-expect-error pkg no existe en los tipos de Node, pero puede estar en runtime
+  !!process.pkg ||
+  !!process.env.BUN_COMPILED ||
+  process.execPath.includes("bun");
 
-// 🔹 Cargar .env manualmente si existe
-const envPath = path.resolve(process.cwd(), ".env");
-if (fs.existsSync(envPath)) {
-  dotenv.config({ path: envPath });
-  console.log("✅ .env cargado desde", envPath);
-} else {
-  console.warn("⚠️ No se encontró archivo .env, usando variables del entorno");
-}
-
-// 🔹 Detectar si está compilado con Bun o pkg
-const isCompiled = !!process.pkg || !!process.env.BUN_COMPILED;
-
-// 🔹 Configurar transporte solo si NO estamos en producción y NO es compilado
+// Solo usa pino-pretty en desarrollo y cuando no está compilado
 const usePretty = process.env.NODE_ENV !== "production" && !isCompiled;
 
 export const logger = pino({
@@ -41,7 +23,9 @@ export const logger = pino({
       }
     : undefined,
   formatters: {
-    level: (label) => ({ level: label }),
+    level(label) {
+      return { level: label };
+    },
   },
 });
 
