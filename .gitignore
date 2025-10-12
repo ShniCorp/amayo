@@ -11,3 +11,6 @@ qodana.yaml
 
 # Generados
 /src/generated/prisma/
+
+# Binarios
+amayo
