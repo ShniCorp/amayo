@@ -1,4 +1,4 @@
-process.loadEnvFile();
+import "dotenv/config";
 
 import Amayo from "./core/client";
 import { loadCommands } from "./core/loaders/loader";
