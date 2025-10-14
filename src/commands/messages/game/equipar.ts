@@ -70,47 +70,82 @@ export const command: CommandMessage = {
       return;
     }
 
-    // Build select options (max 25)
-    const options = inventory
-      .slice(0, 25)
-      .map((inv) => ({
-        label: inv.item.name || inv.item.key,
-        value: inv.item.id,
-        description: inv.item.key,
-      }));
+    // Determine which slots the user actually has items for (based on item.tags)
+    const slotsSet = new Set<string>();
+    for (const inv of inventory) {
+      const tags = Array.isArray(inv.item.tags) ? inv.item.tags : [];
+      if (tags.includes("weapon")) slotsSet.add("weapon");
+      if (tags.includes("armor")) slotsSet.add("armor");
+      if (tags.includes("cape")) slotsSet.add("cape");
+    }
+    const availableSlots = Array.from(slotsSet);
+    if (availableSlots.length === 0) {
+      await message.reply(
+        "❌ No tienes items equipables en el inventario (weapon/armor/cape)."
+      );
+      return;
+    }
+
+    const buildItemOptionsForSlot = (slot: string) =>
+      inventory
+        .filter((inv) => {
+          const tags = Array.isArray(inv.item.tags) ? inv.item.tags : [];
+          return tags.includes(slot);
+        })
+        .slice(0, 25)
+        .map((inv) => ({
+          label: inv.item.name || inv.item.key,
+          value: inv.item.id,
+          description: inv.item.key,
+        }));
+
+    const slotOptions = availableSlots.map((s) => {
+      if (s === "weapon")
+        return {
+          label: "Weapon (arma)",
+          value: "weapon",
+          description: "Equipar como arma",
+        };
+      if (s === "armor")
+        return {
+          label: "Armor (armadura)",
+          value: "armor",
+          description: "Equipar como armadura",
+        };
+      return {
+        label: "Cape (capa)",
+        value: "cape",
+        description: "Equipar como capa",
+      };
+    });
 
     const slotSelect = {
       type: ComponentType.StringSelect,
       custom_id: "equip_slot_select",
-      placeholder: "Selecciona el slot (weapon / armor / cape)",
+      placeholder: "Selecciona el slot",
       min_values: 1,
       max_values: 1,
-      options: [
-        {
-          label: "Weapon (arma)",
-          value: "weapon",
-          description: "Equipar como arma",
-        },
-        {
-          label: "Armor (armadura)",
-          value: "armor",
-          description: "Equipar como armadura",
-        },
-        {
-          label: "Cape (capa)",
-          value: "cape",
-          description: "Equipar como capa",
-        },
-      ],
+      options: slotOptions,
     } as any;
+
+    // If only one slot available, preselect it and build item options for it.
+    let initialSelectedSlot: string | null = null;
+    if (availableSlots.length === 1) initialSelectedSlot = availableSlots[0];
+
+    const initialItemOptions = initialSelectedSlot
+      ? buildItemOptionsForSlot(initialSelectedSlot)
+      : // default to first slot's items so the select is populated
+        buildItemOptionsForSlot(availableSlots[0]);
 
     const itemSelect = {
       type: ComponentType.StringSelect,
       custom_id: "equip_item_select",
-      placeholder: "Selecciona el item a equipar",
+      placeholder: initialSelectedSlot
+        ? "Selecciona el item a equipar"
+        : "Selecciona primero el slot (o usa el slot disponible)",
       min_values: 1,
       max_values: 1,
-      options,
+      options: initialItemOptions,
     } as any;
 
     const channel = message.channel as TextBasedChannel & { send: Function };
@@ -130,7 +165,7 @@ export const command: CommandMessage = {
         i.user.id === message.author.id,
     });
 
-    let selectedSlot: string | null = null;
+    let selectedSlot: string | null = initialSelectedSlot;
     let selectedItemId: string | null = null;
 
     collector.on("collect", async (i: MessageComponentInteraction) => {
@@ -138,11 +173,25 @@ export const command: CommandMessage = {
       await i.deferUpdate();
       if (i.customId === "equip_slot_select") {
         selectedSlot = (i as StringSelectMenuInteraction).values[0];
-        // inform user visually by editing the prompt to show selection
+        // rebuild item select options for the chosen slot
+        const newItemOptions = buildItemOptionsForSlot(selectedSlot);
+        const newSlotSelect =
+          prompt.components[0]?.components?.[0] ?? slotSelect;
+        const newItemSelect = {
+          type: ComponentType.StringSelect,
+          custom_id: "equip_item_select",
+          placeholder: "Selecciona el item a equipar",
+          min_values: 1,
+          max_values: 1,
+          options: newItemOptions,
+        } as any;
         try {
           await prompt.edit({
             content: `Slot seleccionado: **${selectedSlot}**`,
-            components: prompt.components,
+            components: [
+              { type: ComponentType.ActionRow, components: [newSlotSelect] },
+              { type: ComponentType.ActionRow, components: [newItemSelect] },
+            ],
           });
         } catch {}
         return;
@@ -158,6 +207,24 @@ export const command: CommandMessage = {
               flags: 64,
             });
           } catch {}
+          return;
+        }
+
+        // validate that the selected item belongs to the chosen slot
+        const chosenItem = await prisma.economyItem.findUnique({
+          where: { id: selectedItemId },
+        });
+        const chosenTags = Array.isArray(chosenItem?.tags)
+          ? chosenItem!.tags
+          : [];
+        if (!chosenTags.includes(selectedSlot)) {
+          try {
+            await prompt.edit({
+              content: `❌ Ese ítem no puede equiparse en el slot **${selectedSlot}**.`,
+              components: [],
+            });
+          } catch {}
+          collector.stop();
           return;
         }
 

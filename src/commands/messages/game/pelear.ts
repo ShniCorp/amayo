@@ -66,6 +66,10 @@ export const command: CommandMessage = {
       providedTool ?? (await findBestToolKey(userId, guildId, "sword"));
 
     try {
+      // Pre-check: si el nivel tiene requirements con herramienta obligatoria
+      // intentamos validar rápidamente si existe alguna herramienta equipada o en inventario
+      // usando validateRequirements indirectamente sería duplicar lógica; hacemos una ligera comprobación
+      // basada en `toolKey` detectado y si findBestToolKey falla, informaremos.
       const result = await runMinigame(userId, guildId, area.key, level, {
         toolKey: toolKey ?? undefined,
       });
@@ -206,6 +210,46 @@ export const command: CommandMessage = {
       const display = buildDisplay(FIGHT_ACCENT, blocks);
       await sendDisplayReply(message, display);
     } catch (e: any) {
+      const msg = (e?.message || String(e)).toLowerCase();
+      // Mapear errores conocidos a mensajes más amigables
+      if (
+        msg.includes("area no encontrada") ||
+        msg.includes("nivel no encontrado")
+      ) {
+        await message.reply(
+          "⚠️ El área o nivel especificado no existe para este servidor."
+        );
+        return;
+      }
+      if (msg.includes("cooldown activo")) {
+        await message.reply(
+          "⏳ Estás en cooldown para esta actividad. Intenta más tarde."
+        );
+        return;
+      }
+      if (
+        msg.includes("se requiere una herramienta adecuada") ||
+        msg.includes("no tienes la herramienta") ||
+        msg.includes("tipo de herramienta incorrecto") ||
+        msg.includes("tier de herramienta insuficiente")
+      ) {
+        // Mensaje más específico: si no hay arma equipada y el área requiere saberlo, sugerir equipar o conseguir herramienta
+        await message.reply(
+          "⚠️ No tienes una herramienta válida para esta actividad. Equipa una herramienta adecuada (ej: espada) o especifica `toolKey`."
+        );
+        return;
+      }
+      if (
+        msg.includes("no puede infligir daño") ||
+        msg.includes("autoDefeatNoWeapon") ||
+        msg.includes("auto defeat")
+      ) {
+        await message.reply(
+          "⚠️ No tienes un arma equipada o válida para pelear. Equipa un arma para poder infligir daño o usa `pelear <toolKey>` con una herramienta válida."
+        );
+        return;
+      }
+      // Fallback genérico
       await message.reply(`❌ No se pudo pelear: ${e?.message ?? e}`);
     }
   },
