@@ -212,6 +212,15 @@ async function bootstrap() {
     logger.error({ err: e }, "Error cargando eventos");
   }
 
+  // Inicializar repositorio de mobs (intenta cargar mobs desde DB si existe)
+  try {
+    // import dinamico para evitar ciclos en startup
+    const { initializeMobRepository } = await import("./game/mobs/mobData.js");
+    await initializeMobRepository();
+  } catch (e) {
+    logger.warn({ err: e }, "No se pudo inicializar el repositorio de mobs");
+  }
+
   // Registrar comandos en segundo plano con reintentos; no bloquea el arranque del bot
   withRetry("Registrar slash commands", async () => {
     await registeringCommands();

@@ -7,17 +7,17 @@ import type {
 } from "./types";
 import type { Prisma } from "@prisma/client";
 import { ensureUserAndGuildExist } from "../core/userService";
+import coreUtils from "../core/utils";
 
-// Utilidades de tiempo
-function now(): Date {
-  return new Date();
-}
-
-function isWithin(date: Date, from?: Date | null, to?: Date | null): boolean {
-  if (from && date < from) return false;
-  if (to && date > to) return false;
-  return true;
-}
+// Reusar utilidades centrales desde game core
+const {
+  now,
+  isWithin,
+  ensureArray,
+  parseItemProps,
+  parseState,
+  updateInventoryEntryState,
+} = coreUtils as any;
 
 // Resuelve un EconomyItem por key con alcance de guild o global
 export async function findItemByKey(guildId: string, key: string) {
@@ -89,15 +89,8 @@ export async function getInventoryEntry(
   return { item, entry } as const;
 }
 
-function parseItemProps(json: unknown): ItemProps {
-  if (!json || typeof json !== "object") return {};
-  return json as ItemProps;
-}
-
-function parseState(json: unknown): InventoryState {
-  if (!json || typeof json !== "object") return {};
-  return json as InventoryState;
-}
+// utilidades parseItemProps, parseState, ensureArray y updateInventoryEntryState
+// provistas por coreUtils importado arriba
 
 function checkUsableWindow(item: {
   usableFrom: Date | null;
@@ -156,7 +149,7 @@ export async function addItemByKey(
   } else {
     // No apilable: usar state.instances
     const state = parseState(entry.state);
-    state.instances ??= [];
+    state.instances = ensureArray(state.instances);
     const canAdd = Math.max(
       0,
       Math.min(qty, Math.max(0, max - state.instances.length))
@@ -173,13 +166,12 @@ export async function addItemByKey(
         state.instances.push({});
       }
     }
-    const updated = await prisma.inventoryEntry.update({
-      where: { userId_guildId_itemId: { userId, guildId, itemId: item.id } },
-      data: {
-        state: state as unknown as Prisma.InputJsonValue,
-        quantity: state.instances.length,
-      },
-    });
+    const updated = await updateInventoryEntryState(
+      userId,
+      guildId,
+      item.id,
+      state
+    );
     return { added: canAdd, entry: updated } as const;
   }
 }
@@ -203,18 +195,16 @@ export async function consumeItemByKey(
     return { consumed, entry: updated } as const;
   } else {
     const state = parseState(entry.state);
-    const instances = state.instances ?? [];
-    const consumed = Math.min(qty, instances.length);
+    state.instances = ensureArray(state.instances);
+    const consumed = Math.min(qty, state.instances.length);
     if (consumed === 0) return { consumed: 0 } as const;
-    instances.splice(0, consumed);
-    const newState: InventoryState = { ...state, instances };
-    const updated = await prisma.inventoryEntry.update({
-      where: { userId_guildId_itemId: { userId, guildId, itemId: item.id } },
-      data: {
-        state: newState as unknown as Prisma.InputJsonValue,
-        quantity: instances.length,
-      },
-    });
+    state.instances.splice(0, consumed);
+    const updated = await updateInventoryEntryState(
+      userId,
+      guildId,
+      item.id,
+      state
+    );
     return { consumed, entry: updated } as const;
   }
 }
@@ -232,7 +222,7 @@ export async function openChestByKey(
   const props = parseItemProps(item.props);
   const chest = props.chest ?? {};
   if (!chest.enabled) throw new Error("Este ítem no se puede abrir");
-  const rewards = Array.isArray(chest.rewards) ? chest.rewards : [];
+  const rewards: any[] = Array.isArray(chest.rewards) ? chest.rewards : [];
   const mode = chest.randomMode || "all";
   const result: OpenChestResult = {
     coinsDelta: 0,

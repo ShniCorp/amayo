@@ -19,6 +19,7 @@ import {
 import { logToolBreak } from "../lib/toolBreakLog";
 import { updateStats } from "../stats/service"; // 🟩 local authoritative
 import type { ItemProps, InventoryState } from "../economy/types";
+import { parseItemProps, parseState as parseInvState } from "../core/utils";
 import type {
   LevelRequirements,
   RunMinigameOptions,
@@ -120,15 +121,7 @@ async function ensureAreaAndLevel(
   return { area, lvl } as const;
 }
 
-function parseItemProps(json: unknown): ItemProps {
-  if (!json || typeof json !== "object") return {};
-  return json as ItemProps;
-}
-
-function parseInvState(json: unknown): InventoryState {
-  if (!json || typeof json !== "object") return {};
-  return json as InventoryState;
-}
+// parseItemProps y parseInvState son importados desde ../core/utils para centralizar parsing
 
 async function validateRequirements(
   userId: string,
@@ -276,6 +269,26 @@ async function sampleMobs(mobs?: MobsTable): Promise<string[]> {
   for (let i = 0; i < draws; i++) {
     const pick = pickWeighted(mobs.table);
     if (pick) out.push(pick.mobKey);
+  }
+  return out;
+}
+
+// Devuelve instancias de mobs escaladas por nivel (usa getMobInstance de mobData)
+import { getMobInstance } from "../mobs/mobData";
+
+async function sampleMobInstances(
+  mobs?: MobsTable,
+  areaLevel = 1
+): Promise<ReturnType<typeof getMobInstance>[]> {
+  const out: ReturnType<typeof getMobInstance>[] = [];
+  if (!mobs || !Array.isArray(mobs.table) || mobs.table.length === 0)
+    return out;
+  const draws = Math.max(0, mobs.draws ?? 0);
+  for (let i = 0; i < draws; i++) {
+    const pick = pickWeighted(mobs.table);
+    if (!pick) continue;
+    const inst = getMobInstance(pick.mobKey, areaLevel);
+    if (inst) out.push(inst);
   }
   return out;
 }
@@ -445,7 +458,7 @@ export async function runMinigame(
     guildId,
     rewards
   );
-  const mobsSpawned = await sampleMobs(mobs);
+  const mobsSpawned = await sampleMobInstances(mobs, level);
 
   // Reducir durabilidad de herramienta si se usó
   let toolInfo: RunResult["tool"] | undefined;
@@ -478,8 +491,8 @@ export async function runMinigame(
 
     if (!hasWeapon) {
       // Registrar derrota simple contra la lista de mobs (no se derrotan mobs).
-      const mobLogs: CombatSummary["mobs"] = mobsSpawned.map((mk) => ({
-        mobKey: mk,
+      const mobLogs: CombatSummary["mobs"] = mobsSpawned.map((m) => ({
+        mobKey: m?.key ?? "unknown",
         maxHp: 0,
         defeated: false,
         totalDamageDealt: 0,
@@ -596,16 +609,20 @@ export async function runMinigame(
         const factor = 0.8 + Math.random() * 0.4; // 0.8 - 1.2
         return base * factor;
       };
-      for (const mobKey of mobsSpawned) {
+      for (const mob of mobsSpawned) {
         if (currentHp <= 0) break; // jugador derrotado antes de iniciar este mob
-        // Stats simples del mob (placeholder mejorable con tabla real)
-        const mobBaseHp = 10 + Math.floor(Math.random() * 6); // 10-15
+        // Stats simples del mob (usamos la instancia escalada)
+        const mobBaseHp = Math.max(1, Math.floor(mob?.scaled?.hp ?? 10));
         let mobHp = mobBaseHp;
         const rounds: any[] = [];
         let round = 1;
         let mobDamageDealt = 0; // daño que jugador hace a este mob
         let mobDamageTakenFromMob = 0; // daño que jugador recibe de este mob
-        while (mobHp > 0 && currentHp > 0 && round <= 12) {
+        while (
+          mobHp > 0 &&
+          currentHp > 0 &&
+          round <= (mob?.behavior?.maxRounds ?? 12)
+        ) {
           // Daño jugador -> mob
           const playerRaw = variance(eff.damage || 1) + 1; // asegurar >=1
           const playerDamage = Math.max(1, Math.round(playerRaw));
@@ -627,7 +644,7 @@ export async function runMinigame(
             }
           }
           rounds.push({
-            mobKey,
+            mobKey: mob?.key ?? "unknown",
             round,
             playerDamageDealt: playerDamage,
             playerDamageTaken: playerTaken,
@@ -642,7 +659,7 @@ export async function runMinigame(
           round++;
         }
         mobLogs.push({
-          mobKey,
+          mobKey: mob?.key ?? "unknown",
           maxHp: mobBaseHp,
           defeated: mobHp <= 0,
           totalDamageDealt: mobDamageDealt,
@@ -830,7 +847,7 @@ export async function runMinigame(
 
   const resultJson: Prisma.InputJsonValue = {
     rewards: delivered,
-    mobs: mobsSpawned,
+    mobs: mobsSpawned.map((m) => m?.key ?? "unknown"),
     tool: toolInfo,
     weaponTool: weaponToolInfo,
     combat: combatSummary,
@@ -879,7 +896,7 @@ export async function runMinigame(
   return {
     success: true,
     rewards: delivered,
-    mobs: mobsSpawned,
+    mobs: mobsSpawned.map((m) => m?.key ?? "unknown"),
     tool: toolInfo,
     weaponTool: weaponToolInfo,
     combat: combatSummary,

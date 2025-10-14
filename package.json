@@ -18,6 +18,7 @@
     "tsc": "tsc",
     "typecheck": "tsc --noEmit",
     "seed:minigames": "npx tsx src/game/minigames/seed.ts",
+  "test:mobs": "npx tsx scripts/testMobData.ts",
     "start:optimize-relic": "NODE_ENV=production ENABLE_MEMORY_OPTIMIZER=true NEW_RELIC_APP_NAME=amayo NEW_RELIC_LICENSE_KEY= NODE_OPTIONS='--max-old-space-size=512 --expose-gc' npx tsx --experimental-loader=newrelic/esm-loader.mjs src/main.ts"
   },
   "keywords": [],
@@ -35,7 +36,8 @@
     "ejs": "^3.1.10",
     "newrelic": "13.4.0",
     "node-appwrite": "19.1.0",
-    "pino": "9.13.0",
+  "pino": "9.13.0",
+  "zod": "4.25.1",
     "prisma": "6.16.2",
     "redis": "5.8.2"
   },

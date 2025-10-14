@@ -16,10 +16,7 @@ import { sendDisplayReply, formatItemLabel } from "./_helpers";
 
 const PAGE_SIZE = 15;
 
-function parseItemProps(json: unknown): ItemProps {
-  if (!json || typeof json !== "object") return {};
-  return json as ItemProps;
-}
+import { parseItemProps } from "../../../game/core/utils";
 
 function fmtTool(props: ItemProps) {
   const t = props.tool;

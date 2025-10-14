@@ -36,10 +36,7 @@ function buildEmoji(
   return { id, name, animated };
 }
 
-function parseItemProps(json: unknown): ItemProps {
-  if (!json || typeof json !== "object") return {};
-  return json as ItemProps;
-}
+import { parseItemProps } from "../../../game/core/utils";
 
 function formatPrice(price: any): string {
   const parts: string[] = [];

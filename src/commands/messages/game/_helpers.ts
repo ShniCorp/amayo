@@ -271,6 +271,8 @@ export interface KeyPickerResult<T> {
   entry: T | null;
   panelMessage: Message | null;
   reason: "selected" | "empty" | "cancelled" | "timeout";
+  // When present, the raw value selected from the select menu (may be id or key)
+  selectedValue?: string;
 }
 
 export async function promptKeySelection<T>(
@@ -444,11 +446,12 @@ export async function promptKeySelection<T>(
   const result = await new Promise<KeyPickerResult<T>>((resolve) => {
     const finish = (
       entry: T | null,
-      reason: "selected" | "cancelled" | "timeout"
+      reason: "selected" | "cancelled" | "timeout",
+      selectedValue?: string
     ) => {
       if (resolved) return;
       resolved = true;
-      resolve({ entry, panelMessage, reason });
+      resolve({ entry, panelMessage, reason, selectedValue });
     };
 
     const collector = panelMessage.createMessageComponentCollector({
@@ -501,7 +504,7 @@ export async function promptKeySelection<T>(
               }
             }
 
-            finish(selected.entry, "selected");
+            finish(selected.entry, "selected", value);
             collector.stop("selected");
             return;
           }

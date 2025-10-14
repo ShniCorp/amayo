@@ -5,11 +5,7 @@ import {
 } from "./statusEffectsService";
 import type { ItemProps } from "../economy/types";
 import { ensureUserAndGuildExist } from "../core/userService";
-
-function parseItemProps(json: unknown): ItemProps {
-  if (!json || typeof json !== "object") return {};
-  return json as ItemProps;
-}
+import { parseItemProps } from "../core/utils";
 
 export async function ensurePlayerState(userId: string, guildId: string) {
   // Asegurar que User y Guild existan antes de crear/buscar state
