@@ -9,7 +9,7 @@ import { sendComponentsV2Message } from "../../core/api/discordAPI";
 const URL_REGEX =
   /https?:\/\/(www\.)?[-a-zA-Z0-9@:%._+~#=]{1,256}\.[a-zA-Z0-9()]{1,6}\b([-a-zA-Z0-9()@:%_+.~#?&/=]*)/gi;
 
-// Dominios de Discord válidos para invitaciones
+// (kept for reference) dominios de Discord válidos para invitaciones
 const DISCORD_DOMAINS = [
   "discord.gg",
   "discord.com/invite",
@@ -57,6 +57,7 @@ export async function alliance(message: Message) {
     }
 
     // Validar que los enlaces sean de Discord (invitaciones)
+    // Usar extracción de código de invitación para validar (maneja query params como ?event=...)
     const validDiscordLinks = validateDiscordLinks(links);
 
     if (validDiscordLinks.length === 0) {
@@ -78,9 +79,24 @@ function extractValidLinks(content: string): string[] {
 }
 
 function validateDiscordLinks(links: string[]): string[] {
-  return links.filter((link) => {
-    return DISCORD_DOMAINS.some((domain) => link.includes(domain));
-  });
+  // Priorizar la extracción del código de invitación: si podemos extraerlo, lo consideramos válido.
+  const results: string[] = [];
+  for (const link of links) {
+    try {
+      const code = extractInviteCode(link);
+      if (code) {
+        results.push(link);
+        continue;
+      }
+      // Fallback rápido: comprobar dominios conocidos (por compatibilidad)
+      if (DISCORD_DOMAINS.some((d) => link.includes(d))) {
+        results.push(link);
+      }
+    } catch {
+      // ignorar enlaces que causen excepciones
+    }
+  }
+  return results;
 }
 
 async function processValidLink(
@@ -561,9 +577,8 @@ async function processConfigVariables(
   }
 
   if (Array.isArray(config)) {
-    const processedArray = [];
+    const processedArray: any[] = [];
     for (const item of config) {
-      // @ts-ignore
       processedArray.push(
         await processConfigVariables(item, user, guild, userStats, inviteObject)
       );
