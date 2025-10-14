@@ -1,6 +1,5 @@
 import type { CommandMessage } from "../../../core/types/commands";
 import type Amayo from "../../../core/client";
-import { prisma } from "../../../core/database/prisma";
 import { ComponentType, ButtonStyle } from "discord-api-types/v10";
 import type { MessageComponentInteraction, TextBasedChannel } from "discord.js";
 

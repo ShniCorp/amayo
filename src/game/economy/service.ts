@@ -72,6 +72,9 @@ export async function getInventoryEntryByItemId(
   });
   if (existing) return existing;
   if (!opts?.createIfMissing) return null;
+  // Asegurar que User y Guild existan antes de crear inventoryEntry para evitar
+  // errores de constraint por foreign keys inexistentes.
+  await ensureUserAndGuildExist(userId, guildId);
   return prisma.inventoryEntry.create({
     data: { userId, guildId, itemId, quantity: 0 },
   });

@@ -29,6 +29,17 @@ export interface BaseMobDefinition {
   };
 }
 
+// Nota sobre 'drops':
+// El motor soporta, además de la definición básica del mob, un campo opcional `drops`
+// que puede vivir en la definición del mob (o en la fila DB `Mob.drops`). Hay dos formatos
+// soportados por conveniencia:
+// 1) Mapa simple (object): { "item.key": qty, "other.key": qty }
+//    - Selección aleatoria entre las keys y entrega qty del item seleccionado.
+// 2) Array ponderado: [{ itemKey: string, qty?: number, weight?: number }, ...]
+//    - Se realiza una tirada ponderada usando `weight` (por defecto 1) y se entrega `qty`.
+// Si no hay drops configurados o la selección falla, la lógica actual aplica un fallback que
+// otorga 1 moneda.
+
 // Ejemplos iniciales - se pueden ir expandiendo
 export const MOB_DEFINITIONS: BaseMobDefinition[] = [
   {
@@ -114,7 +125,7 @@ export function listMobKeys(): string[] {
 import { prisma } from "../../core/database/prisma";
 import { z } from "zod";
 
-const BaseMobDefinitionSchema = z.object({
+export const BaseMobDefinitionSchema = z.object({
   key: z.string(),
   name: z.string(),
   tier: z.number().int().nonnegative(),

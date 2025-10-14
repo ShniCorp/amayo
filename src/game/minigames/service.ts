@@ -10,6 +10,7 @@ import {
   findItemByKey,
   getInventoryEntry,
 } from "../economy/service";
+import { findMobDef } from "../mobs/mobData";
 import {
   getEffectiveStats,
   adjustHP,
@@ -221,6 +222,8 @@ async function applyRewards(
 
   // Detectar efecto FATIGUE activo para penalizar SOLO monedas.
   let fatigueMagnitude: number | undefined;
+  // prepare a container for merged modifiers so it's available later in the result
+  let mergedRewardModifiers: RunResult["rewardModifiers"] | undefined;
   try {
     const effects = await getActiveStatusEffects(userId, guildId);
     const fatigue = effects.find((e) => e.type === "FATIGUE");
@@ -459,6 +462,110 @@ export async function runMinigame(
     rewards
   );
   const mobsSpawned = await sampleMobInstances(mobs, level);
+
+  // container visible for the whole runMinigame scope so we can attach mob-derived modifiers
+  let mergedRewardModifiers: RunResult["rewardModifiers"] | undefined =
+    undefined;
+
+  // --- Aplicar rewardMods de los mobs (coinMultiplier y extraDropChance)
+  // Nota: applyRewards ya aplicó monedas/items base. Aquí solo aplicamos
+  // incrementos por rewardMods de mobs: aumentos positivos en monedas y
+  // posibles drops extra (aquí simplificado como +1 moneda por evento).
+  try {
+    // calcular total de monedas entregadas hasta ahora
+    const totalCoins = delivered
+      .filter((r) => r.type === "coins")
+      .reduce((s, r) => s + (r.amount || 0), 0);
+
+    // multiplicador compuesto por mobs (producto de coinMultiplier)
+    const mobCoinMultiplier = mobsSpawned.reduce((acc, m) => {
+      const cm = (m && (m.rewardMods as any)?.coinMultiplier) ?? 1;
+      return acc * (typeof cm === "number" ? cm : 1);
+    }, 1);
+
+    // Si el multiplicador es mayor a 1, añadimos la diferencia en monedas
+    if (mobCoinMultiplier > 1 && totalCoins > 0) {
+      const newTotal = Math.max(0, Math.floor(totalCoins * mobCoinMultiplier));
+      const delta = newTotal - totalCoins;
+      if (delta !== 0) {
+        await adjustCoins(userId, guildId, delta);
+        delivered.push({ type: "coins", amount: delta });
+      }
+    }
+
+    // extraDropChance: por cada mob, tirada para dar un drop.
+    // Si la definición del mob incluye `drops` (tabla de items), intentamos elegir uno.
+    // Si no hay drops configurados o la selección falla, otorgamos 1 coin como fallback.
+    let extraDropsGiven = 0;
+    for (const m of mobsSpawned) {
+      const chance = (m && (m.rewardMods as any)?.extraDropChance) ?? 0;
+      if (typeof chance === "number" && chance > 0 && Math.random() < chance) {
+        try {
+          // Intentar usar la tabla `drops` si existe en la definición original (buscada via findMobDef)
+          const def = (m && findMobDef(m.key)) as any;
+          const drops = def?.drops ?? def?.rewards ?? null;
+          let granted = false;
+          if (drops) {
+            // Formato A (ponderado): [{ itemKey, qty?, weight? }, ...]
+            if (Array.isArray(drops) && drops.length > 0) {
+              const total = drops.reduce(
+                (s: number, d: any) => s + (Number(d.weight) || 1),
+                0
+              );
+              let r = Math.random() * total;
+              for (const d of drops) {
+                const w = Number(d.weight) || 1;
+                r -= w;
+                if (r <= 0) {
+                  const sel = d.itemKey;
+                  const qty = Number(d.qty) || 1;
+                  await addItemByKey(userId, guildId, sel, qty);
+                  delivered.push({ type: "item", itemKey: sel, qty });
+                  granted = true;
+                  break;
+                }
+              }
+            } else if (typeof drops === "object") {
+              // Formato B (map simple): { itemKey: qty }
+              const keys = Object.keys(drops || {});
+              if (keys.length > 0) {
+                const sel = keys[Math.floor(Math.random() * keys.length)];
+                const qty = Number((drops as any)[sel]) || 1;
+                await addItemByKey(userId, guildId, sel, qty);
+                delivered.push({ type: "item", itemKey: sel, qty });
+                granted = true;
+              }
+            }
+          }
+          if (!granted) {
+            // fallback: coin
+            await adjustCoins(userId, guildId, 1);
+            delivered.push({ type: "coins", amount: 1 });
+          }
+          extraDropsGiven++;
+        } catch (e) {
+          // en error, conceder fallback monetario pero no interrumpir
+          try {
+            await adjustCoins(userId, guildId, 1);
+            delivered.push({ type: "coins", amount: 1 });
+            extraDropsGiven++;
+          } catch {}
+        }
+      }
+    }
+
+    // Construir un objeto mergedRewardModifiers en lugar de mutar rewardModifiers
+    mergedRewardModifiers = {
+      ...((rewardModifiers as any) || {}),
+      mobCoinMultiplier,
+      extraDropsGiven:
+        ((rewardModifiers as any)?.extraDropsGiven || 0) + extraDropsGiven,
+    } as any;
+  } catch (err) {
+    // No queremos que fallos menores de rewardMods rompan la ejecución
+    // eslint-disable-next-line no-console
+    console.warn("applyMobRewardMods: failed:", (err as any)?.message ?? err);
+  }
 
   // Reducir durabilidad de herramienta si se usó
   let toolInfo: RunResult["tool"] | undefined;
@@ -845,13 +952,117 @@ export async function runMinigame(
     }
   }
 
+  // --- Aplicar rewardMods provenientes de mobs derrotados (post-combate)
+  try {
+    if (combatSummary) {
+      const defeated = (combatSummary.mobs || []).filter((m) => m.defeated);
+      if (defeated.length > 0) {
+        // multiplicador compuesto solo por mobs derrotados
+        const defeatedMultiplier = defeated.reduce((acc, dm) => {
+          try {
+            const def = findMobDef(dm.mobKey) as any;
+            const cm =
+              (def && def.rewardMods && def.rewardMods.coinMultiplier) ?? 1;
+            return acc * (typeof cm === "number" ? cm : 1);
+          } catch {
+            return acc;
+          }
+        }, 1);
+
+        const totalCoinsBefore = delivered
+          .filter((r) => r.type === "coins")
+          .reduce((s, r) => s + (r.amount || 0), 0);
+
+        if (defeatedMultiplier > 1 && totalCoinsBefore > 0) {
+          const newTotal = Math.max(
+            0,
+            Math.floor(totalCoinsBefore * defeatedMultiplier)
+          );
+          const delta = newTotal - totalCoinsBefore;
+          if (delta !== 0) {
+            await adjustCoins(userId, guildId, delta);
+            delivered.push({ type: "coins", amount: delta });
+          }
+        }
+
+        // extra drops por cada mob derrotado
+        let extraDropsFromCombat = 0;
+        for (const dm of defeated) {
+          try {
+            const def = findMobDef(dm.mobKey) as any;
+            const chance =
+              (def && def.rewardMods && def.rewardMods.extraDropChance) ?? 0;
+            if (
+              typeof chance === "number" &&
+              chance > 0 &&
+              Math.random() < chance
+            ) {
+              // intentar dropear item similar al flujo de minigame
+              const drops = def?.drops ?? def?.rewards ?? null;
+              let granted = false;
+              if (drops) {
+                if (Array.isArray(drops) && drops.length > 0) {
+                  const total = drops.reduce(
+                    (s: number, d: any) => s + (Number(d.weight) || 1),
+                    0
+                  );
+                  let r = Math.random() * total;
+                  for (const d of drops) {
+                    const w = Number(d.weight) || 1;
+                    r -= w;
+                    if (r <= 0) {
+                      const sel = d.itemKey;
+                      const qty = Number(d.qty) || 1;
+                      await addItemByKey(userId, guildId, sel, qty);
+                      delivered.push({ type: "item", itemKey: sel, qty });
+                      granted = true;
+                      break;
+                    }
+                  }
+                } else if (typeof drops === "object") {
+                  const keys = Object.keys(drops || {});
+                  if (keys.length > 0) {
+                    const sel = keys[Math.floor(Math.random() * keys.length)];
+                    const qty = Number((drops as any)[sel]) || 1;
+                    await addItemByKey(userId, guildId, sel, qty);
+                    delivered.push({ type: "item", itemKey: sel, qty });
+                    granted = true;
+                  }
+                }
+              }
+              if (!granted) {
+                await adjustCoins(userId, guildId, 1);
+                delivered.push({ type: "coins", amount: 1 });
+              }
+              extraDropsFromCombat++;
+            }
+          } catch {}
+        }
+
+        // Fusionar con mergedRewardModifiers
+        mergedRewardModifiers = {
+          ...((mergedRewardModifiers as any) || (rewardModifiers as any) || {}),
+          defeatedMobCoinMultiplier:
+            ((mergedRewardModifiers as any)?.defeatedMobCoinMultiplier || 1) *
+            (defeatedMultiplier || 1),
+          extraDropsFromCombat:
+            ((mergedRewardModifiers as any)?.extraDropsFromCombat || 0) +
+            extraDropsFromCombat,
+        } as any;
+      }
+    }
+  } catch (e) {
+    // no bloquear ejecución por fallos en recompensas secundarias
+  }
+
   const resultJson: Prisma.InputJsonValue = {
     rewards: delivered,
     mobs: mobsSpawned.map((m) => m?.key ?? "unknown"),
     tool: toolInfo,
     weaponTool: weaponToolInfo,
     combat: combatSummary,
-    rewardModifiers,
+    rewardModifiers:
+      mergedRewardModifiers ?? (rewardModifiers as any) ?? undefined,
     notes: "auto",
   } as unknown as Prisma.InputJsonValue;
 
@@ -900,7 +1111,7 @@ export async function runMinigame(
     tool: toolInfo,
     weaponTool: weaponToolInfo,
     combat: combatSummary,
-    rewardModifiers,
+    rewardModifiers: mergedRewardModifiers,
   };
 }
 

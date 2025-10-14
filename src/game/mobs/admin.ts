@@ -1,40 +1,11 @@
 import { prisma } from "../../core/database/prisma";
 import { z } from "zod";
-import { BaseMobDefinition, MOB_DEFINITIONS, findMobDef } from "./mobData";
-
-const BaseMobDefinitionSchema = z.object({
-  key: z.string(),
-  name: z.string(),
-  tier: z.number().int().nonnegative(),
-  base: z.object({
-    hp: z.number(),
-    attack: z.number(),
-    defense: z.number().optional(),
-  }),
-  scaling: z
-    .object({
-      hpPerLevel: z.number().optional(),
-      attackPerLevel: z.number().optional(),
-      defensePerLevel: z.number().optional(),
-      hpMultiplierPerTier: z.number().optional(),
-    })
-    .optional(),
-  tags: z.array(z.string()).optional(),
-  rewardMods: z
-    .object({
-      coinMultiplier: z.number().optional(),
-      extraDropChance: z.number().optional(),
-    })
-    .optional(),
-  behavior: z
-    .object({
-      maxRounds: z.number().optional(),
-      aggressive: z.boolean().optional(),
-      critChance: z.number().optional(),
-      critMultiplier: z.number().optional(),
-    })
-    .optional(),
-});
+import {
+  BaseMobDefinition,
+  MOB_DEFINITIONS,
+  findMobDef,
+  BaseMobDefinitionSchema,
+} from "./mobData";
 
 type MobInput = z.infer<typeof BaseMobDefinitionSchema>;
 
