@@ -15,6 +15,8 @@
               <%- await include('../partials/dashboard/dashboard_overview') %>
             <% } else if (typeof page !== 'undefined' && page === 'settings') { %>
               <div id="dashMain"><%- await include('../partials/dashboard/dashboard_settings') %></div>
+              <% } else if (typeof page !== 'undefined' && page === 'items') { %>
+                  <div id="dashMain"><%- await include('../partials/dashboard/dashboard_items') %></div>
           <% } else { %>
             <div id="dashMain"><!-- empty main placeholder --></div>
           <% } %>

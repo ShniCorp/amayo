@@ -2,6 +2,7 @@ import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { promises as fs } from "node:fs";
 import { readFileSync } from "node:fs";
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
+import { createCipheriv, randomBytes, createDecipheriv } from "node:crypto";
 import {
   gzipSync,
   brotliCompressSync,
@@ -228,6 +229,49 @@ function sanitizeString(v: unknown, opts?: { max?: number }) {
   const max = opts?.max ?? 200;
   if (s.length > max) s = s.slice(0, max);
   return s.trim();
+}
+
+// --- Optional item encryption utilities (AES-256-GCM)
+function getItemEncryptionKey(): Buffer | null {
+  const k = process.env.ITEM_ENCRYPTION_KEY || "";
+  if (!k) return null;
+  // derive 32-byte key from provided secret
+  return createHash("sha256").update(k).digest();
+}
+
+function encryptJsonForDb(obj: any): any {
+  const key = getItemEncryptionKey();
+  if (!key) return obj;
+  try {
+    const iv = randomBytes(12);
+    const cipher = createCipheriv("aes-256-gcm", key, iv);
+    const plain = JSON.stringify(obj ?? {});
+    const enc = Buffer.concat([cipher.update(plain, "utf8"), cipher.final()]);
+    const tag = cipher.getAuthTag();
+    const payload = Buffer.concat([iv, tag, enc]).toString("base64");
+    return { __enc: true, v: payload };
+  } catch (e) {
+    return null;
+  }
+}
+
+function decryptJsonFromDb(maybe: any): any {
+  const key = getItemEncryptionKey();
+  if (!key) return maybe;
+  if (!maybe || typeof maybe !== "object") return maybe;
+  if (!maybe.__enc || typeof maybe.v !== "string") return maybe;
+  try {
+    const buf = Buffer.from(maybe.v, "base64");
+    const iv = buf.slice(0, 12);
+    const tag = buf.slice(12, 28);
+    const enc = buf.slice(28);
+    const decipher = createDecipheriv("aes-256-gcm", key, iv);
+    decipher.setAuthTag(tag);
+    const dec = Buffer.concat([decipher.update(enc), decipher.final()]).toString("utf8");
+    return JSON.parse(dec);
+  } catch (e) {
+    return null;
+  }
 }
 
 function validateDiscordId(id: unknown) {
@@ -1149,6 +1193,337 @@ export const server = createServer(
             );
             res.end(JSON.stringify({ ok: false, error: String(err) }));
             return;
+          }
+        }
+      }
+      // API: CRUD for EconomyItem within dashboard
+      // GET  /api/dashboard/:guildId/items          -> list items (guild + global)
+      // POST /api/dashboard/:guildId/items          -> create item
+      // PUT  /api/dashboard/:guildId/items/:id      -> update item
+      // DELETE /api/dashboard/:guildId/items/:id    -> delete item
+      if (
+        url.pathname.startsWith("/api/dashboard/") &&
+        url.pathname.includes("/items")
+      ) {
+        const parts = url.pathname.split("/").filter(Boolean);
+        // parts: ['api','dashboard', guildId, 'items', [id]]
+        if (
+          parts.length >= 4 &&
+          parts[0] === "api" &&
+          parts[1] === "dashboard" &&
+          parts[3] === "items"
+        ) {
+          const guildId = parts[2];
+          const itemId = parts[4] || null;
+
+          // session guard (same as settings)
+          const cookiesApi = parseCookies(req);
+          const signedApi = cookiesApi["amayo_sid"];
+          const sidApi = unsignSid(signedApi);
+          const sessionApi = sidApi ? SESSIONS.get(sidApi) : null;
+          if (!sessionApi) {
+            res.writeHead(
+              401,
+              applySecurityHeadersForRequest(req, {
+                "Content-Type": "application/json",
+              })
+            );
+            res.end(JSON.stringify({ error: "not_authenticated" }));
+            return;
+          }
+          const userGuildsApi = sessionApi?.guilds || [];
+          if (
+            !userGuildsApi.find((g: any) => String(g.id) === String(guildId))
+          ) {
+            res.writeHead(
+              403,
+              applySecurityHeadersForRequest(req, {
+                "Content-Type": "application/json",
+              })
+            );
+            res.end(JSON.stringify({ error: "forbidden" }));
+            return;
+          }
+
+          // GET list
+          if (req.method === "GET" && !itemId) {
+            try {
+              const items = await prisma.economyItem.findMany({
+                where: {
+                  OR: [{ guildId: String(guildId) }, { guildId: null }],
+                },
+                orderBy: { createdAt: "desc" },
+              });
+              // Hide potentially sensitive JSON fields from API responses
+              const safe = items.map((it: any) => ({
+                id: it.id,
+                key: it.key,
+                name: it.name,
+                description: it.description,
+                category: it.category,
+                icon: it.icon,
+                stackable: it.stackable,
+                maxPerInventory: it.maxPerInventory,
+                tags: it.tags || [],
+                guildId: it.guildId || null,
+                createdAt: it.createdAt,
+                updatedAt: it.updatedAt,
+              }));
+              res.writeHead(
+                200,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ ok: true, items: safe }));
+              return;
+            } catch (err) {
+              res.writeHead(
+                500,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ ok: false, error: String(err) }));
+              return;
+            }
+          }
+
+          // GET single item raw (admin) -> /api/dashboard/:guildId/items/:id?raw=1
+          if (req.method === "GET" && itemId) {
+            const wantRaw = url.searchParams.get('raw') === '1';
+            if (wantRaw) {
+              if (process.env.ALLOW_ITEM_RAW !== '1') {
+                res.writeHead(403, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
+                res.end(JSON.stringify({ ok:false, error: 'raw_disabled' }));
+                return;
+              }
+              try {
+                const it = await prisma.economyItem.findUnique({ where: { id: String(itemId) } });
+                if (!it) {
+                  res.writeHead(404, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
+                  res.end(JSON.stringify({ ok:false, error:'not_found' }));
+                  return;
+                }
+                const props = decryptJsonFromDb(it.props);
+                const metadata = decryptJsonFromDb(it.metadata);
+                res.writeHead(200, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
+                res.end(JSON.stringify({ ok:true, item: { id: it.id, key: it.key, name: it.name, props, metadata } }));
+                return;
+              } catch (err) {
+                res.writeHead(500, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
+                res.end(JSON.stringify({ ok:false, error: String(err) }));
+                return;
+              }
+            }
+            // otherwise fall through to allow POST/PUT/DELETE handling below
+          }
+
+          // Read body helper
+          const raw = await new Promise<string>((resolve) => {
+            let data = "";
+            req.on("data", (c: any) => (data += String(c)));
+            req.on("end", () => resolve(data));
+            req.on("error", () => resolve(""));
+          }).catch(() => "");
+          let payload: any = {};
+          try {
+            payload = raw ? JSON.parse(raw) : {};
+          } catch {
+            payload = {};
+          }
+
+          // POST create
+          if (req.method === "POST" && !itemId) {
+            const key = sanitizeString(payload.key || "", { max: 200 });
+            const name = sanitizeString(payload.name || "", { max: 200 });
+            if (!key || !name) {
+              res.writeHead(
+                400,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(
+                JSON.stringify({ ok: false, error: "missing_key_or_name" })
+              );
+              return;
+            }
+            const createData: any = {
+              key,
+              name,
+              description:
+                sanitizeString(payload.description || "", { max: 1000 }) ||
+                null,
+              category:
+                sanitizeString(payload.category || "", { max: 200 }) || null,
+              icon: sanitizeString(payload.icon || "", { max: 200 }) || null,
+              stackable: payload.stackable === false ? false : true,
+              maxPerInventory:
+                typeof payload.maxPerInventory === "number"
+                  ? payload.maxPerInventory
+                  : null,
+              guildId: String(guildId),
+              tags: Array.isArray(payload.tags)
+                ? payload.tags.map(String)
+                : typeof payload.tags === "string"
+                ? payload.tags
+                    .split(",")
+                    .map((s: any) => String(s).trim())
+                    .filter(Boolean)
+                : [],
+            };
+            // parse JSON fields if provided as string and encrypt if key present
+            try {
+              const rawProps = payload.props ? (typeof payload.props === 'string' ? JSON.parse(payload.props) : payload.props) : null;
+              const rawMeta = payload.metadata ? (typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata) : null;
+              createData.props = getItemEncryptionKey() ? encryptJsonForDb(rawProps) : rawProps;
+              createData.metadata = getItemEncryptionKey() ? encryptJsonForDb(rawMeta) : rawMeta;
+            } catch {
+              createData.props = null;
+              createData.metadata = null;
+            }
+
+            try {
+              const created = await prisma.economyItem.create({ data: createData });
+              // Return safe summary only (do not include props/metadata)
+              const safeCreated = {
+                id: created.id,
+                key: created.key,
+                name: created.name,
+                description: created.description,
+                category: created.category,
+                icon: created.icon,
+                stackable: created.stackable,
+                maxPerInventory: created.maxPerInventory,
+                tags: created.tags || [],
+                guildId: created.guildId || null,
+                createdAt: created.createdAt,
+                updatedAt: created.updatedAt,
+              };
+              res.writeHead(
+                200,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ ok: true, item: safeCreated }));
+              return;
+            } catch (err: any) {
+              // Prisma unique constraint error code P2002 -> duplicate key
+              if (err && err.code === 'P2002') {
+                res.writeHead(400, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
+                res.end(JSON.stringify({ ok:false, error:'duplicate_key' }));
+                return;
+              }
+              const errMsg = String(err || 'unknown');
+              res.writeHead(500, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
+              res.end(JSON.stringify({ ok:false, error: errMsg }));
+              return;
+            }
+          }
+
+          // PUT update
+          if (req.method === "PUT" && itemId) {
+            try {
+              const id = String(itemId);
+              const updateData: any = {};
+              if (payload.key)
+                updateData.key = sanitizeString(payload.key, { max: 200 });
+              if (payload.name)
+                updateData.name = sanitizeString(payload.name, { max: 200 });
+              if (typeof payload.description !== "undefined")
+                updateData.description =
+                  sanitizeString(payload.description || "", { max: 1000 }) ||
+                  null;
+              if (typeof payload.category !== "undefined")
+                updateData.category =
+                  sanitizeString(payload.category || "", { max: 200 }) || null;
+              if (typeof payload.icon !== "undefined")
+                updateData.icon =
+                  sanitizeString(payload.icon || "", { max: 200 }) || null;
+              if (typeof payload.stackable !== "undefined")
+                updateData.stackable =
+                  payload.stackable === false ? false : true;
+              updateData.maxPerInventory =
+                typeof payload.maxPerInventory === "number"
+                  ? payload.maxPerInventory
+                  : null;
+              if (typeof payload.tags !== "undefined")
+                updateData.tags = Array.isArray(payload.tags)
+                  ? payload.tags.map(String)
+                  : typeof payload.tags === "string"
+                  ? payload.tags
+                      .split(",")
+                      .map((s: any) => String(s).trim())
+                      .filter(Boolean)
+                  : [];
+              try {
+                const rawProps = typeof payload.props === 'string' ? JSON.parse(payload.props) : payload.props;
+                const rawMeta = typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata;
+                updateData.props = getItemEncryptionKey() ? encryptJsonForDb(rawProps) : rawProps;
+                updateData.metadata = getItemEncryptionKey() ? encryptJsonForDb(rawMeta) : rawMeta;
+              } catch {
+                updateData.props = null;
+                updateData.metadata = null;
+              }
+
+              try {
+                const updated = await prisma.economyItem.update({ where: { id }, data: updateData });
+                // Return safe summary only (do not include props/metadata)
+                const safeUpdated = {
+                  id: updated.id,
+                  key: updated.key,
+                  name: updated.name,
+                  description: updated.description,
+                  category: updated.category,
+                  icon: updated.icon,
+                  stackable: updated.stackable,
+                  maxPerInventory: updated.maxPerInventory,
+                  tags: updated.tags || [],
+                  guildId: updated.guildId || null,
+                  createdAt: updated.createdAt,
+                  updatedAt: updated.updatedAt,
+                };
+                res.writeHead(200, applySecurityHeadersForRequest(req, { 'Content-Type': 'application/json' }));
+                res.end(JSON.stringify({ ok: true, item: safeUpdated }));
+                return;
+              } catch (err: any) {
+                if (err && err.code === 'P2002') {
+                  res.writeHead(400, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
+                  res.end(JSON.stringify({ ok:false, error:'duplicate_key' }));
+                  return;
+                }
+                res.writeHead(500, applySecurityHeadersForRequest(req, { 'Content-Type': 'application/json' }));
+                res.end(JSON.stringify({ ok: false, error: String(err) }));
+                return;
+              }
+            }
+          }
+
+          // DELETE
+          if (req.method === "DELETE" && itemId) {
+            try {
+              const id = String(itemId);
+              await prisma.economyItem.delete({ where: { id } });
+              res.writeHead(
+                200,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ ok: true }));
+              return;
+            } catch (err) {
+              res.writeHead(
+                500,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ ok: false, error: String(err) }));
+              return;
+            }
           }
         }
       }

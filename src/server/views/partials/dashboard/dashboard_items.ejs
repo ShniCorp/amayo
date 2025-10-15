@@ -1,0 +1,225 @@
+<div class="p-4 bg-[#071323] rounded">
+  <div class="flex items-center justify-between mb-4">
+    <h2 class="text-white text-lg font-semibold">Items</h2>
+    <div>
+      <button id="createItemBtn" class="inline-flex items-center gap-2 px-3 py-1 bg-indigo-600 rounded text-white">Crear item</button>
+    </div>
+  </div>
+
+  <div id="itemsList" class="space-y-3">
+    <% if (typeof guildRoles !== 'undefined') { %>
+      <!-- placeholder: server will not inject items; client will fetch -->
+    <% } %>
+    <div class="text-white/60">Cargando items...</div>
+  </div>
+
+  <!-- Create / Edit modal -->
+  <div id="itemModal" class="fixed inset-0 hidden items-center justify-center z-50">
+    <div class="absolute inset-0 bg-black/70"></div>
+    <div class="relative w-full max-w-3xl bg-[#0b1320] rounded shadow p-6 z-10">
+      <h3 id="modalTitle" class="text-white text-lg mb-2">Crear item</h3>
+      <form id="itemForm">
+        <input type="hidden" name="id" id="itemId">
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="text-white/80">Key</label>
+            <input id="fieldKey" name="key" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white" />
+          </div>
+          <div>
+            <label class="text-white/80">Name</label>
+            <input id="fieldName" name="name" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white" />
+          </div>
+          <div>
+            <label class="text-white/80">Category</label>
+            <input id="fieldCategory" name="category" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white" />
+          </div>
+          <div>
+            <label class="text-white/80">Icon</label>
+            <input id="fieldIcon" name="icon" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white" />
+          </div>
+          <div class="col-span-2">
+            <label class="text-white/80">Description</label>
+            <textarea id="fieldDescription" name="description" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white" rows="3"></textarea>
+          </div>
+          <div>
+            <label class="text-white/80">Tags (comma separated)</label>
+            <input id="fieldTags" name="tags" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white" />
+          </div>
+          <div>
+            <label class="text-white/80">Max Per Inventory</label>
+            <input id="fieldMaxPer" name="maxPerInventory" type="number" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white" />
+          </div>
+          <div class="col-span-2">
+            <label class="text-white/80">Props (JSON)</label>
+            <textarea id="fieldProps" name="props" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white font-mono" rows="6">{}</textarea>
+          </div>
+          <div class="col-span-2">
+            <label class="text-white/80">Metadata (JSON)</label>
+            <textarea id="fieldMetadata" name="metadata" class="w-full mt-1 p-2 rounded bg-[#0f1720] text-white font-mono" rows="4">{}</textarea>
+          </div>
+        </div>
+        <div class="mt-4 flex items-center justify-end gap-2">
+          <button type="button" id="cancelItemBtn" class="px-3 py-1 rounded bg-white/6 text-white">Cancelar</button>
+          <button type="submit" id="saveItemBtn" class="px-3 py-1 rounded bg-green-600 text-white">Guardar</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    (function(){
+      const guildId = '<%= selectedGuildId ? selectedGuildId : '' %>';
+      const list = document.getElementById('itemsList');
+      const modal = document.getElementById('itemModal');
+      const form = document.getElementById('itemForm');
+      const createBtn = document.getElementById('createItemBtn');
+      const cancelBtn = document.getElementById('cancelItemBtn');
+      const modalTitle = document.getElementById('modalTitle');
+
+      function showModal(edit=false) {
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+      }
+      function hideModal() {
+        modal.classList.add('hidden');
+        modal.classList.remove('flex');
+        form.reset();
+        document.getElementById('fieldProps').value = '{}';
+        document.getElementById('fieldMetadata').value = '{}';
+        document.getElementById('itemId').value = '';
+      }
+
+      async function fetchItems() {
+        if (!guildId) return;
+        list.innerHTML = '<div class="text-white/60">Cargando items...</div>';
+        try {
+          const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items`, { headers: { 'Accept':'application/json' } });
+          if (!res.ok) throw new Error('fetch-failed');
+          const j = await res.json();
+          if (!j.ok) throw new Error('bad');
+          renderList(j.items || []);
+        } catch (err) {
+          list.innerHTML = '<div class="text-red-400">Error cargando items</div>';
+        }
+      }
+
+      function renderList(items) {
+        if (!Array.isArray(items) || items.length === 0) {
+          list.innerHTML = '<div class="text-white/60">No hay items definidos.</div>';
+          return;
+        }
+        list.innerHTML = '';
+        for (const it of items) {
+          const el = document.createElement('div');
+          el.className = 'p-3 bg-[#071a2a] rounded flex items-start justify-between';
+          el.innerHTML = `<div>
+            <div class="text-white font-medium">${escapeHtml(it.name)} <span class="text-white/50">(${escapeHtml(it.key)})</span></div>
+            <div class="text-white/60 text-sm mt-1">${escapeHtml(it.description || '')}</div>
+          </div>
+          <div class="flex items-center gap-2">
+            <button data-id="${it.id}" class="editBtn px-2 py-1 bg-indigo-600 rounded text-white text-sm">Editar</button>
+            <button data-id="${it.id}" class="delBtn px-2 py-1 bg-red-600 rounded text-white text-sm">Eliminar</button>
+          </div>`;
+          list.appendChild(el);
+        }
+        // attach handlers
+        Array.from(list.querySelectorAll('.editBtn')).forEach(b=>b.addEventListener('click', onEdit));
+        Array.from(list.querySelectorAll('.delBtn')).forEach(b=>b.addEventListener('click', onDelete));
+      }
+
+      function escapeHtml(s){ if (!s) return ''; return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'":"&#39;' })[m] || m); }
+
+      function onEdit(e) {
+        const id = e.currentTarget.getAttribute('data-id');
+        openEdit(id);
+      }
+      async function openEdit(id) {
+        try {
+          const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items`);
+          if (!res.ok) throw new Error('fetch-failed');
+          const j = await res.json();
+          const it = (j.items || []).find(x=>x.id===id);
+          if (!it) return alert('Item no encontrado');
+          document.getElementById('itemId').value = it.id;
+          document.getElementById('fieldKey').value = it.key || '';
+          document.getElementById('fieldName').value = it.name || '';
+          document.getElementById('fieldCategory').value = it.category || '';
+          document.getElementById('fieldIcon').value = it.icon || '';
+          document.getElementById('fieldDescription').value = it.description || '';
+          document.getElementById('fieldTags').value = (Array.isArray(it.tags) ? it.tags.join(',') : '');
+          document.getElementById('fieldMaxPer').value = it.maxPerInventory || '';
+          // For security we do NOT expose stored props/metadata via the API. User must paste JSON manually if needed.
+          document.getElementById('fieldProps').value = '{ /* props are hidden for security; paste JSON to replace */ }';
+          document.getElementById('fieldMetadata').value = '{ /* metadata hidden for security */ }';
+          modalTitle.textContent = 'Editar item';
+          showModal(true);
+        } catch (err) {
+          alert('Error al abrir item');
+        }
+      }
+
+      async function onDelete(e) {
+        const id = e.currentTarget.getAttribute('data-id');
+        if (!confirm('Eliminar item?')) return;
+        try {
+          const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items/${encodeURIComponent(id)}`, { method: 'DELETE' });
+          if (!res.ok) throw new Error('delete-failed');
+          await fetchItems();
+        } catch (err) {
+          alert('Error al eliminar');
+        }
+      }
+
+      createBtn.addEventListener('click', ()=>{ modalTitle.textContent = 'Crear item'; showModal(false); });
+      cancelBtn.addEventListener('click', hideModal);
+
+      form.addEventListener('submit', async (ev)=>{
+        ev.preventDefault();
+        const id = document.getElementById('itemId').value;
+        // validate JSON fields before sending
+        const propsText = document.getElementById('fieldProps').value.trim();
+        const metaText = document.getElementById('fieldMetadata').value.trim();
+        let parsedProps = null;
+        let parsedMeta = null;
+        try {
+          parsedProps = propsText ? JSON.parse(propsText) : null;
+        } catch (e) {
+          return alert('JSON inválido en Props: ' + (e && e.message ? e.message : String(e)));
+        }
+        try {
+          parsedMeta = metaText ? JSON.parse(metaText) : null;
+        } catch (e) {
+          return alert('JSON inválido en Metadata: ' + (e && e.message ? e.message : String(e)));
+        }
+
+        const payload = {
+          key: document.getElementById('fieldKey').value.trim(),
+          name: document.getElementById('fieldName').value.trim(),
+          category: document.getElementById('fieldCategory').value.trim(),
+          icon: document.getElementById('fieldIcon').value.trim(),
+          description: document.getElementById('fieldDescription').value.trim(),
+          tags: document.getElementById('fieldTags').value.split(',').map(s=>s.trim()).filter(Boolean),
+          maxPerInventory: Number(document.getElementById('fieldMaxPer').value) || null,
+          props: parsedProps,
+          metadata: parsedMeta,
+        };
+        try {
+          if (id) {
+            const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items/${encodeURIComponent(id)}`, { method: 'PUT', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) throw new Error('save-failed');
+          } else {
+            const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items`, { method: 'POST', headers: { 'Content-Type':'application/json' }, body: JSON.stringify(payload) });
+            if (!res.ok) throw new Error('create-failed');
+          }
+          hideModal();
+          await fetchItems();
+        } catch (err) {
+          alert('Error al guardar item. ¿JSON válido en Props/Metadata?');
+        }
+      });
+
+      // Initial load
+      fetchItems();
+    })();
+  </script>
+</div>
