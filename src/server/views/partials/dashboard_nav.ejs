@@ -24,16 +24,14 @@
           <div id="miniGuildList" class="origin-top-left absolute top-full left-0 mt-2 w-56 bg-white/80 backdrop-blur-md rounded-lg p-1 hidden transition-transform duration-150 z-50" style="max-height:18rem; overflow:auto; background-color: rgba(12,15,18,0.92);">
           <% if (guilds && guilds.length) { %>
                 <% guilds.forEach(g => { %>
-                  <div class="p-1 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-3" data-id="<%= g.id %>">
+                  <div class="p-1 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-3 <%= (typeof g.botInGuild === 'boolean' && !g.botInGuild) ? 'opacity-60' : '' %>" data-id="<%= g.id %>" data-bot="<%= (typeof g.botInGuild === 'boolean' && g.botInGuild) ? '1' : '0' %>" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
                     <% if (g.icon) { %>
                       <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-5 h-5 rounded-full" alt="icon">
                     <% } else { %>
                       <div class="w-5 h-5 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
                     <% } %>
                     <div class="flex-1 text-sm truncate pl-1"><%= g.name %></div>
-                    <% if (typeof g.botInGuild === 'boolean' && !g.botInGuild) { %>
-                      <a href="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>" class="text-xs text-sky-400 hover:underline ml-2" target="_blank" rel="noopener">Invitar bot</a>
-                    <% } %>
+                    <!-- invite button removed from inline list; rows without bot are dimmed and clicking them opens the invite -->
                   </div>
                 <% }) %>
           <% } else { %>
@@ -121,6 +119,13 @@
       Array.from(list.querySelectorAll('.guild-item')).forEach(it=>{
         it.addEventListener('click', ()=>{
           const id = it.getAttribute('data-id');
+          const bot = it.getAttribute('data-bot');
+          const invite = it.getAttribute('data-invite');
+          if (bot === '0' && invite) {
+            // open invite in a new tab
+            window.open(invite, '_blank', 'noopener');
+            return;
+          }
           if (id) window.location.href = `/dashboard/${id}/overview`;
         });
         // keyboard activation (Enter / Space)

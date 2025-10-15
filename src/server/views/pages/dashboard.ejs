@@ -44,7 +44,7 @@
             <div id="cardList" class="max-h-72 overflow-auto rounded">
               <% if (guilds && guilds.length) { %>
                 <% guilds.sort((a,b)=> a.name.localeCompare(b.name)).forEach(g => { %>
-                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>">
+                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white <%= (typeof g.botInGuild === 'boolean' && !g.botInGuild) ? 'opacity-60' : '' %>" data-id="<%= g.id %>" data-bot="<%= (typeof g.botInGuild === 'boolean' && g.botInGuild) ? '1' : '0' %>" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
                     <div class="flex items-center gap-3">
                       <% if (g.icon) { %>
                         <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
@@ -56,9 +56,6 @@
                       </div>
                     </div>
                     <div class="flex items-center gap-2">
-                      <% if (typeof g.botInGuild === 'boolean' && !g.botInGuild) { %>
-                        <a href="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>" class="text-xs text-sky-400 hover:underline mr-2" target="_blank" rel="noopener">Invitar bot</a>
-                      <% } %>
                       <div class="text-slate-300">&rsaquo;</div>
                     </div>
                   </div>
@@ -84,12 +81,18 @@
             document.addEventListener('click', ()=> userMenu.classList.add('hidden'));
           }
 
-          // clicking a guild row navigates
+          // clicking a guild row navigates or opens invite if bot not present
           document.getElementById('cardList')?.addEventListener('click', (e)=>{
             let el = e.target;
             while (el && !el.dataset?.id) el = el.parentElement;
             if (el && el.dataset && el.dataset.id) {
               const id = el.dataset.id;
+              const bot = el.getAttribute('data-bot');
+              const invite = el.getAttribute('data-invite');
+              if (bot === '0' && invite) {
+                window.open(invite, '_blank', 'noopener');
+                return;
+              }
               window.location.href = `/dashboard/${id}/overview`;
             }
           });
