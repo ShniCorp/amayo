@@ -230,6 +230,21 @@ function validateDiscordId(id: unknown) {
   return /^\d{17,20}$/.test(s);
 }
 
+function formatHumanDate(d: unknown): string | null {
+  if (!d) return null;
+  try {
+    const dt = new Date(d as any);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt.toLocaleDateString("es-ES", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return null;
+  }
+}
+
 async function safeUpsertGuild(g: any) {
   if (!g) return;
   if (!validateDiscordId(g.id)) {
@@ -541,6 +556,23 @@ const renderTemplate = async (
     dashboardNavHtml = null;
   }
 
+  // Pre-render the main navbar when layout expects it (and dashboard nav isn't used)
+  let navbarHtml: string | null = null;
+  try {
+    const shouldShowNavbar = !locals.hideNavbar && !locals.useDashboardNav;
+    if (shouldShowNavbar) {
+      const navPath = path.join(viewsDir, "partials", "navbar.ejs");
+      navbarHtml = await ejs.renderFile(
+        navPath,
+        { appName: locals.appName ?? pkg.name ?? "Amayo Bot" },
+        { async: true }
+      );
+    }
+  } catch (err) {
+    console.warn("Failed rendering navbar partial:", err);
+    navbarHtml = null;
+  }
+
   const html = await ejs.renderFile(
     layoutFile,
     {
@@ -565,6 +597,7 @@ const renderTemplate = async (
           : false,
       // Pre-rendered partial HTML (if produced above)
       dashboardNav: dashboardNavHtml,
+      navbar: navbarHtml,
       ...locals,
       title: locals.title ?? defaultTitle,
       body: pageBody,
@@ -848,6 +881,9 @@ export const server = createServer(
           const safeGuilds = (adminGuilds || []).map((g: any) => ({
             id: String(g.id),
             name: sanitizeString(g.name ?? g.id, { max: 100 }),
+            icon: sanitizeString(g.icon ?? "", { max: 100 }),
+            // Some sources may include a joinedAt/addedAt field; keep raw value for formatting later
+            addedAt: g.addedAt || g.joinedAt || null,
           }));
 
           // create session with tokens to allow refresh
@@ -921,18 +957,37 @@ export const server = createServer(
         touchSession(sid!);
 
         // Guild list: prefer session-stored guilds from OAuth (accurate), otherwise fallback to DB
-        const sessionGuilds: Array<{ id: string; name?: string }> =
-          session?.guilds || [];
+        const sessionGuilds: Array<{
+          id: string;
+          name?: string;
+          icon?: string;
+          addedAt?: string | null;
+        }> = session?.guilds || [];
         let guilds: Array<{ id: string; name: string }> = [];
         if (sessionGuilds && sessionGuilds.length) {
-          guilds = sessionGuilds.map((g: any) => ({
-            id: String(g.id),
-            name: String(g.name || g.id),
-          }));
+          guilds = sessionGuilds.map(
+            (g: any) =>
+              ({
+                id: String(g.id),
+                name: String(g.name || g.id),
+                icon: g.icon || null,
+                addedAt: g.addedAt || null,
+                addedAtHuman: formatHumanDate(g.addedAt || g.joinedAt || null),
+              } as any)
+          );
         } else {
           try {
             const rows = await prisma.guild.findMany({ take: 50 });
-            guilds = rows.map((r) => ({ id: r.id, name: r.name }));
+            guilds = rows.map(
+              (r) =>
+                ({
+                  id: r.id,
+                  name: r.name,
+                  icon: null,
+                  addedAt: null,
+                  addedAtHuman: null,
+                } as any)
+            );
           } catch {
             guilds = [];
           }
@@ -945,6 +1000,7 @@ export const server = createServer(
             user,
             guilds,
             hideNavbar: true,
+            selectedGuildId: null,
           });
           return;
         }
@@ -975,6 +1031,7 @@ export const server = createServer(
             user,
             guilds,
             selectedGuild: guildId,
+            selectedGuildId: guildId,
             selectedGuildName,
             page,
             hideNavbar: false,

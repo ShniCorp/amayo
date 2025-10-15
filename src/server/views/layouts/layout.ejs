@@ -29,7 +29,11 @@
       <%- include('../partials/dashboard_nav') %>
     <% } %>
   <% } else if (!hideNavbar) { %>
-    <%- include('../partials/navbar', { appName }) %>
+    <% if (typeof navbar !== 'undefined' && navbar) { %>
+      <%- navbar %>
+    <% } else { %>
+      <%- include('../partials/navbar', { appName }) %>
+    <% } %>
   <% } %>
 
   <div class="relative z-10">

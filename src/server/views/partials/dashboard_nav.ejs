@@ -35,8 +35,8 @@
                   <% } %>
                   <div class="flex-1">
                     <div class="text-sm font-medium"><%= g.name %></div>
-                    <% if (g.addedAt || g.joinedAt) { %>
-                      <div class="text-xs text-slate-300"><%= (g.addedAt || g.joinedAt) %></div>
+                    <% if (g.addedAtHuman) { %>
+                      <div class="text-xs text-slate-300"><%= g.addedAtHuman %></div>
                     <% } %>
                   </div>
                 </div>
