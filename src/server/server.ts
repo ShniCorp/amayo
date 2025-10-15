@@ -526,6 +526,8 @@ const renderTemplate = async (
     {
       head: null,
       scripts: null,
+      // supply version to templates if not provided by caller
+      version: locals.version ?? pkg.version ?? "2.0.0",
       ...locals,
       title: locals.title ?? defaultTitle,
       body: pageBody,
