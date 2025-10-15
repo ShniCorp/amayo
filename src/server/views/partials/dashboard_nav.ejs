@@ -23,8 +23,9 @@
           </button>
           <div id="miniGuildList" class="origin-top-left absolute top-full left-0 mt-2 w-56 bg-white/80 backdrop-blur-md rounded-lg p-1 hidden transition-transform duration-150 z-50" style="max-height:18rem; overflow:auto; background-color: rgba(12,15,18,0.92);">
           <% if (guilds && guilds.length) { %>
-                <% guilds.forEach(g => { %>
-                  <div class="p-1 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-3 <%= (g.botInGuild === false) ? 'opacity-60' : '' %>" data-id="<%= g.id %>" data-bot="<%= (g.botInGuild === false) ? '0' : '1' %>" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                <% const withBot = guilds.filter(g=> g.botInGuild !== false); const withoutBot = guilds.filter(g=> g.botInGuild === false); %>
+                <% withBot.forEach(g => { %>
+                  <div class="p-1 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-3" data-id="<%= g.id %>" data-bot="1" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
                     <% if (g.icon) { %>
                       <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-5 h-5 rounded-full" alt="icon">
                     <% } else { %>
@@ -34,6 +35,19 @@
                     <!-- invite button removed from inline list; rows without bot are dimmed and clicking them opens the invite -->
                   </div>
                 <% }) %>
+                <% if (withoutBot && withoutBot.length) { %>
+                  <div class="border-t border-white/6 my-1"></div>
+                  <% withoutBot.forEach(g => { %>
+                    <div class="p-1 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-3 opacity-60" data-id="<%= g.id %>" data-bot="0" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                      <% if (g.icon) { %>
+                        <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-5 h-5 rounded-full" alt="icon">
+                      <% } else { %>
+                        <div class="w-5 h-5 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
+                      <% } %>
+                      <div class="flex-1 text-sm truncate pl-1"><%= g.name %></div>
+                    </div>
+                  <% }) %>
+                <% } %>
           <% } else { %>
             <div class="p-2 text-slate-300">No servers</div>
           <% } %>
@@ -197,8 +211,9 @@
     </div>
     <div id="mobileGuildList" class="space-y-2">
       <% if (guilds && guilds.length) { %>
-        <% guilds.forEach(g => { %>
-          <div class="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer <%= (g.botInGuild === false) ? 'opacity-60' : '' %>" data-id="<%= g.id %>" data-bot="<%= (g.botInGuild === false) ? '0' : '1' %>" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+        <% const withBot = guilds.filter(g=> g.botInGuild !== false); const withoutBot = guilds.filter(g=> g.botInGuild === false); %>
+        <% withBot.forEach(g => { %>
+          <div class="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer" data-id="<%= g.id %>" data-bot="1" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
             <% if (g.icon) { %>
               <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
             <% } else { %>
@@ -207,6 +222,19 @@
             <div class="text-white"><%= g.name %></div>
           </div>
         <% }) %>
+        <% if (withoutBot && withoutBot.length) { %>
+          <div class="border-t border-white/6 mt-2 pt-2"></div>
+          <% withoutBot.forEach(g => { %>
+            <div class="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer opacity-60" data-id="<%= g.id %>" data-bot="0" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+              <% if (g.icon) { %>
+                <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
+              <% } else { %>
+                <div class="w-8 h-8 rounded-full bg-white/8"></div>
+              <% } %>
+              <div class="text-white"><%= g.name %></div>
+            </div>
+          <% }) %>
+        <% } %>
       <% } else { %>
         <div class="text-slate-300">No servers</div>
       <% } %>
@@ -260,7 +288,12 @@
     document.getElementById('mobileGuildList')?.addEventListener('click', (e)=>{
       let el = e.target;
       while (el && !el.dataset?.id) el = el.parentElement;
-      if (el && el.dataset && el.dataset.id) { window.location.href = `/dashboard/${el.dataset.id}/overview`; }
+      if (el && el.dataset && el.dataset.id) {
+        const bot = el.getAttribute('data-bot');
+        const invite = el.getAttribute('data-invite');
+        if (bot === '0' && invite) { window.open(invite, '_blank', 'noopener'); return; }
+        window.location.href = `/dashboard/${el.dataset.id}/overview`;
+      }
     });
 
     // user menu mobile

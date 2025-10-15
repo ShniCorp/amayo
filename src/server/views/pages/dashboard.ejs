@@ -43,8 +43,9 @@
 
             <div id="cardList" class="max-h-72 overflow-auto rounded">
               <% if (guilds && guilds.length) { %>
-                <% guilds.sort((a,b)=> a.name.localeCompare(b.name)).forEach(g => { %>
-                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white <%= (g.botInGuild === false) ? 'opacity-60' : '' %>" data-id="<%= g.id %>" data-bot="<%= (g.botInGuild === false) ? '0' : '1' %>" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                <% const sorted = guilds.slice().sort((a,b)=> a.name.localeCompare(b.name)); const withBot = sorted.filter(g=> g.botInGuild !== false); const withoutBot = sorted.filter(g=> g.botInGuild === false); %>
+                <% withBot.forEach(g => { %>
+                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>" data-bot="1" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
                     <div class="flex items-center gap-3">
                       <% if (g.icon) { %>
                         <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
@@ -60,6 +61,26 @@
                     </div>
                   </div>
                 <% }) %>
+                <% if (withoutBot && withoutBot.length) { %>
+                  <div class="border-t border-white/6 my-2"></div>
+                  <% withoutBot.forEach(g => { %>
+                    <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white opacity-60" data-id="<%= g.id %>" data-bot="0" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                      <div class="flex items-center gap-3">
+                        <% if (g.icon) { %>
+                          <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
+                        <% } else { %>
+                          <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
+                        <% } %>
+                        <div class="text-left">
+                          <div class="font-medium"><%= g.name %></div>
+                        </div>
+                      </div>
+                      <div class="flex items-center gap-2">
+                        <div class="text-slate-300">&rsaquo;</div>
+                      </div>
+                    </div>
+                  <% }) %>
+                <% } %>
               <% } else { %>
                 <div class="p-4 text-slate-300">No servers available</div>
               <% } %>
