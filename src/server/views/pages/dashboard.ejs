@@ -2,19 +2,19 @@
   <div class="max-w-7xl mx-auto p-6">
   <div class="relative">
   <% if (!selectedGuild) { %>
-    <!-- When no guild selected show centered card -->
-    <%- include('partials/dashboard/dashboard_noguild_card') %>
+  <!-- When no guild selected show centered card -->
+  <%- include('../partials/dashboard/dashboard_noguild_card') %>
   <% } else { %>
     <!-- When a guild is selected render sidebar + content layout -->
     <div class="w-full max-w-7xl mx-auto mt-6 px-4">
       <div class="flex items-start gap-8">
-        <%- include('partials/dashboard/dashboard_sidebar') %>
+          <%- include('../partials/dashboard/dashboard_sidebar') %>
         <div id="dashContent" class="flex-1">
           <!-- initial fragment content will be rendered inside #dashMain by partials -->
-          <% if (typeof page !== 'undefined' && page === 'overview') { %>
-            <%- include('partials/dashboard/dashboard_overview') %>
-          <% } else if (typeof page !== 'undefined' && page === 'settings') { %>
-            <div id="dashMain"><%- include('partials/dashboard/dashboard_settings') %></div>
+              <% if (typeof page !== 'undefined' && page === 'overview') { %>
+              <%- include('../partials/dashboard/dashboard_overview') %>
+            <% } else if (typeof page !== 'undefined' && page === 'settings') { %>
+              <div id="dashMain"><%- include('../partials/dashboard/dashboard_settings') %></div>
           <% } else { %>
             <div id="dashMain"><!-- empty main placeholder --></div>
           <% } %>
