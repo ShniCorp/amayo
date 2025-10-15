@@ -18,6 +18,7 @@
     <div class="absolute inset-0 bg-black/70"></div>
     <div class="relative w-full max-w-3xl bg-[#0b1320] rounded shadow p-6 z-10">
       <h3 id="modalTitle" class="text-white text-lg mb-2">Crear item</h3>
+  <div id="modalError" class="hidden text-red-400 text-sm mb-2"></div>
       <form id="itemForm">
         <input type="hidden" name="id" id="itemId">
         <div class="grid grid-cols-2 gap-3">
@@ -215,6 +216,14 @@
   <script>
     (function(){
       const guildId = '<%= selectedGuildId ? selectedGuildId : '' %>';
+      let cachedItems = [];
+      function setModalError(msg) {
+        const el = document.getElementById('modalError');
+        if (!el) return;
+        el.textContent = msg || '';
+        if (msg) el.classList.remove('hidden'); else el.classList.add('hidden');
+      }
+      function clearModalError() { setModalError(''); }
       const list = document.getElementById('itemsList');
       const modal = document.getElementById('itemModal');
       const form = document.getElementById('itemForm');
@@ -279,7 +288,8 @@
           if (!res.ok) throw new Error('fetch-failed');
           const j = await res.json();
           if (!j.ok) throw new Error('bad');
-          renderList(j.items || []);
+          cachedItems = j.items || [];
+          renderList(cachedItems);
         } catch (err) {
           list.innerHTML = '<div class="text-red-400">Error cargando items</div>';
         }
@@ -337,7 +347,7 @@
         if (type === 'coins') {
           list.push({ coins: amt });
         } else {
-          if (!key) return alert('item.key requerido');
+          if (!key) { setModalError('item.key requerido'); return; }
           list.push({ items: [{ key, quantity: amt || 1 }] });
         }
         setCurrentRewards(list);
@@ -346,6 +356,22 @@
         document.getElementById('newRewardAmount').value = '';
         document.getElementById('newRewardItemKey').value = '';
       });
+
+      // Hide item key input when reward type is coins
+      const newRewardTypeEl = document.getElementById('newRewardType');
+      const newRewardItemKeyEl = document.getElementById('newRewardItemKey');
+      function updateRewardKeyVisibility() {
+        if (!newRewardTypeEl || !newRewardItemKeyEl) return;
+        if (newRewardTypeEl.value === 'coins') {
+          newRewardItemKeyEl.disabled = true;
+          newRewardItemKeyEl.classList.add('opacity-50');
+        } else {
+          newRewardItemKeyEl.disabled = false;
+          newRewardItemKeyEl.classList.remove('opacity-50');
+        }
+      }
+      newRewardTypeEl.addEventListener('change', ()=>{ updateRewardKeyVisibility(); clearModalError(); });
+      updateRewardKeyVisibility();
 
       // Tag chips UI
       const tagsChipsContainer = document.createElement('div');
@@ -417,12 +443,23 @@
         openEdit(id);
       }
       async function openEdit(id) {
+        clearModalError();
         try {
-          const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items`);
-          if (!res.ok) throw new Error('fetch-failed');
-          const j = await res.json();
-          const it = (j.items || []).find(x=>x.id===id);
-          if (!it) return alert('Item no encontrado');
+          // Prefer using cached items to avoid an extra network call and potential race conditions
+          let it = (cachedItems || []).find(x=>x.id===id);
+          if (!it) {
+            // fallback to fetch single list if not in cache
+            try {
+              const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items`);
+              if (res && res.ok) {
+                const j = await res.json();
+                it = (j.items || []).find(x=>x.id===id);
+              }
+            } catch (e) {
+              // ignore and continue
+            }
+          }
+          if (!it) { setModalError('Item no encontrado'); return; }
           document.getElementById('itemId').value = it.id;
           document.getElementById('fieldKey').value = it.key || '';
           document.getElementById('fieldName').value = it.name || '';
@@ -471,7 +508,7 @@
           modalTitle.textContent = 'Editar item';
           showModal(true);
         } catch (err) {
-          alert('Error al abrir item');
+          setModalError('Error al abrir item');
         }
       }
 
