@@ -1498,6 +1498,15 @@ export const server = createServer(
                 res.end(JSON.stringify({ ok: false, error: String(err) }));
                 return;
               }
+            } catch (err) {
+              res.writeHead(
+                500,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ ok: false, error: String(err) }));
+              return;
             }
           }
 
