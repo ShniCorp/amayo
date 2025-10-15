@@ -217,6 +217,7 @@
     (function(){
       const guildId = '<%= selectedGuildId ? selectedGuildId : '' %>';
       let cachedItems = [];
+  let currentOpenEditId = 0;
       function setModalError(msg) {
         const el = document.getElementById('modalError');
         if (!el) return;
@@ -270,7 +271,8 @@
   document.getElementById('propBuyPrice').value = '';
   document.getElementById('propChestEnabled').checked = false;
   // rewards UI reset
-  document.getElementById('rewardsList').innerHTML = '';
+  const rewardsEl = document.getElementById('rewardsList');
+  if (rewardsEl) { rewardsEl.innerHTML = ''; rewardsEl.dataset.rewards = JSON.stringify([]); }
   document.getElementById('newRewardType').value = 'coins';
   document.getElementById('newRewardAmount').value = '';
   document.getElementById('newRewardItemKey').value = '';
@@ -446,14 +448,14 @@
         clearModalError();
         try {
           // Prefer using cached items to avoid an extra network call and potential race conditions
-          let it = (cachedItems || []).find(x=>x.id===id);
+          let it = (cachedItems || []).find(x=>String(x.id) === String(id));
           if (!it) {
             // fallback to fetch single list if not in cache
             try {
               const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items`);
               if (res && res.ok) {
                 const j = await res.json();
-                it = (j.items || []).find(x=>x.id===id);
+                it = (j.items || []).find(x=>String(x.id) === String(id));
               }
             } catch (e) {
               // ignore and continue
@@ -545,87 +547,91 @@
         }
       }
 
-      createBtn.addEventListener('click', ()=>{ modalTitle.textContent = 'Crear item'; showModal(false); });
-      cancelBtn.addEventListener('click', hideModal);
+  createBtn.addEventListener('click', ()=>{ clearModalError(); currentOpenEditId++; hideModal(); modalTitle.textContent = 'Crear item'; showModal(false); });
+  cancelBtn.addEventListener('click', ()=>{ hideModal(); clearModalError(); });
 
       form.addEventListener('submit', async (ev)=>{
-        ev.preventDefault();
-        const id = document.getElementById('itemId').value;
-        // validate JSON fields before sending
-        // Build props object from UI
-        let parsedProps = {};
-        if (document.getElementById('propCraftable').checked) {
-          parsedProps.craftable = true;
-          const rk = document.getElementById('propRecipeKey').value.trim(); if (rk) parsedProps.recipe = { key: rk };
+        async function openEdit(id) {
+          clearModalError();
+          const myOpenId = ++currentOpenEditId;
+          try {
+            // Prefer using cached items to avoid an extra network call and potential race conditions
+            let it = (cachedItems || []).find(x=>String(x.id) === String(id));
+            if (!it) {
+              // fallback to fetch single list if not in cache
+              try {
+                const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/items`);
+                if (res && res.ok) {
+                  const j = await res.json();
+                  it = (j.items || []).find(x=>String(x.id) === String(id));
+                }
+              } catch (e) {
+                // ignore and continue
+              }
+            }
+            // if another open request happened meanwhile, abort applying
+            if (myOpenId !== currentOpenEditId) return;
+            if (!it) { setModalError('Item no encontrado'); return; }
+            document.getElementById('itemId').value = it.id;
+            document.getElementById('fieldKey').value = it.key || '';
+            document.getElementById('fieldName').value = it.name || '';
+            document.getElementById('fieldCategory').value = it.category || '';
+            document.getElementById('fieldIcon').value = it.icon || '';
+            document.getElementById('fieldDescription').value = it.description || '';
+            document.getElementById('fieldTags').value = (Array.isArray(it.tags) ? it.tags.join(',') : '');
+            document.getElementById('fieldMaxPer').value = it.maxPerInventory || '';
+            // For security we do NOT expose stored props/metadata via the API. UI fields will be empty/default and admin can attempt raw load.
+            document.getElementById('propCraftable').checked = false;
+            document.getElementById('propRecipeKey').value = '';
+            document.getElementById('propEquipable').checked = false;
+            document.getElementById('propSlot').value = '';
+            document.getElementById('propAttack').value = '';
+            document.getElementById('propDefense').value = '';
+            document.getElementById('propDurability').value = '';
+            document.getElementById('propMaxDurability').value = '';
+            document.getElementById('propCustomJson').value = '{}';
+            document.getElementById('metaRarity').value = 'common';
+            document.getElementById('metaWeight').value = '';
+            document.getElementById('metaCustomJson').value = '{}';
+            // new fields defaults on edit
+            document.getElementById('propToolType').value = '';
+            document.getElementById('propToolTier').value = '';
+            document.getElementById('propBreakable').checked = false;
+            document.getElementById('propDurabilityPerUse').value = '';
+            document.getElementById('propUsable').checked = false;
+            document.getElementById('propPurgeAllEffects').checked = false;
+            document.getElementById('propHealAmount').value = '';
+            document.getElementById('propDamage').value = '';
+            document.getElementById('propDamageBonus').value = '';
+            document.getElementById('statAttack').value = '';
+            document.getElementById('statHp').value = '';
+            document.getElementById('statDefense').value = '';
+            document.getElementById('statXpReward').value = '';
+            document.getElementById('reqToolRequired').checked = false;
+            document.getElementById('reqToolType').value = '';
+            document.getElementById('reqMinTier').value = '';
+            document.getElementById('propSellPrice').value = '';
+            document.getElementById('propBuyPrice').value = '';
+            document.getElementById('propChestEnabled').checked = false;
+            document.getElementById('propDropsJson').value = '{}';
+            // populate rewards if we have a cached representation in the item (not exposed by default)
+            const rewardsEl2 = document.getElementById('rewardsList');
+            if (rewardsEl2) { rewardsEl2.dataset.rewards = JSON.stringify([]); }
+            renderRewardsList([]);
+            modalTitle.textContent = 'Editar item';
+            showModal(true);
+          } catch (err) {
+            setModalError('Error al abrir item');
+          }
         }
-        if (document.getElementById('propEquipable').checked) {
-          parsedProps.equipable = true;
-          const slot = document.getElementById('propSlot').value; if (slot) parsedProps.slot = slot;
-        }
-        // tool
-        const ttype = document.getElementById('propToolType').value.trim();
-        const ttier = document.getElementById('propToolTier').value.trim();
-        if (ttype) parsedProps.tool = Object.assign({}, parsedProps.tool || {}, { type: ttype });
-        if (ttier) parsedProps.tool = Object.assign({}, parsedProps.tool || {}, { tier: Number(ttier) });
-        // breakable
-        if (document.getElementById('propBreakable').checked) {
-          parsedProps.breakable = parsedProps.breakable || {};
-          parsedProps.breakable.enabled = true;
-          const dpu = document.getElementById('propDurabilityPerUse').value.trim(); if (dpu) parsedProps.breakable.durabilityPerUse = Number(dpu);
-        }
-        const attack = document.getElementById('propAttack').value.trim(); if (attack) parsedProps.attack = Number(attack);
-        const defense = document.getElementById('propDefense').value.trim(); if (defense) parsedProps.defense = Number(defense);
-        const durability = document.getElementById('propDurability').value.trim(); if (durability) parsedProps.durability = Number(durability);
-        const maxDur = document.getElementById('propMaxDurability').value.trim(); if (maxDur) parsedProps.maxDurability = Number(maxDur);
-        // usable
-        if (document.getElementById('propUsable').checked) {
-          parsedProps.usable = true;
-          if (document.getElementById('propPurgeAllEffects').checked) parsedProps.purgeAllEffects = true;
-          const heal = document.getElementById('propHealAmount').value.trim(); if (heal) parsedProps.heal = Number(heal);
-        }
-        // damage/bonuses
-        const dmg = document.getElementById('propDamage').value.trim(); if (dmg) parsedProps.damage = Number(dmg);
-        const dmgBonus = document.getElementById('propDamageBonus').value.trim(); if (dmgBonus) parsedProps.damageBonus = Number(dmgBonus);
-        // stats
-        const sAtk = document.getElementById('statAttack').value.trim(); if (sAtk) parsedProps.stats = parsedProps.stats || {}, parsedProps.stats.attack = Number(sAtk);
-        const sHp = document.getElementById('statHp').value.trim(); if (sHp) parsedProps.stats = parsedProps.stats || {}, parsedProps.stats.hp = Number(sHp);
-        const sDef = document.getElementById('statDefense').value.trim(); if (sDef) parsedProps.stats = parsedProps.stats || {}, parsedProps.stats.defense = Number(sDef);
-        const sXp = document.getElementById('statXpReward').value.trim(); if (sXp) parsedProps.stats = parsedProps.stats || {}, parsedProps.stats.xpReward = Number(sXp);
-        // requirements
-        if (document.getElementById('reqToolRequired').checked) {
-          parsedProps.requirements = parsedProps.requirements || {};
-          parsedProps.requirements.tool = { required: true };
-          const rtype = document.getElementById('reqToolType').value.trim(); if (rtype) parsedProps.requirements.tool.toolType = rtype;
-          const rmin = document.getElementById('reqMinTier').value.trim(); if (rmin) parsedProps.requirements.tool.minTier = Number(rmin);
-        }
-        // economy
-        const sell = document.getElementById('propSellPrice').value.trim(); if (sell) parsedProps.sellPrice = Number(sell);
-        const buy = document.getElementById('propBuyPrice').value.trim(); if (buy) parsedProps.buyPrice = Number(buy);
-        // chest/drops
-        if (document.getElementById('propChestEnabled').checked) {
-          parsedProps.chest = parsedProps.chest || {};
-          parsedProps.chest.enabled = true;
-        }
-        try {
-          // prefer structured rewards list
-          const rawRewards = document.getElementById('rewardsList').dataset.rewards;
-          const rewards = rawRewards ? JSON.parse(rawRewards) : null;
-          if (Array.isArray(rewards)) {
-            parsedProps.chest = Object.assign(parsedProps.chest || {}, { rewards });
-          } else {
-            // fallback parse old textarea if present
-            const el = document.getElementById('propDropsJson');
-            if (el) {
-              const drops = JSON.parse(el.value || '{}');
-              if (drops && typeof drops === 'object') parsedProps.chest = Object.assign(parsedProps.chest || {}, { rewards: drops.rewards || drops });
             }
           }
-        } catch (e) { return alert('JSON inválido en Drops/Chest: ' + (e && e.message ? e.message : String(e))); }
+        } catch (e) { setModalError('JSON inválido en Drops/Chest: ' + (e && e.message ? e.message : String(e))); return; }
         // merge custom JSON
         try {
           const custom = JSON.parse(document.getElementById('propCustomJson').value || '{}');
           if (custom && typeof custom === 'object') Object.assign(parsedProps, custom);
-        } catch (e) { return alert('JSON inválido en Props personalizado: ' + (e && e.message ? e.message : String(e))); }
+  } catch (e) { setModalError('JSON inválido en Props personalizado: ' + (e && e.message ? e.message : String(e))); return; }
 
         // Build metadata
         let parsedMeta = { rarity: document.getElementById('metaRarity').value };
@@ -633,7 +639,7 @@
         try {
           const customM = JSON.parse(document.getElementById('metaCustomJson').value || '{}');
           if (customM && typeof customM === 'object') Object.assign(parsedMeta, customM);
-        } catch (e) { return alert('JSON inválido en Metadata personalizado: ' + (e && e.message ? e.message : String(e))); }
+        } catch (e) { setModalError('JSON inválido en Metadata personalizado: ' + (e && e.message ? e.message : String(e))); return; }
 
         const payload = {
           key: document.getElementById('fieldKey').value.trim(),
@@ -672,9 +678,10 @@
             if (!res.ok) throw new Error('create-failed');
           }
           hideModal();
+          clearModalError();
           await fetchItems();
         } catch (err) {
-          alert('Error al guardar item. ¿JSON válido en Props/Metadata?');
+          setModalError('Error al guardar item. ¿JSON válido en Props/Metadata?');
         }
       });
 
@@ -739,7 +746,7 @@
             document.getElementById('metaCustomJson').value = JSON.stringify(copyM, null, 2);
           }
         } catch (e) {
-          alert('Error al mapear raw props: ' + (e && e.message ? e.message : String(e)));
+          setModalError('Error al mapear raw props: ' + (e && e.message ? e.message : String(e)));
         }
       });
 
