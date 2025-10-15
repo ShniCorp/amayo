@@ -69,6 +69,21 @@
     const list = document.getElementById('miniGuildList');
     const userBtn = document.getElementById('userBtn');
     const userMenu = document.getElementById('userMenu');
+    const cardUserMenu = document.getElementById('cardUserMenu');
+    const mobileGuildModal = document.getElementById('mobileGuildModal');
+    const mobileUserSheet = document.getElementById('mobileUserSheet');
+
+    function closeAllMenus() {
+      try {
+        if (list) list.classList.add('hidden');
+        if (userMenu) userMenu.classList.add('hidden');
+        if (cardUserMenu) cardUserMenu.classList.add('hidden');
+        if (mobileGuildModal) mobileGuildModal.classList.add('hidden');
+        if (mobileUserSheet) mobileUserSheet.classList.add('hidden');
+        if (btn) btn.setAttribute('aria-expanded','false');
+        if (userBtn) userBtn.setAttribute('aria-expanded','false');
+      } catch(e){}
+    }
     function openDropdown(el, container) {
       if (!el || !container) return;
       container.classList.remove('hidden');
@@ -94,7 +109,11 @@
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
         const expanded = btn.getAttribute('aria-expanded') === 'true';
-        if (expanded) closeDropdown(btn, list); else openDropdown(btn, list);
+        if (expanded) closeDropdown(btn, list); else {
+          // close other menus first
+          closeAllMenus();
+          openDropdown(btn, list);
+        }
       });
       Array.from(list.querySelectorAll('.guild-item')).forEach(it=>{
         it.addEventListener('click', ()=>{
@@ -114,7 +133,11 @@
       userBtn.addEventListener('click', (e)=>{
         e.stopPropagation();
         const expanded = userBtn.getAttribute('aria-expanded') === 'true';
-        if (expanded) closeDropdown(userBtn, userMenu); else openDropdown(userBtn, userMenu);
+        if (expanded) closeDropdown(userBtn, userMenu); else {
+          // ensure other menus are closed
+          closeAllMenus();
+          openDropdown(userBtn, userMenu);
+        }
       });
     }
     // close on outside click or Escape
@@ -191,6 +214,8 @@
       miniBtn.addEventListener('click', (e)=>{
         if (isMobile()) {
           e.stopPropagation();
+          // close other menus before opening the mobile guild modal
+          closeAllMenus();
           mobileGuildModal.classList.remove('hidden');
         }
       });
@@ -206,7 +231,7 @@
 
     // user menu mobile
     const userBtnMobile = document.getElementById('userBtn');
-    if (userBtnMobile) userBtnMobile.addEventListener('click', (e)=>{ if (isMobile()) { e.stopPropagation(); mobileUserSheet.classList.remove('hidden'); } });
+  if (userBtnMobile) userBtnMobile.addEventListener('click', (e)=>{ if (isMobile()) { e.stopPropagation(); closeAllMenus(); mobileUserSheet.classList.remove('hidden'); } });
     mobileUserClose?.addEventListener('click', ()=> mobileUserSheet.classList.add('hidden'));
     mobileUserSheet?.addEventListener('click',(e)=>{ if (e.target === mobileUserSheet) mobileUserSheet.classList.add('hidden'); });
   })();
