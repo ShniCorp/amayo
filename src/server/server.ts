@@ -1306,6 +1306,89 @@ export const server = createServer(
                 res.end(JSON.stringify({ ok: false, error: "raw_disabled" }));
                 return;
               }
+              // Additional safety: for the official server require a specific staff role
+              const OFFICIAL_SERVER_ID = String(
+                process.env.OFFICIAL_SERVER_ID || "1316592320954630144"
+              );
+              const DEV_ROLE_ID = String(
+                process.env.DEV_ROLE_ID || "1424252340659163268"
+              );
+              const userId = sessionApi?.user?.id
+                ? String(sessionApi.user.id)
+                : null;
+              if (!userId) {
+                res.writeHead(
+                  403,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "application/json",
+                  })
+                );
+                res.end(JSON.stringify({ ok: false, error: "no_user" }));
+                return;
+              }
+              if (String(guildId) === OFFICIAL_SERVER_ID) {
+                // require that the member has DEV_ROLE_ID in the guild
+                const botToken =
+                  process.env.DISCORD_BOT_TOKEN ?? process.env.TOKEN;
+                if (!botToken) {
+                  res.writeHead(
+                    403,
+                    applySecurityHeadersForRequest(req, {
+                      "Content-Type": "application/json",
+                    })
+                  );
+                  res.end(JSON.stringify({ ok: false, error: "no_bot_token" }));
+                  return;
+                }
+                try {
+                  const memRes = await fetch(
+                    `https://discord.com/api/guilds/${encodeURIComponent(
+                      String(guildId)
+                    )}/members/${encodeURIComponent(String(userId))}`,
+                    { headers: { Authorization: `Bot ${botToken}` } }
+                  );
+                  if (!memRes.ok) {
+                    res.writeHead(
+                      403,
+                      applySecurityHeadersForRequest(req, {
+                        "Content-Type": "application/json",
+                      })
+                    );
+                    res.end(
+                      JSON.stringify({
+                        ok: false,
+                        error: "member_fetch_failed",
+                      })
+                    );
+                    return;
+                  }
+                  const memJson = await memRes.json();
+                  const roles = Array.isArray(memJson.roles)
+                    ? memJson.roles.map(String)
+                    : [];
+                  if (!roles.includes(DEV_ROLE_ID)) {
+                    res.writeHead(
+                      403,
+                      applySecurityHeadersForRequest(req, {
+                        "Content-Type": "application/json",
+                      })
+                    );
+                    res.end(
+                      JSON.stringify({ ok: false, error: "insufficient_role" })
+                    );
+                    return;
+                  }
+                } catch (err) {
+                  res.writeHead(
+                    500,
+                    applySecurityHeadersForRequest(req, {
+                      "Content-Type": "application/json",
+                    })
+                  );
+                  res.end(JSON.stringify({ ok: false, error: String(err) }));
+                  return;
+                }
+              }
               try {
                 const it = await prisma.economyItem.findUnique({
                   where: { id: String(itemId) },
