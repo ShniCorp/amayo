@@ -18,7 +18,7 @@
           <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
           <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
             <div class="mb-2">
-              <div id="staffTagsContainer" class="w-full rounded p-3 bg-transparent border border-white/6 flex items-center gap-2 flex-wrap">
+              <div id="staffTagsContainer" class="w-full rounded p-3 flex items-center gap-2 flex-wrap">
                 <div id="staffChips" class="flex items-center gap-2 flex-wrap"></div>
                 <button id="openRolePicker" type="button" class="ml-2 self-stretch inline-flex items-center justify-center px-3 py-1 rounded bg-white/6 hover:bg-white/10">
                   <!-- plus svg -->
@@ -30,17 +30,13 @@
 
               <!-- Role picker modal (hidden by default) -->
               <div id="rolePickerModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
-                <div class="absolute inset-0 bg-black/50" id="rolePickerBackdrop"></div>
-                <div class="relative w-full max-w-md bg-white/6 rounded p-4 shadow-lg glass-card">
+                <div class="absolute inset-0" id="rolePickerBackdrop"></div>
+                <div class="relative w-full max-w-md bg-gray-800 rounded p-4 shadow-lg glass-card">
                   <div class="flex items-center justify-between mb-2">
                     <strong class="text-sm">Seleccionar roles</strong>
-                    <button id="closeRolePicker" type="button" class="text-slate-300">✕</button>
                   </div>
                   <input id="rolePickerSearch" class="w-full rounded p-2 bg-transparent border border-white/6 mb-2" placeholder="Filtrar roles..." />
                   <div id="rolePickerList" class="max-h-60 overflow-auto rounded bg-white/4 p-1"></div>
-                  <div class="mt-3 flex justify-end">
-                    <button id="rolePickerDone" class="pixel-btn">Listo</button>
-                  </div>
                 </div>
               </div>
             </div>
