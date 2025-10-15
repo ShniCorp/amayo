@@ -13,10 +13,24 @@
           <img src="<%= user.avatar || '/assets/images/snap1.svg' %>" class="w-8 h-8 rounded-full" alt="avatar">
           <span class="text-white"><%= user.username %></span>
         </div>
-        <span class="text-sm text-white/70 px-3">|</span>
-        <% if (typeof selectedGuildName !== 'undefined' && selectedGuildName) { %>
-          <span class="text-white/80"> <%= selectedGuildName %> </span>
-        <% } %>
+        <div class="relative">
+          <button id="miniGuildBtn" class="ml-3 px-3 py-2 rounded-md bg-white/5 text-white hover:bg-white/6 flex items-center gap-2">
+            <span id="miniGuildName"><%= selectedGuildName || 'Seleccionar servidor' %></span>
+            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+          </button>
+          <div id="miniGuildList" class="absolute right-0 mt-2 w-64 bg-white/6 backdrop-blur rounded-md p-2 hidden">
+            <% if (guilds && guilds.length) { %>
+              <% guilds.forEach(g => { %>
+                <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item" data-id="<%= g.id %>">
+                  <div class="text-sm font-medium"><%= g.name %></div>
+                  <div class="text-xs text-slate-300"><%= g.id %></div>
+                </div>
+              <% }) %>
+            <% } else { %>
+              <div class="p-2 text-slate-300">No servers</div>
+            <% } %>
+          </div>
+        </div>
         <a href="/auth/logout" class="text-sm text-white/70 px-3 py-2 rounded-md hover:bg-white/5">Salir</a>
       <% } else { %>
         <a href="/auth/discord" class="text-sm text-white/70 px-3 py-2 rounded-md hover:bg-white/5">Entrar</a>
@@ -26,3 +40,21 @@
 </header>
 
 <div style="height:56px"></div>
+
+<script>
+  (function(){
+    const btn = document.getElementById('miniGuildBtn');
+    const list = document.getElementById('miniGuildList');
+    if (!btn || !list) return;
+    btn.addEventListener('click', ()=> list.classList.toggle('hidden'));
+    document.addEventListener('click', (e)=>{
+      if (!btn.contains(e.target) && !list.contains(e.target)) list.classList.add('hidden');
+    });
+    Array.from(list.querySelectorAll('.guild-item')).forEach(it=>{
+      it.addEventListener('click', ()=>{
+        const id = it.getAttribute('data-id');
+        if (id) window.location.href = `/dashboard/${id}/overview`;
+      });
+    });
+  })();
+</script>
