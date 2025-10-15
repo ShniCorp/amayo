@@ -526,8 +526,16 @@ const renderTemplate = async (
     {
       head: null,
       scripts: null,
-      // supply version to templates if not provided by caller
+      // supply defaults to templates if not provided by caller
       version: locals.version ?? pkg.version ?? "2.0.0",
+      djsVersion:
+        locals.djsVersion ?? pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
+      currentDateHuman:
+        locals.currentDateHuman ??
+        new Date().toLocaleDateString("es-ES", {
+          month: "long",
+          year: "numeric",
+        }),
       ...locals,
       title: locals.title ?? defaultTitle,
       body: pageBody,
