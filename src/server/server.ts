@@ -686,7 +686,7 @@ export const server = createServer(
         }
         const redirectUri =
           process.env.DISCORD_REDIRECT_URI ||
-          `http://${req.headers.host}/auth/callback`;
+          `https://${req.headers.host}/auth/callback`;
         const state = randomUUID();
         // Store state in a temp session map
         storeState(state);
