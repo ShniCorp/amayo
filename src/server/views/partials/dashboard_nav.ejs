@@ -132,8 +132,8 @@
 </script>
 
 <!-- Mobile modals -->
-<div id="mobileGuildModal" class="fixed inset-0 bg-black/60 hidden z-50">
-  <div class="absolute bottom-0 left-0 right-0 bg-[#1f2933] rounded-t-xl p-4 max-h-[80vh] overflow-auto">
+<div id="mobileGuildModal" class="fixed inset-0 bg-black/60 hidden z-50" style="display:block;">
+  <div class="fixed inset-x-0 bottom-0 bg-[#1f2933] rounded-t-xl p-4 max-h-[80vh] overflow-auto" style="margin:0;">
     <div class="flex items-center justify-between mb-3">
       <h3 class="text-white font-medium">Servers</h3>
       <button id="mobileGuildClose" class="text-white/70">Cerrar</button>
@@ -155,10 +155,11 @@
       <% } %>
     </div>
   </div>
+  </div>
 </div>
 
 <div id="mobileUserSheet" class="fixed inset-0 bg-black/60 hidden z-50">
-  <div class="absolute bottom-0 left-0 right-0 bg-[#1f2933] rounded-t-xl p-4">
+  <div class="fixed inset-x-0 bottom-0 bg-[#1f2933] rounded-t-xl p-4 max-h-[80vh] overflow-auto">
   <h3 class="text-white font-medium mb-3">User settings</h3>
   <a href="/dashboard/select-guild" class="block py-2 text-white">Servers</a>
   <a href="/auth/logout" class="block py-2 text-rose-300">Log out</a>
