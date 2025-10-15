@@ -521,6 +521,26 @@ const renderTemplate = async (
   const defaultTitle = `${
     locals.appName ?? pkg.name ?? "Amayo Bot"
   } | Guía Completa`;
+  // If the caller requested the dashboard nav, render it here and pass the
+  // resulting HTML string to the layout to avoid printing unresolved Promises
+  // in the template (EJS include/await differences across environments).
+  let dashboardNavHtml: string | null = null;
+  try {
+    if (locals.useDashboardNav) {
+      const partialPath = path.join(viewsDir, "partials", "dashboard_nav.ejs");
+      // Render partial with same locals (async)
+      dashboardNavHtml = await ejs.renderFile(
+        partialPath,
+        { ...locals },
+        { async: true }
+      );
+    }
+  } catch (err) {
+    // If rendering the partial fails, log and continue — layout will handle missing nav.
+    console.warn("Failed rendering dashboard_nav partial:", err);
+    dashboardNavHtml = null;
+  }
+
   const html = await ejs.renderFile(
     layoutFile,
     {
@@ -543,6 +563,8 @@ const renderTemplate = async (
         typeof locals.useDashboardNav !== "undefined"
           ? locals.useDashboardNav
           : false,
+      // Pre-rendered partial HTML (if produced above)
+      dashboardNav: dashboardNavHtml,
       ...locals,
       title: locals.title ?? defaultTitle,
       body: pageBody,
