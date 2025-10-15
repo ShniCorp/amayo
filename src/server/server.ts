@@ -1155,6 +1155,8 @@ export const server = createServer(
         if (parts.length >= 2) {
           const guildId = parts[1];
           const page = parts[2] || "overview";
+          const fragment =
+            url.searchParams.get("fragment") || url.searchParams.get("ajax");
           // find a nicer display name for selected guild
           const found = guilds.find((g) => String(g.id) === String(guildId));
           const selectedGuildName = found ? found.name : guildId;
@@ -1193,10 +1195,9 @@ export const server = createServer(
           }
           // Render dashboard with selected guild context; show dashboard nav
           // If caller requested a fragment, render only the page template (no layout)
-          const fragment =
-            url.searchParams.get("fragment") || url.searchParams.get("ajax");
           if (fragment) {
-            const pageFile = path.join(viewsDir, "pages", `${page}.ejs`);
+            // Render the dashboard page and extract the inner #dashContent fragment
+            const dashPage = path.join(viewsDir, "pages", `dashboard.ejs`);
             const pageLocals = {
               appName: pkg.name ?? "Amayo Bot",
               user,
@@ -1211,23 +1212,30 @@ export const server = createServer(
               useDashboardNav: true,
             };
             try {
-              const fragmentHtml = await ejs.renderFile(pageFile, pageLocals, {
+              const fullPageHtml = await ejs.renderFile(dashPage, pageLocals, {
                 async: true,
               });
-              res.writeHead(
-                200,
-                applySecurityHeadersForRequest(req, {
-                  "Content-Type": "text/html; charset=utf-8",
-                })
-              );
-              res.end(fragmentHtml);
-              return;
+              // extract content inside the first <div id="dashContent"> ... </div>
+              const match =
+                /<div\s+id=["']dashContent["']\b[^>]*>([\s\S]*?)<\/div>/.exec(
+                  fullPageHtml
+                );
+              if (match && match[1] != null) {
+                const fragmentHtml = match[1];
+                res.writeHead(
+                  200,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "text/html; charset=utf-8",
+                  })
+                );
+                res.end(fragmentHtml);
+                return;
+              }
+              // if extraction failed, fall through to full render
             } catch (err) {
-              console.warn("Failed rendering page fragment:", err);
-              // fallthrough to full render
+              console.warn("Failed rendering dashboard fragment:", err);
             }
           }
-
           await renderTemplate(req, res, "dashboard", {
             appName: pkg.name ?? "Amayo Bot",
             user,
