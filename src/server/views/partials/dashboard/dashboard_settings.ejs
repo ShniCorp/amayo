@@ -5,16 +5,16 @@
     </div>
     <form id="guildSettingsForm" class="space-y-4">
       <div>
-        <label class="block text-sm text-slate-200 mb-1">Prefix del bot</label>
-        <input type="text" name="prefix" id="prefixInput" value="<%= (guildConfig && guildConfig.prefix) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="!" />
+        <label class="block text-sm text-violet-300 mb-1">Prefix del bot</label>
+        <input type="text" name="prefix" id="prefixInput" value="<%= (guildConfig && guildConfig.prefix) || '' %>" class="w-full rounded p-2 bg-transparent border-2 border-dashed" placeholder="!" />
       </div>
       <div>
-        <label class="block text-sm text-slate-200 mb-1">AI Role Prompt (opcional)</label>
-        <textarea name="aiRolePrompt" id="aiRoleInput" rows="4" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="E.g. Actúa como un moderador amigable..."><%= (guildConfig && guildConfig.aiRolePrompt) || '' %></textarea>
+        <label class="block text-sm text-violet-300 mb-1">AI Role Prompt (opcional)</label>
+        <textarea name="aiRolePrompt" id="aiRoleInput" rows="4" class="w-full rounded p-2 bg-transparent border-2 border-dashed" placeholder="E.g. Actúa como un moderador amigable..."><%= (guildConfig && guildConfig.aiRolePrompt) || '' %></textarea>
       </div>
-      
-        <div>
-          <label class="block text-sm text-slate-200 mb-1">Roles de staff</label>
+
+      <div>
+        <label class="block text-sm text-violet-300 mb-1">Roles de staff</label>
           <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
           <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
             <div class="mb-2">
@@ -35,7 +35,7 @@
                   <div class="flex items-center justify-between mb-2">
                     <strong class="text-sm">Seleccionar roles</strong>
                   </div>
-                  <input id="rolePickerSearch" class="w-full rounded p-2 bg-transparent border border-white/6 mb-2" placeholder="Filtrar roles..." />
+                  <input id="rolePickerSearch" class="w-full rounded p-2 bg-transparent border-2 border-dashed mb-2" placeholder="Filtrar roles..." />
                   <div id="rolePickerList" class="max-h-60 overflow-auto rounded bg-white/4 p-1"></div>
                 </div>
               </div>
