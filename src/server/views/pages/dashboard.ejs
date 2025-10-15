@@ -44,6 +44,66 @@
       </div>
     <% } %>
 
+    <% if (typeof page !== 'undefined' && page === 'settings' && selectedGuild) { %>
+      <div class="w-full max-w-3xl mt-6">
+        <div class="backdrop-blur-md bg-white/6 border border-white/8 rounded-xl p-6 glass-card">
+          <h2 class="text-xl font-semibold mb-4">Ajustes del servidor</h2>
+          <form id="guildSettingsForm" class="space-y-4">
+            <div>
+              <label class="block text-sm text-slate-200 mb-1">Prefix del bot</label>
+              <input type="text" name="prefix" id="prefixInput" value="<%= (guildConfig && guildConfig.prefix) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="!" />
+            </div>
+            <div>
+              <label class="block text-sm text-slate-200 mb-1">AI Role Prompt (opcional)</label>
+              <textarea name="aiRolePrompt" id="aiRoleInput" rows="4" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="E.g. Actúa como un moderador amigable..."><%= (guildConfig && guildConfig.aiRolePrompt) || '' %></textarea>
+            </div>
+            <div>
+              <label class="block text-sm text-slate-200 mb-1">Roles de staff (IDs separadas por coma)</label>
+              <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
+            </div>
+            <div class="flex items-center gap-3">
+              <button type="submit" class="pixel-btn">Guardar</button>
+              <span id="saveStatus" class="text-sm text-slate-300"></span>
+            </div>
+          </form>
+        </div>
+      </div>
+      <script>
+        (function(){
+          const form = document.getElementById('guildSettingsForm');
+          const status = document.getElementById('saveStatus');
+          form.addEventListener('submit', async (e)=>{
+            e.preventDefault();
+            status.textContent = 'Guardando...';
+            const prefix = document.getElementById('prefixInput').value.trim();
+            const aiRolePrompt = document.getElementById('aiRoleInput').value.trim();
+            const staffRaw = document.getElementById('staffInput').value.trim();
+            const payload = {
+              prefix: prefix,
+              aiRolePrompt: aiRolePrompt.length ? aiRolePrompt : null,
+              staff: staffRaw ? staffRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
+            };
+            try {
+              const res = await fetch(`/api/dashboard/${encodeURIComponent('<%= selectedGuild %>')}/settings`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload),
+              });
+              const json = await res.json();
+              if (res.ok && json.ok) {
+                status.textContent = 'Guardado';
+                setTimeout(()=> status.textContent = '', 2500);
+              } else {
+                status.textContent = json.error || 'Error';
+              }
+            } catch (err) {
+              status.textContent = 'Error de red';
+            }
+          });
+        })();
+      </script>
+    <% } %>
+
   </div>
 </div>
 

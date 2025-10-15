@@ -952,6 +952,116 @@ export const server = createServer(
         return res.end();
       }
 
+      // API: update guild settings (used by dashboard settings panel)
+      if (req.method === "POST" && url.pathname.startsWith("/api/dashboard/")) {
+        const partsApi = url.pathname.split("/").filter(Boolean);
+        // expected /api/dashboard/:guildId/settings
+        if (
+          partsApi[0] === "api" &&
+          partsApi[1] === "dashboard" &&
+          partsApi.length >= 4
+        ) {
+          const guildId = partsApi[2];
+          const action = partsApi[3];
+          if (action === "settings") {
+            const cookiesApi = parseCookies(req);
+            const signedApi = cookiesApi["amayo_sid"];
+            const sidApi = unsignSid(signedApi);
+            const sessionApi = sidApi ? SESSIONS.get(sidApi) : null;
+            if (!sessionApi) {
+              res.writeHead(
+                401,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ error: "not_authenticated" }));
+              return;
+            }
+            // ensure user has this guild in their session guilds (basic guard)
+            const userGuildsApi = sessionApi?.guilds || [];
+            if (
+              !userGuildsApi.find((g: any) => String(g.id) === String(guildId))
+            ) {
+              res.writeHead(
+                403,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ error: "forbidden" }));
+              return;
+            }
+
+            // collect body
+            const raw = await new Promise<string>((resolve, reject) => {
+              let data = "";
+              req.on("data", (c: any) => (data += String(c)));
+              req.on("end", () => resolve(data));
+              req.on("error", (e: any) => reject(e));
+            }).catch(() => "");
+
+            let payload: any = {};
+            try {
+              payload = raw ? JSON.parse(raw) : {};
+            } catch {
+              payload = {};
+            }
+
+            const newPrefix = sanitizeString(payload.prefix ?? "");
+            const newAi =
+              payload.aiRolePrompt == null
+                ? null
+                : String(payload.aiRolePrompt).slice(0, 1500);
+            let staff: string[] | null = null;
+            if (Array.isArray(payload.staff)) {
+              staff = payload.staff
+                .map(String)
+                .filter((s) => validateDiscordId(s));
+            } else if (typeof payload.staff === "string") {
+              const arr = payload.staff
+                .split(",")
+                .map((s) => s.trim())
+                .filter(Boolean);
+              staff = arr.filter((s) => validateDiscordId(s));
+            }
+
+            try {
+              const updateData: any = {};
+              if (newPrefix) updateData.prefix = newPrefix;
+              // allow explicitly setting null to remove ai prompt
+              updateData.aiRolePrompt = newAi;
+              if (staff !== null) updateData.staff = staff;
+
+              const createData: any = {
+                id: String(guildId),
+                name: String(guildId),
+                prefix: newPrefix || "!",
+                aiRolePrompt: newAi,
+                staff: staff || [],
+              };
+
+              await prisma.guild.upsert({
+                where: { id: String(guildId) },
+                update: updateData,
+                create: createData,
+              });
+            } catch (err) {
+              console.warn("Failed saving guild settings", err);
+            }
+
+            res.writeHead(
+              200,
+              applySecurityHeadersForRequest(req, {
+                "Content-Type": "application/json",
+              })
+            );
+            res.end(JSON.stringify({ ok: true }));
+            return;
+          }
+        }
+      }
+
       // Dashboard routes
       if (
         url.pathname === "/dashboard" ||
@@ -1048,6 +1158,15 @@ export const server = createServer(
           // find a nicer display name for selected guild
           const found = guilds.find((g) => String(g.id) === String(guildId));
           const selectedGuildName = found ? found.name : guildId;
+          // Load guild config from DB to allow editing settings
+          let guildConfig: any = null;
+          try {
+            guildConfig = await prisma.guild.findFirst({
+              where: { id: String(guildId) },
+            });
+          } catch {
+            guildConfig = null;
+          }
           // Render dashboard with selected guild context; show dashboard nav
           await renderTemplate(req, res, "dashboard", {
             appName: pkg.name ?? "Amayo Bot",
@@ -1056,6 +1175,7 @@ export const server = createServer(
             selectedGuild: guildId,
             selectedGuildId: guildId,
             selectedGuildName,
+            guildConfig,
             page,
             hideNavbar: false,
             useDashboardNav: true,
