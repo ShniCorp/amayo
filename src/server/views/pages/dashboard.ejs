@@ -1,20 +1,22 @@
 <div class="max-w-3xl mx-auto p-6">
   <div class="relative flex justify-center">
-    <!-- Card principal (centered) -->
-    <div class="w-full">
-      <div class="mx-auto backdrop-blur-md bg-white/10 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
-        <h1 class="text-3xl font-bold mb-2"><%= appName %></h1>
-        <p class="text-sm text-slate-200/80 mb-4">Panel de administración</p>
-        <div class="mt-4">
-          <p class="text-sm text-slate-200/80">Selecciona un servidor desde la página principal para administrar sus ajustes.</p>
-          <a href="/dashboard/select-guild" class="inline-block mt-3 pixel-btn">Seleccionar servidor</a>
+    <% if (!selectedGuild) { %>
+      <!-- Card principal (centered) -->
+      <div class="w-full">
+        <div class="mx-auto backdrop-blur-md bg-white/10 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
+          <h1 class="text-3xl font-bold mb-2"><%= appName %></h1>
+          <p class="text-sm text-slate-200/80 mb-4">Panel de administración</p>
+          <div class="mt-4">
+            <p class="text-sm text-slate-200/80">Selecciona un servidor desde la página principal para administrar sus ajustes.</p>
+            <a href="/dashboard/select-guild" class="inline-block mt-3 pixel-btn">Seleccionar servidor</a>
+          </div>
         </div>
       </div>
-    </div>
+    <% } %>
 
     <% if (typeof selectedGuild !== 'undefined' && selectedGuild) { %>
       <!-- Floating sidebar for guild actions -->
-      <aside class="absolute right-8 top-20 hidden lg:block">
+  <aside class="absolute right-6 top-12 hidden lg:block transform translate-y-1">
         <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card w-48">
           <ul class="flex flex-col gap-3">
             <li><a href="/dashboard/<%= selectedGuild %>/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
