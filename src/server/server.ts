@@ -72,6 +72,53 @@ function parseCookies(req: IncomingMessage) {
     }, {});
 }
 
+// --- Session and state helpers (restored) ---
+function getSessionSecret(): string {
+  // Prefer explicit env var; fallback to package name + version for a deterministic but non-secret default.
+  if (process.env.SESSION_SECRET && process.env.SESSION_SECRET.length > 8)
+    return process.env.SESSION_SECRET;
+  const name = pkg?.name || "amayo";
+  const version = pkg?.version || "0";
+  return createHmac("sha256", "fallback")
+    .update(name + "@" + version)
+    .digest("hex");
+}
+
+function unsignSid(signed: string | undefined): string | null {
+  if (!signed) return null;
+  const parts = String(signed).split(".");
+  if (parts.length !== 2) return null;
+  const sid = parts[0];
+  const sig = parts[1];
+  try {
+    const expected = createHmac("sha256", getSessionSecret())
+      .update(sid)
+      .digest("base64url");
+    // timing-safe compare
+    const a = Buffer.from(sig);
+    const b = Buffer.from(expected);
+    if (a.length !== b.length) return null;
+    if (!timingSafeEqual(a, b)) return null;
+    return sid;
+  } catch {
+    return null;
+  }
+}
+
+function storeState(key: string) {
+  STATE_STORE.set(key, { ts: Date.now() });
+}
+
+function hasState(key: string) {
+  const v = STATE_STORE.get(key);
+  if (!v) return false;
+  if (Date.now() - v.ts > STATE_TTL_MS) {
+    STATE_STORE.delete(key);
+    return false;
+  }
+  return true;
+}
+
 function setSessionCookie(res: ServerResponse, sid: string) {
   // Sign the SID to prevent tampering
   const secret = getSessionSecret();
@@ -92,49 +139,8 @@ function clearSessionCookie(res: ServerResponse) {
   const secure = isProd ? "; Secure" : "";
   res.setHeader(
     "Set-Cookie",
-    `amayo_sid=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`
+    `amayo_sid=; HttpOnly; Path=/; Max-Age=0; Expires=Thu, 01 Jan 1970 00:00:00 GMT${secure}`
   );
-}
-
-function getSessionSecret() {
-  return (
-    process.env.SESSION_SECRET ||
-    process.env.DISCORD_CLIENT_SECRET ||
-    "dev-session-secret"
-  );
-}
-
-function unsignSid(signed: string | undefined): string | null {
-  if (!signed) return null;
-  const decoded = decodeURIComponent(signed);
-  const parts = decoded.split(".");
-  if (parts.length !== 2) return null;
-  const [sid, sig] = parts;
-  try {
-    const secret = getSessionSecret();
-    const expected = createHmac("sha256", secret).update(sid).digest();
-    const got = Buffer.from(sig, "base64url");
-    // timing safe compare
-    if (expected.length !== got.length) return null;
-    if (!timingSafeEqual(expected, got)) return null;
-    return sid;
-  } catch {
-    return null;
-  }
-}
-
-function storeState(state: string) {
-  STATE_STORE.set(state, { ts: Date.now() });
-}
-
-function hasState(state: string) {
-  const v = STATE_STORE.get(state);
-  if (!v) return false;
-  if (Date.now() - v.ts > STATE_TTL_MS) {
-    STATE_STORE.delete(state);
-    return false;
-  }
-  return true;
 }
 
 function createSession(data: any) {

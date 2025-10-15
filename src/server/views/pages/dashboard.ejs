@@ -43,9 +43,9 @@
 
             <div id="cardList" class="max-h-72 overflow-auto rounded">
               <% if (guilds && guilds.length) { %>
-                <% const sorted = guilds.slice().sort((a,b)=> a.name.localeCompare(b.name)); const withBot = sorted.filter(g=> g.botInGuild !== false); const withoutBot = sorted.filter(g=> g.botInGuild === false); %>
+                <% const sorted = guilds.slice().sort((a,b)=> a.name.localeCompare(b.name)); const withBot = sorted.filter(g=> g.botInGuild === true); const withoutBot = sorted.filter(g=> g.botInGuild !== true); %>
                 <% withBot.forEach(g => { %>
-                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>" data-bot="1" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                  <div onclick="location.href='/dashboard/<%= g.id %>/overview'" role="button" tabindex="0" class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>" data-bot="1" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
                     <div class="flex items-center gap-3">
                       <% if (g.icon) { %>
                         <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
@@ -53,7 +53,7 @@
                         <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
                       <% } %>
                       <div class="text-left">
-                        <div class="font-medium"><%= g.name %></div>
+                        <div class="font-medium"><%= g.name %> <% if (g.botInGuild === true) { %><span class="text-xs text-emerald-300">(Bot)</span><% } else { %><span class="text-xs text-sky-300">(Invitar)</span><% } %></div>
                       </div>
                     </div>
                     <div class="flex items-center gap-2">
@@ -64,7 +64,7 @@
                 <% if (withoutBot && withoutBot.length) { %>
                   <div class="border-t border-white/6 my-2"></div>
                   <% withoutBot.forEach(g => { %>
-                    <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white opacity-60" data-id="<%= g.id %>" data-bot="0" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                    <div onclick="window.open('https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>', '_blank', 'noopener')" role="button" tabindex="0" class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white opacity-60" data-id="<%= g.id %>" data-bot="0" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
                       <div class="flex items-center gap-3">
                         <% if (g.icon) { %>
                           <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
@@ -110,11 +110,15 @@
               const id = el.dataset.id;
               const bot = el.getAttribute('data-bot');
               const invite = el.getAttribute('data-invite');
-              if (bot === '0' && invite) {
+              const isDim = el.classList && el.classList.contains('opacity-60');
+              if (bot === '1') {
+                window.location.href = `/dashboard/${id}/overview`;
+                return;
+              }
+              if ((bot === '0' || isDim) && invite) {
                 window.open(invite, '_blank', 'noopener');
                 return;
               }
-              window.location.href = `/dashboard/${id}/overview`;
             }
           });
         })();
