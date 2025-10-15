@@ -19,7 +19,7 @@
     <%= head %>
   <% } %>
 </head>
-<body class="min-h-screen pixel-grid-bg pt-14" style="background-image: url('/assets/images/background.svg'); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;">
+<body class="min-h-screen pixel-grid-bg pt-14" style="background-image: url('/assets/images/background.svg'); backdrop-filter: blur(8px); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;">
 
   <% if (useDashboardNav) { %>
     <%# If the server pre-rendered the dashboard nav it will be available as dashboardNav (string) %>
