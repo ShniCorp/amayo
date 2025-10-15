@@ -10,7 +10,12 @@
     <div class="flex items-center gap-3">
       <% if (user) { %>
         <div class="flex items-center gap-2">
-          <img src="<%= user.avatar || '/assets/images/snap1.svg' %>" class="w-8 h-8 rounded-full" alt="avatar">
+          <%-- Mostrar avatar desde Discord CDN cuando sea posible --%>
+          <% if (user.id && user.avatar) { %>
+            <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" class="w-8 h-8 rounded-full" alt="avatar">
+          <% } else { %>
+            <img src="<%= user.avatar || '/assets/images/snap1.svg' %>" class="w-8 h-8 rounded-full" alt="avatar">
+          <% } %>
           <span class="text-white"><%= user.username %></span>
         </div>
         <div class="relative">
@@ -18,12 +23,22 @@
             <span id="miniGuildName"><%= selectedGuildName || 'Seleccionar servidor' %></span>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
-          <div id="miniGuildList" class="absolute right-0 mt-2 w-64 bg-white/6 backdrop-blur rounded-md p-2 hidden">
+          <div id="miniGuildList" class="absolute right-0 mt-2 w-72 bg-white/6 backdrop-blur rounded-md p-2 hidden">
             <% if (guilds && guilds.length) { %>
               <% guilds.forEach(g => { %>
-                <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item" data-id="<%= g.id %>">
-                  <div class="text-sm font-medium"><%= g.name %></div>
-                  <div class="text-xs text-slate-300"><%= g.id %></div>
+                <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-2 <%= selectedGuildId && selectedGuildId.toString() === g.id.toString() ? 'bg-white/8' : '' %>" data-id="<%= g.id %>">
+                  <%-- icono del servidor si viene (g.icon) --%>
+                  <% if (g.icon) { %>
+                    <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" class="w-6 h-6 rounded-full" alt="icon">
+                  <% } else { %>
+                    <div class="w-6 h-6 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
+                  <% } %>
+                  <div class="flex-1">
+                    <div class="text-sm font-medium"><%= g.name %></div>
+                    <% if (g.addedAt || g.joinedAt) { %>
+                      <div class="text-xs text-slate-300"><%= (g.addedAt || g.joinedAt) %></div>
+                    <% } %>
+                  </div>
                 </div>
               <% }) %>
             <% } else { %>
