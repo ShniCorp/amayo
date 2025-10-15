@@ -128,3 +128,73 @@
     });
   })();
 </script>
+
+<!-- Mobile modals -->
+<div id="mobileGuildModal" class="fixed inset-0 bg-black/60 hidden z-50">
+  <div class="absolute bottom-0 left-0 right-0 bg-[#1f2933] rounded-t-xl p-4 max-h-[80vh] overflow-auto">
+    <div class="flex items-center justify-between mb-3">
+      <h3 class="text-white font-medium">Servers</h3>
+      <button id="mobileGuildClose" class="text-white/70">Cerrar</button>
+    </div>
+    <div id="mobileGuildList" class="space-y-2">
+      <% if (guilds && guilds.length) { %>
+        <% guilds.forEach(g => { %>
+          <div class="flex items-center gap-3 p-2 rounded-md hover:bg-white/5 cursor-pointer" data-id="<%= g.id %>">
+            <% if (g.icon) { %>
+              <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" class="w-8 h-8 rounded-full" alt="icon">
+            <% } else { %>
+              <div class="w-8 h-8 rounded-full bg-white/8"></div>
+            <% } %>
+            <div class="text-white"><%= g.name %></div>
+          </div>
+        <% }) %>
+      <% } else { %>
+        <div class="text-slate-300">No servers</div>
+      <% } %>
+    </div>
+  </div>
+</div>
+
+<div id="mobileUserSheet" class="fixed inset-0 bg-black/60 hidden z-50">
+  <div class="absolute bottom-0 left-0 right-0 bg-[#1f2933] rounded-t-xl p-4">
+    <h3 class="text-white font-medium mb-3">User settings</h3>
+    <a href="/dashboard/select-guild" class="block py-2 text-white">Servers</a>
+    <a href="/auth/logout" class="block py-2 text-rose-300">Log out</a>
+    <div class="text-right mt-2"><button id="mobileUserClose" class="text-white/70">Cerrar</button></div>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const mobileGuildModal = document.getElementById('mobileGuildModal');
+    const mobileGuildClose = document.getElementById('mobileGuildClose');
+    const mobileUserSheet = document.getElementById('mobileUserSheet');
+    const mobileUserClose = document.getElementById('mobileUserClose');
+    function isMobile(){ return window.innerWidth < 768; }
+    // override mini guild click on mobile
+    const miniBtn = document.getElementById('miniGuildBtn');
+    const miniList = document.getElementById('miniGuildList');
+    if (miniBtn) {
+      miniBtn.addEventListener('click', (e)=>{
+        if (isMobile()) {
+          e.stopPropagation();
+          mobileGuildModal.classList.remove('hidden');
+        }
+      });
+    }
+    mobileGuildClose?.addEventListener('click', ()=> mobileGuildModal.classList.add('hidden'));
+    mobileGuildModal?.addEventListener('click',(e)=>{ if (e.target === mobileGuildModal) mobileGuildModal.classList.add('hidden'); });
+    // clicking mobile guild item
+    document.getElementById('mobileGuildList')?.addEventListener('click', (e)=>{
+      let el = e.target;
+      while (el && !el.dataset?.id) el = el.parentElement;
+      if (el && el.dataset && el.dataset.id) { window.location.href = `/dashboard/${el.dataset.id}/overview`; }
+    });
+
+    // user menu mobile
+    const userBtnMobile = document.getElementById('userBtn');
+    if (userBtnMobile) userBtnMobile.addEventListener('click', (e)=>{ if (isMobile()) { e.stopPropagation(); mobileUserSheet.classList.remove('hidden'); } });
+    mobileUserClose?.addEventListener('click', ()=> mobileUserSheet.classList.add('hidden'));
+    mobileUserSheet?.addEventListener('click',(e)=>{ if (e.target === mobileUserSheet) mobileUserSheet.classList.add('hidden'); });
+  })();
+</script>
