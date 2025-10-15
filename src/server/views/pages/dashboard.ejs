@@ -3,18 +3,18 @@
   <div class="relative">
   <% if (!selectedGuild) { %>
   <!-- When no guild selected show centered card -->
-  <%- include('../partials/dashboard/dashboard_noguild_card') %>
+  <%- await include('../partials/dashboard/dashboard_noguild_card') %>
   <% } else { %>
     <!-- When a guild is selected render sidebar + content layout -->
     <div class="w-full max-w-7xl mx-auto mt-6 px-4">
       <div class="flex items-start gap-8">
-          <%- include('../partials/dashboard/dashboard_sidebar') %>
+          <%- await include('../partials/dashboard/dashboard_sidebar') %>
         <div id="dashContent" class="flex-1">
           <!-- initial fragment content will be rendered inside #dashMain by partials -->
               <% if (typeof page !== 'undefined' && page === 'overview') { %>
-              <%- include('../partials/dashboard/dashboard_overview') %>
+              <%- await include('../partials/dashboard/dashboard_overview') %>
             <% } else if (typeof page !== 'undefined' && page === 'settings') { %>
-              <div id="dashMain"><%- include('../partials/dashboard/dashboard_settings') %></div>
+              <div id="dashMain"><%- await include('../partials/dashboard/dashboard_settings') %></div>
           <% } else { %>
             <div id="dashMain"><!-- empty main placeholder --></div>
           <% } %>
@@ -23,16 +23,7 @@
     </div>
   <% } %>
 
-    <div id="dashContent">
-      <!-- The dashContent keeps the outer layout; dashMain inside will be swapped by fragments -->
-      <% if (typeof page !== 'undefined' && page === 'overview' && selectedGuild) { %>
-        <%- include('partials/dashboard/dashboard_overview') %>
-      <% } %>
-
-      <% if (typeof page !== 'undefined' && page === 'settings' && selectedGuild) { %>
-        <%- include('partials/dashboard/dashboard_settings') %>
-      <% } %>
-    </div>
+    <!-- dashContent is rendered above inside the selectedGuild block to ensure includes use await -->
 
     <script>
       // Simple fragment navigation for a SPA-like feel inside /dashboard
