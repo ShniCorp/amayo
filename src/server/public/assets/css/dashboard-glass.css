@@ -1,0 +1,10 @@
+/* Minimal glassmorphism + tailwind helpers */
+.glass-card {
+  background: linear-gradient(135deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02));
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 6px 20px rgba(8,10,15,0.6);
+}
+
+@media (prefers-reduced-transparency: reduce) {
+  .glass-card { backdrop-filter: none; background: rgba(20,20,20,0.8); }
+}

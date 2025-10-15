@@ -9,6 +9,8 @@ import {
 } from "node:zlib";
 import path from "node:path";
 import ejs from "ejs";
+import { prisma } from "../core/database/prisma";
+import { randomUUID } from "node:crypto";
 
 const publicDir = path.join(__dirname, "public");
 const viewsDir = path.join(__dirname, "views");
@@ -43,6 +45,169 @@ const MIME_TYPES: Record<string, string> = {
 };
 
 const PORT = Number(process.env.PORT) || 3000;
+
+// Simple in-memory stores (keep small, restart clears data)
+const SESSIONS = new Map<string, any>();
+const STATE_STORE = new Map<string, { ts: number }>();
+
+// Configurable limits and TTLs (tune for production)
+const STATE_TTL_MS = Number(process.env.STATE_TTL_MS) || 5 * 60 * 1000; // 5 minutes
+const SESSION_TTL_MS =
+  Number(process.env.SESSION_TTL_MS) || 7 * 24 * 60 * 60 * 1000; // 7 days
+const MAX_SESSIONS = Number(process.env.MAX_SESSIONS) || 2000; // cap entries to control RAM
+
+function parseCookies(req: IncomingMessage) {
+  const raw = (req.headers.cookie as string) || "";
+  return raw
+    .split(";")
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .reduce<Record<string, string>>((acc, cur) => {
+      const idx = cur.indexOf("=");
+      if (idx === -1) return acc;
+      const k = cur.slice(0, idx).trim();
+      const v = cur.slice(idx + 1).trim();
+      acc[k] = decodeURIComponent(v);
+      return acc;
+    }, {});
+}
+
+function setSessionCookie(res: ServerResponse, sid: string) {
+  const cookie = `amayo_sid=${encodeURIComponent(
+    sid
+  )}; HttpOnly; Path=/; Max-Age=${60 * 60 * 24 * 7}`; // 7 days
+  res.setHeader("Set-Cookie", cookie);
+}
+
+function clearSessionCookie(res: ServerResponse) {
+  res.setHeader("Set-Cookie", `amayo_sid=; HttpOnly; Path=/; Max-Age=0`);
+}
+
+function storeState(state: string) {
+  STATE_STORE.set(state, { ts: Date.now() });
+}
+
+function hasState(state: string) {
+  const v = STATE_STORE.get(state);
+  if (!v) return false;
+  if (Date.now() - v.ts > STATE_TTL_MS) {
+    STATE_STORE.delete(state);
+    return false;
+  }
+  return true;
+}
+
+function createSession(data: any) {
+  // Evict oldest if over cap
+  if (SESSIONS.size >= MAX_SESSIONS) {
+    // delete ~10% oldest entries
+    const toRemove = Math.max(1, Math.floor(MAX_SESSIONS * 0.1));
+    const it = SESSIONS.keys();
+    for (let i = 0; i < toRemove; i++) {
+      const k = it.next().value;
+      if (!k) break;
+      SESSIONS.delete(k);
+    }
+  }
+  const sid = randomUUID();
+  SESSIONS.set(sid, { ...data, created: Date.now(), lastSeen: Date.now() });
+  return sid;
+}
+
+function touchSession(sid: string) {
+  const s = SESSIONS.get(sid);
+  if (!s) return;
+  s.lastSeen = Date.now();
+}
+
+async function refreshAccessTokenIfNeeded(session: any) {
+  // session expected to have refresh_token and expires_at (ms)
+  if (!session) return session;
+  const now = Date.now();
+  if (!session.refresh_token) return session;
+  // If token expires in next 60s, refresh
+  if (!session.expires_at || session.expires_at - now <= 60 * 1000) {
+    try {
+      const clientId = process.env.CLIENT || "";
+      const clientSecret = process.env.CLIENT_SECRET || "";
+      const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
+        method: "POST",
+        headers: { "Content-Type": "application/x-www-form-urlencoded" },
+        body: new URLSearchParams({
+          client_id: clientId,
+          client_secret: clientSecret,
+          grant_type: "refresh_token",
+          refresh_token: session.refresh_token,
+        } as any).toString(),
+      });
+      if (!tokenRes.ok) throw new Error("Refresh failed");
+      const tokenJson = await tokenRes.json();
+      session.access_token = tokenJson.access_token;
+      session.refresh_token = tokenJson.refresh_token || session.refresh_token;
+      session.expires_at =
+        Date.now() + Number(tokenJson.expires_in || 3600) * 1000;
+    } catch (err) {
+      console.warn("Token refresh error", err);
+    }
+  }
+  return session;
+}
+
+// Periodic cleanup for memory-sensitive stores
+setInterval(() => {
+  const now = Date.now();
+  // Cleanup state store
+  for (const [k, v] of STATE_STORE.entries()) {
+    if (now - v.ts > STATE_TTL_MS) STATE_STORE.delete(k);
+  }
+  // Cleanup sessions older than TTL
+  for (const [k, s] of SESSIONS.entries()) {
+    if (now - (s.lastSeen || s.created || 0) > SESSION_TTL_MS)
+      SESSIONS.delete(k);
+  }
+}, Math.max(30_000, Math.min(5 * 60_000, STATE_TTL_MS)));
+
+// --- Input sanitization helpers ---
+function stripControlChars(s: string) {
+  return s.replace(/\x00|[\x00-\x1F\x7F]+/g, "");
+}
+
+function sanitizeString(v: unknown, opts?: { max?: number }) {
+  if (v == null) return "";
+  let s = String(v);
+  s = stripControlChars(s);
+  // Remove script tags and angle-bracket injections
+  s = s.replace(/<\/?\s*script[^>]*>/gi, "");
+  s = s.replace(/[<>]/g, "");
+  const max = opts?.max ?? 200;
+  if (s.length > max) s = s.slice(0, max);
+  return s.trim();
+}
+
+function validateDiscordId(id: unknown) {
+  if (!id) return false;
+  const s = String(id);
+  return /^\d{17,20}$/.test(s);
+}
+
+async function safeUpsertGuild(g: any) {
+  if (!g) return;
+  if (!validateDiscordId(g.id)) {
+    console.warn("Skipping upsert: invalid guild id", g && g.id);
+    return;
+  }
+  const gid = String(g.id);
+  const name = sanitizeString(g.name ?? gid, { max: 100 });
+  try {
+    await prisma.guild.upsert({
+      where: { id: gid },
+      update: { name },
+      create: { id: gid, name, prefix: "!" },
+    });
+  } catch (err) {
+    console.warn("safeUpsertGuild failed for", gid, err);
+  }
+}
 
 // --- Basic hardening: blocklist patterns and lightweight rate limiting for suspicious paths ---
 const BLOCKED_PATTERNS: RegExp[] = [
@@ -247,10 +412,9 @@ const sendResponse = async (
 ): Promise<void> => {
   const extension = path.extname(filePath).toLowerCase();
   const mimeType = MIME_TYPES[extension] || "application/octet-stream";
-    const cacheControl = extension.match(/\.(?:html)$/)
-      ? "no-cache"
-      : "public, max-age=86400, immutable";
-
+  const cacheControl = extension.match(/\.(?:html)$/)
+    ? "no-cache"
+    : "public, max-age=86400, immutable";
 
   const stat = await fs.stat(filePath).catch(() => undefined);
   const data = await fs.readFile(filePath);
@@ -451,6 +615,203 @@ export const server = createServer(
           currentDateHuman,
         });
         return;
+      }
+
+      // --- Auth routes (Discord OAuth minimal flow) ---
+      if (url.pathname === "/auth/discord") {
+        // Redirect to Discord OAuth2 authorize
+        const clientId = process.env.DISCORD_CLIENT_ID || "";
+        const redirectUri =
+          process.env.DISCORD_REDIRECT_URI ||
+          `http://${req.headers.host}/auth/callback`;
+        const state = randomUUID();
+        // Store state in a temp session map
+        SESSIONS.set(state, { ts: Date.now() });
+        const scopes = encodeURIComponent("identify guilds");
+        const urlAuth = `https://discord.com/api/oauth2/authorize?response_type=code&client_id=${encodeURIComponent(
+          clientId
+        )}&scope=${scopes}&state=${state}&redirect_uri=${encodeURIComponent(
+          redirectUri
+        )}`;
+        res.writeHead(
+          302,
+          applySecurityHeadersForRequest(req, { Location: urlAuth })
+        );
+        return res.end();
+      }
+
+      if (url.pathname === "/auth/callback") {
+        const qs = Object.fromEntries(url.searchParams.entries());
+        const { code, state } = qs as any;
+        // Validate state
+        if (!state || !SESSIONS.has(state)) {
+          res.writeHead(400, applySecurityHeadersForRequest(req));
+          return res.end("Invalid OAuth state");
+        }
+        const clientId = process.env.DISCORD_CLIENT_ID || "";
+        const clientSecret = process.env.DISCORD_CLIENT_SECRET || "";
+        const redirectUri =
+          process.env.DISCORD_REDIRECT_URI ||
+          `http://${req.headers.host}/auth/callback`;
+
+        if (!code) {
+          res.writeHead(400, applySecurityHeadersForRequest(req));
+          return res.end("Missing code");
+        }
+
+        try {
+          // Exchange code for token
+          const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: new URLSearchParams({
+              client_id: clientId,
+              client_secret: clientSecret,
+              grant_type: "authorization_code",
+              code,
+              redirect_uri: redirectUri,
+            } as any).toString(),
+          });
+          if (!tokenRes.ok) throw new Error("Token exchange failed");
+          const tokenJson = await tokenRes.json();
+          const accessToken = tokenJson.access_token;
+
+          // Fetch user
+          const userRes = await fetch("https://discord.com/api/users/@me", {
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          if (!userRes.ok) throw new Error("Failed fetching user");
+          const userJson = await userRes.json();
+
+          // Fetch guilds
+          const guildsRes = await fetch(
+            "https://discord.com/api/users/@me/guilds",
+            {
+              headers: { Authorization: `Bearer ${accessToken}` },
+            }
+          );
+          const guildsJson = guildsRes.ok ? await guildsRes.json() : [];
+
+          // Filter guilds where user is owner or has ADMINISTRATOR bit
+          const ADMIN_BIT = 0x8;
+          const adminGuilds = (
+            Array.isArray(guildsJson) ? guildsJson : []
+          ).filter((g: any) => {
+            try {
+              const perms = Number(g.permissions || 0);
+              return g.owner || (perms & ADMIN_BIT) === ADMIN_BIT;
+            } catch {
+              return false;
+            }
+          });
+
+          // Upsert guilds to DB safely
+          for (const g of adminGuilds) {
+            await safeUpsertGuild({ id: g.id, name: g.name });
+          }
+
+          // Sanitize user and guilds before storing in session
+          const uid = validateDiscordId(userJson?.id)
+            ? String(userJson.id)
+            : null;
+          const uname = sanitizeString(userJson?.username ?? "DiscordUser", {
+            max: 100,
+          });
+          const uavatar = sanitizeString(userJson?.avatar ?? "", { max: 200 });
+          const safeGuilds = (adminGuilds || []).map((g: any) => ({
+            id: String(g.id),
+            name: sanitizeString(g.name ?? g.id, { max: 100 }),
+          }));
+
+          const sid = randomUUID();
+          const session = {
+            user: {
+              id: uid,
+              username: uname,
+              avatar: uavatar,
+            },
+            guilds: safeGuilds,
+          };
+          SESSIONS.set(sid, session);
+          setSessionCookie(res, sid);
+          res.writeHead(
+            302,
+            applySecurityHeadersForRequest(req, { Location: "/dashboard" })
+          );
+          return res.end();
+        } catch (err: any) {
+          console.error("OAuth callback error:", err);
+          res.writeHead(500, applySecurityHeadersForRequest(req));
+          return res.end("OAuth error");
+        }
+      }
+
+      if (url.pathname === "/auth/logout") {
+        const cookies = parseCookies(req);
+        const sid = cookies["amayo_sid"];
+        if (sid) SESSIONS.delete(sid);
+        clearSessionCookie(res);
+        res.writeHead(
+          302,
+          applySecurityHeadersForRequest(req, { Location: "/" })
+        );
+        return res.end();
+      }
+
+      // Dashboard routes
+      if (
+        url.pathname === "/dashboard" ||
+        url.pathname.startsWith("/dashboard")
+      ) {
+        const cookies = parseCookies(req);
+        const sid = cookies["amayo_sid"];
+        const session = sid ? SESSIONS.get(sid) : null;
+        const user = session?.user ?? null;
+
+        // If not authenticated, redirect to login page
+        if (!user) {
+          await renderTemplate(req, res, "login", {
+            appName: pkg.name ?? "Amayo Bot",
+          });
+          return;
+        }
+
+        // Simple guild list: for demo, fetch guilds where guild.staff contains user.id (not implemented fully)
+        const guilds = await (async () => {
+          try {
+            const rows = await prisma.guild.findMany({ take: 10 });
+            return rows.map((r) => ({ id: r.id, name: r.name }));
+          } catch {
+            return [];
+          }
+        })();
+
+        // /dashboard -> main dashboard
+        if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
+          await renderTemplate(req, res, "dashboard", {
+            appName: pkg.name ?? "Amayo Bot",
+            user,
+            guilds,
+          });
+          return;
+        }
+
+        // Dashboard subpaths (e.g. /dashboard/:guildId/overview)
+        const parts = url.pathname.split("/").filter(Boolean);
+        // parts[0] === 'dashboard'
+        if (parts.length >= 2) {
+          const guildId = parts[1];
+          const page = parts[2] || "overview";
+          // For now render same dashboard with selected guild context stub
+          await renderTemplate(req, res, "dashboard", {
+            appName: pkg.name ?? "Amayo Bot",
+            user,
+            guilds,
+            selectedGuild: guildId,
+            page,
+          });
+          return;
+        }
       }
 
       const filePath = resolvePath(url.pathname);

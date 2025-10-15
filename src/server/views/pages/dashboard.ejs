@@ -1,0 +1,43 @@
+<div class="max-w-6xl mx-auto p-4">
+  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+    <!-- Card principal -->
+    <div class="col-span-2">
+      <div class="backdrop-blur-md bg-white/10 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
+        <h1 class="text-3xl font-bold mb-2"><%= appName %></h1>
+        <p class="text-sm text-slate-200/80 mb-4">Panel de administración</p>
+        <div class="mt-4">
+          <label class="block text-xs text-slate-300 mb-2">Selecciona servidor</label>
+          <select id="guildSelector" class="w-full rounded-md p-3 bg-white/6 text-white focus:outline-none">
+            <% if (guilds && guilds.length) { %>
+              <% guilds.forEach(g => { %>
+                <option value="<%= g.id %>"><%= g.name %> (<%= g.id %>)</option>
+              <% }) %>
+            <% } else { %>
+              <option disabled>No tienes servidores gestionados</option>
+            <% } %>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar navegación móvil estilo app -->
+    <aside class="col-span-1 md:col-span-1">
+      <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card">
+        <ul class="flex md:flex-col gap-2">
+          <li><a href="/dashboard/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
+          <li><a href="/dashboard/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
+          <li><a href="/dashboard/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
+          <li><a href="/dashboard/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
+          <li><a href="/dashboard/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
+        </ul>
+      </nav>
+    </aside>
+  </div>
+</div>
+
+<script>
+  document.getElementById('guildSelector')?.addEventListener('change', (e) => {
+    const v = e.target.value;
+    if (v) window.location.href = `/dashboard/${v}/overview`;
+  });
+</script>
