@@ -1,0 +1,77 @@
+<div class="hidden md:flex flex-col items-center justify-start">
+  <!-- logo area -->
+  <div class="mt-10 mb-6">
+    <div class="w-12 h-12 mx-auto">
+      <img src="/assets/images/logo-amayo.svg" alt="logo" class="mx-auto mb-4 rounded-full" />
+    </div>
+  </div>
+
+  <div class="w-full max-w-lg">
+    <div class="mx-auto backdrop-blur-md bg-white/6 rounded-xl p-6 shadow-xl glass-card">
+      <div class="flex items-center justify-center mb-4">
+        <div class="text-slate-200 text-sm">Logged in as</div>
+        <div class="ml-3 relative">
+          <button id="cardUserBtn" class="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-white/5 focus:outline-none" aria-expanded="false">
+            <% if (user && user.id && user.avatar) { %>
+              <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.webp" class="w-8 h-8 rounded-full" alt="avatar">
+            <% } else { %>
+              <img src="/assets/images/snap1.svg" class="w-8 h-8 rounded-full" alt="avatar">
+            <% } %>
+            <span class="text-white font-medium"><%= user?.username || 'User' %></span>
+            <svg class="w-3 h-3 text-white/80" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <div id="cardUserMenu" class="absolute right-0 mt-2 w-36 bg-white/6 backdrop-blur rounded-md p-2 hidden">
+            <a href="/auth/logout" class="block px-3 py-2 text-sm text-rose-300 hover:bg-white/5 rounded">Log out</a>
+          </div>
+        </div>
+      </div>
+
+      <div id="cardList" class="max-h-72 overflow-auto rounded">
+        <% if (guilds && guilds.length) { %>
+          <% const sorted = guilds.slice().sort((a,b)=> a.name.localeCompare(b.name)); const withBot = sorted.filter(g=> g.botInGuild === true); const withoutBot = sorted.filter(g=> g.botInGuild !== true); %>
+          <% withBot.forEach(g => { %>
+            <div onclick="location.href='/dashboard/<%= g.id %>/overview'" role="button" tabindex="0" class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>" data-bot="1" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+              <div class="flex items-center gap-3">
+                <% if (g.icon) { %>
+                  <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
+                <% } else { %>
+                  <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
+                <% } %>
+                <div class="text-left">
+                  <div class="font-medium"><%= g.name %> <% if (g.botInGuild === true) { %><span class="text-xs text-emerald-300">(Bot)</span><% } else { %><span class="text-xs text-sky-300">(Invitar)</span><% } %></div>
+                </div>
+              </div>
+              <div class="flex items-center gap-2">
+                <div class="text-slate-300">&rsaquo;</div>
+              </div>
+            </div>
+          <% }) %>
+          <% if (withoutBot && withoutBot.length) { %>
+            <div class="border-t border-white/6 my-2"></div>
+            <% withoutBot.forEach(g => { %>
+              <div onclick="window.open('https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>', '_blank', 'noopener')" role="button" tabindex="0" class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white opacity-60" data-id="<%= g.id %>" data-bot="0" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                <div class="flex items-center gap-3">
+                  <% if (g.icon) { %>
+                    <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
+                  <% } else { %>
+                    <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
+                  <% } %>
+                  <div class="text-left">
+                    <div class="font-medium"><%= g.name %></div>
+                  </div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <div class="text-slate-300">&rsaquo;</div>
+                </div>
+              </div>
+            <% }) %>
+          <% } %>
+        <% } else { %>
+          <div class="p-4 text-slate-300">No servers available</div>
+        <% } %>
+      </div>
+    </div>
+
+    <div class="text-center text-xs text-slate-400 mt-6">© 2021–2025 ShniCorp •  Terms  •  Privacy </div>
+  </div>
+</div>

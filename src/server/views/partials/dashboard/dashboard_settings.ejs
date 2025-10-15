@@ -1,0 +1,101 @@
+<div class="w-full max-w-3xl mt-6 mx-auto">
+  <div class="backdrop-blur-md bg-white/6 rounded-xl p-6 glass-card">
+    <div class="flex items-center justify-between mb-4">
+      <h2 class="text-xl font-semibold">Ajustes del servidor</h2>
+      <a href="/dashboard/<%= selectedGuild %>/overview" class="text-sm text-slate-200/80 hover:underline">← Volver al overview</a>
+    </div>
+    <form id="guildSettingsForm" class="space-y-4">
+      <div>
+        <label class="block text-sm text-slate-200 mb-1">Prefix del bot</label>
+        <input type="text" name="prefix" id="prefixInput" value="<%= (guildConfig && guildConfig.prefix) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="!" />
+      </div>
+      <div>
+        <label class="block text-sm text-slate-200 mb-1">AI Role Prompt (opcional)</label>
+        <textarea name="aiRolePrompt" id="aiRoleInput" rows="4" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="E.g. Actúa como un moderador amigable..."><%= (guildConfig && guildConfig.aiRolePrompt) || '' %></textarea>
+      </div>
+      <div>
+        <label class="block text-sm text-slate-200 mb-1">Roles de staff</label>
+        <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
+          <div class="mb-2">
+            <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
+          </div>
+          <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
+            <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
+            <% guildRoles.forEach(r => { %>
+              <option value="<%= r.id %>" <%= selectedStaff.includes(String(r.id)) ? 'selected' : '' %>><%= r.name %> — <%= r.id %></option>
+            <% }) %>
+          </select>
+        <% } else { %>
+          <% const fallbackStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
+          <% if (fallbackStaff.length) { %>
+            <div class="mb-2">
+              <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
+            </div>
+            <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
+              <% fallbackStaff.forEach(id => { %>
+                <option value="<%= id %>" <%= (Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String).includes(String(id)) : String(guildConfig.staff || '').split(',').map(s=>s.trim()).includes(String(id))) ? 'selected' : '' %>>ID: <%= id %></option>
+              <% }) %>
+            </select>
+          <% } else { %>
+            <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
+            <div class="text-xs text-slate-300 mt-1">No se pudo obtener roles desde la API ni hay roles guardados. Introduce IDs manualmente separadas por coma.</div>
+          <% } %>
+        <% } %>
+      </div>
+      <div class="flex items-center gap-3">
+        <button type="submit" class="pixel-btn">Guardar</button>
+        <span id="saveStatus" class="text-sm text-slate-300"></span>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  (function(){
+    const form = document.getElementById('guildSettingsForm');
+    const status = document.getElementById('saveStatus');
+    const staffFilter = document.getElementById('staffFilter');
+    if (staffFilter) {
+      staffFilter.addEventListener('input', ()=>{
+        const q = staffFilter.value.trim().toLowerCase();
+        const sel = document.getElementById('staffSelect');
+        if (!sel) return;
+        for (const opt of Array.from(sel.options)) {
+          const txt = (opt.textContent || '').toLowerCase();
+          opt.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
+        }
+      });
+    }
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      status.textContent = 'Guardando...';
+      const prefix = document.getElementById('prefixInput').value.trim();
+      const aiRolePrompt = document.getElementById('aiRoleInput').value.trim();
+      let staffArr = [];
+      const staffSelect = document.getElementById('staffSelect');
+      if (staffSelect) {
+        for (const o of staffSelect.selectedOptions) staffArr.push(o.value);
+      } else {
+        const staffRaw = (document.getElementById('staffInput') && document.getElementById('staffInput').value) ? document.getElementById('staffInput').value.trim() : '';
+        staffArr = staffRaw ? staffRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+      }
+      const payload = { prefix: prefix, aiRolePrompt: aiRolePrompt.length ? aiRolePrompt : null, staff: staffArr };
+      try {
+        const res = await fetch(`/api/dashboard/${encodeURIComponent('<%= selectedGuild %>')}/settings`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+        const json = await res.json();
+        if (res.ok && json.ok) {
+          status.textContent = 'Guardado';
+          setTimeout(()=> status.textContent = '', 2500);
+        } else {
+          status.textContent = json.error || 'Error';
+        }
+      } catch (err) {
+        status.textContent = 'Error de red';
+      }
+    });
+  })();
+</script>

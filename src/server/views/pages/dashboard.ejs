@@ -1,264 +1,37 @@
 <!-- dashboard_nav is rendered by the layout via renderTemplate to avoid unresolved Promise output -->
-  <div class="max-w-3xl mx-auto p-6">
-  <div class="relative flex justify-center">
+  <div class="max-w-7xl mx-auto p-6">
+  <div class="relative">
   <% if (!selectedGuild) { %>
-      <!-- Centered logo + selection card to match mock -->
-  <div class="hidden md:flex flex-col items-center justify-start">
-        <!-- logo area -->
-        <div class="mt-10 mb-6">
-          <!-- reuse small logo SVG -->
-          <div class="w-12 h-12 mx-auto">
-              <img src="/assets/images/logo-amayo.svg" alt="logo" class="mx-auto mb-4 rounded-full" />
-          </div>
-        </div>
-
-        <!-- Mobile CTA: open server list sheet when no guild selected -->
-        <div class="md:hidden text-center mt-8">
-          <button id="openMobileGuildList" class="px-4 py-2 rounded-md bg-slate-700 text-white">Seleccionar servidor</button>
-        </div>
-        <!-- Floating touch CTA for touch devices (visible when no selectedGuild) -->
-        <button id="floatingTouchGuildBtn" class="hidden" style="position:fixed;right:16px;bottom:18px;z-index:60;padding:10px 14px;border-radius:10px;background:#374151;color:#fff;border:none;">Servers</button>
-
-        <div class="w-full max-w-lg">
-          <div class="mx-auto backdrop-blur-md bg-white/6 rounded-xl p-6 shadow-xl glass-card">
-            <!-- user header inside card -->
-            <div class="flex items-center justify-center mb-4">
-              <div class="text-slate-200 text-sm">Logged in as</div>
-              <div class="ml-3 relative">
-                <button id="cardUserBtn" class="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-white/5 focus:outline-none" aria-expanded="false">
-                  <% if (user && user.id && user.avatar) { %>
-                    <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.webp" class="w-8 h-8 rounded-full" alt="avatar">
-                  <% } else { %>
-                    <img src="/assets/images/snap1.svg" class="w-8 h-8 rounded-full" alt="avatar">
-                  <% } %>
-                  <span class="text-white font-medium"><%= user?.username || 'User' %></span>
-                  <svg class="w-3 h-3 text-white/80" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
-                </button>
-                <div id="cardUserMenu" class="absolute right-0 mt-2 w-36 bg-white/6 backdrop-blur rounded-md p-2 hidden">
-                  <!-- Hidden on mobile because the mobile sheet handles user actions -->
-                  <a href="/auth/logout" class="block px-3 py-2 text-sm text-rose-300 hover:bg-white/5 rounded">Log out</a>
-                </div>
-              </div>
-            </div>
-
-            <div id="cardList" class="max-h-72 overflow-auto rounded">
-              <% if (guilds && guilds.length) { %>
-                <% const sorted = guilds.slice().sort((a,b)=> a.name.localeCompare(b.name)); const withBot = sorted.filter(g=> g.botInGuild === true); const withoutBot = sorted.filter(g=> g.botInGuild !== true); %>
-                <% withBot.forEach(g => { %>
-                  <div onclick="location.href='/dashboard/<%= g.id %>/overview'" role="button" tabindex="0" class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>" data-bot="1" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
-                    <div class="flex items-center gap-3">
-                      <% if (g.icon) { %>
-                        <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
-                      <% } else { %>
-                        <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
-                      <% } %>
-                      <div class="text-left">
-                        <div class="font-medium"><%= g.name %> <% if (g.botInGuild === true) { %><span class="text-xs text-emerald-300">(Bot)</span><% } else { %><span class="text-xs text-sky-300">(Invitar)</span><% } %></div>
-                      </div>
-                    </div>
-                    <div class="flex items-center gap-2">
-                      <div class="text-slate-300">&rsaquo;</div>
-                    </div>
-                  </div>
-                <% }) %>
-                <% if (withoutBot && withoutBot.length) { %>
-                  <div class="border-t border-white/6 my-2"></div>
-                  <% withoutBot.forEach(g => { %>
-                    <div onclick="window.open('https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>', '_blank', 'noopener')" role="button" tabindex="0" class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white opacity-60" data-id="<%= g.id %>" data-bot="0" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
-                      <div class="flex items-center gap-3">
-                        <% if (g.icon) { %>
-                          <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
-                        <% } else { %>
-                          <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
-                        <% } %>
-                        <div class="text-left">
-                          <div class="font-medium"><%= g.name %></div>
-                        </div>
-                      </div>
-                      <div class="flex items-center gap-2">
-                        <div class="text-slate-300">&rsaquo;</div>
-                      </div>
-                    </div>
-                  <% }) %>
-                <% } %>
-              <% } else { %>
-                <div class="p-4 text-slate-300">No servers available</div>
-              <% } %>
-            </div>
-          </div>
-
-          <div class="text-center text-xs text-slate-400 mt-6">© 2021–2025 ShniCorp •  Terms  •  Privacy </div>
+    <!-- When no guild selected show centered card -->
+    <%- include('partials/dashboard/dashboard_noguild_card') %>
+  <% } else { %>
+    <!-- When a guild is selected render sidebar + content layout -->
+    <div class="w-full max-w-7xl mx-auto mt-6 px-4">
+      <div class="flex items-start gap-8">
+        <%- include('partials/dashboard/dashboard_sidebar') %>
+        <div id="dashContent" class="flex-1">
+          <!-- initial fragment content will be rendered inside #dashMain by partials -->
+          <% if (typeof page !== 'undefined' && page === 'overview') { %>
+            <%- include('partials/dashboard/dashboard_overview') %>
+          <% } else if (typeof page !== 'undefined' && page === 'settings') { %>
+            <div id="dashMain"><%- include('partials/dashboard/dashboard_settings') %></div>
+          <% } else { %>
+            <div id="dashMain"><!-- empty main placeholder --></div>
+          <% } %>
         </div>
       </div>
-
-      <script>
-        (function(){
-          const card = document.querySelector('[data-id]')?.closest('.mx-auto');
-          // user menu toggle inside card
-          const userBtn = document.getElementById('cardUserBtn');
-          const userMenu = document.getElementById('cardUserMenu');
-          if (userBtn && userMenu) {
-            userBtn.addEventListener('click',(e)=>{ e.stopPropagation(); const open = userMenu.classList.contains('hidden'); if (open) { userMenu.classList.remove('hidden'); } else { userMenu.classList.add('hidden'); } });
-            document.addEventListener('click', ()=> userMenu.classList.add('hidden'));
-          }
-
-          // clicking a guild row navigates or opens invite if bot not present
-          document.getElementById('cardList')?.addEventListener('click', (e)=>{
-            let el = e.target;
-            while (el && !el.dataset?.id) el = el.parentElement;
-            if (el && el.dataset && el.dataset.id) {
-              const id = el.dataset.id;
-              const bot = el.getAttribute('data-bot');
-              const invite = el.getAttribute('data-invite');
-              const isDim = el.classList && el.classList.contains('opacity-60');
-              if (bot === '1') {
-                window.location.href = `/dashboard/${id}/overview`;
-                return;
-              }
-              if ((bot === '0' || isDim) && invite) {
-                window.open(invite, '_blank', 'noopener');
-                return;
-              }
-            }
-          });
-        })();
-      </script>
-    <% } %>
+    </div>
+  <% } %>
 
     <div id="dashContent">
-    <% if (typeof page !== 'undefined' && page === 'overview' && selectedGuild) { %>
-      <div class="w-full max-w-7xl mx-auto mt-6 px-4">
-        <div class="flex gap-8">
-          <!-- Left sidebar -->
-          <aside class="w-64 hidden lg:block">
-            <nav class="bg-white/4 border border-white/6 rounded-xl p-4 sticky top-20 h-[80vh] overflow-auto">
-              <div class="mb-4 flex items-center gap-2">
-                <a href="/dashboard/<%= selectedGuild %>/overview" class="px-3 py-1 rounded-full bg-white/5 text-white text-xs">Home</a>
-              </div>
-              <ul class="mt-2 space-y-3 text-slate-200">
-                <li class="text-sm"><a href="/dashboard/<%= selectedGuild %>/settings" class="flex items-center gap-3"><span class="opacity-80">⚙️</span> General Settings</a></li>
-              </ul>
-            </nav>
-          </aside>
+      <!-- The dashContent keeps the outer layout; dashMain inside will be swapped by fragments -->
+      <% if (typeof page !== 'undefined' && page === 'overview' && selectedGuild) { %>
+        <%- include('partials/dashboard/dashboard_overview') %>
+      <% } %>
 
-          <!-- Main column -->
-          <main class="flex-1">
-            <div class="mb-6">
-              <h1 class="text-4xl font-bold text-white">Welcome <span class="text-blue-400"><%= user?.username || 'Admin' %></span>,</h1>
-            </div>
-
-
-            </div>
-          </main>
-
-        </div>
-      </div>
-      <!-- background SVGs removed (snap1/snap2) per design) -->
-    <% } %>
-
-    <% if (typeof page !== 'undefined' && page === 'settings' && selectedGuild) { %>
-      <div class="w-full max-w-3xl mt-6">
-        <div class="backdrop-blur-md bg-white/6 border border-white/8 rounded-xl p-6 glass-card">
-          <div class="flex items-center justify-between mb-4">
-            <h2 class="text-xl font-semibold">Ajustes del servidor</h2>
-            <a href="/dashboard/<%= selectedGuild %>/overview" class="text-sm text-slate-200/80 hover:underline">← Volver al overview</a>
-          </div>
-          <form id="guildSettingsForm" class="space-y-4">
-            <div>
-              <label class="block text-sm text-slate-200 mb-1">Prefix del bot</label>
-              <input type="text" name="prefix" id="prefixInput" value="<%= (guildConfig && guildConfig.prefix) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="!" />
-            </div>
-            <div>
-              <label class="block text-sm text-slate-200 mb-1">AI Role Prompt (opcional)</label>
-              <textarea name="aiRolePrompt" id="aiRoleInput" rows="4" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="E.g. Actúa como un moderador amigable..."><%= (guildConfig && guildConfig.aiRolePrompt) || '' %></textarea>
-            </div>
-            <div>
-              <label class="block text-sm text-slate-200 mb-1">Roles de staff</label>
-              <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
-                <div class="mb-2">
-                  <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
-                </div>
-                <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
-                  <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
-                  <% guildRoles.forEach(r => { %>
-                    <option value="<%= r.id %>" <%= selectedStaff.includes(String(r.id)) ? 'selected' : '' %>><%= r.name %> — <%= r.id %></option>
-                  <% }) %>
-                </select>
-              <% } else { %>
-                <% const fallbackStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
-                <% if (fallbackStaff.length) { %>
-                  <div class="mb-2">
-                    <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
-                  </div>
-                  <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
-                    <% fallbackStaff.forEach(id => { %>
-                      <option value="<%= id %>" <%= (Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String).includes(String(id)) : String(guildConfig.staff || '').split(',').map(s=>s.trim()).includes(String(id))) ? 'selected' : '' %>>ID: <%= id %></option>
-                    <% }) %>
-                  </select>
-                <% } else { %>
-                  <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
-                  <div class="text-xs text-slate-300 mt-1">No se pudo obtener roles desde la API ni hay roles guardados. Introduce IDs manualmente separadas por coma.</div>
-                <% } %>
-              <% } %>
-            </div>
-            <div class="flex items-center gap-3">
-              <button type="submit" class="pixel-btn">Guardar</button>
-              <span id="saveStatus" class="text-sm text-slate-300"></span>
-            </div>
-          </form>
-        </div>
-      </div>
-      <script>
-        (function(){
-          const form = document.getElementById('guildSettingsForm');
-          const status = document.getElementById('saveStatus');
-                const staffFilter = document.getElementById('staffFilter');
-                if (staffFilter) {
-                  staffFilter.addEventListener('input', ()=>{
-                    const q = staffFilter.value.trim().toLowerCase();
-                    const sel = document.getElementById('staffSelect');
-                    if (!sel) return;
-                    for (const opt of Array.from(sel.options)) {
-                      const txt = (opt.textContent || '').toLowerCase();
-                      opt.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
-                    }
-                  });
-                }
-            form.addEventListener('submit', async (e)=>{
-            e.preventDefault();
-            status.textContent = 'Guardando...';
-            const prefix = document.getElementById('prefixInput').value.trim();
-            const aiRolePrompt = document.getElementById('aiRoleInput').value.trim();
-            let staffArr = [];
-            const staffSelect = document.getElementById('staffSelect');
-            if (staffSelect) {
-              for (const o of staffSelect.selectedOptions) staffArr.push(o.value);
-            } else {
-              const staffRaw = (document.getElementById('staffInput') && document.getElementById('staffInput').value) ? document.getElementById('staffInput').value.trim() : '';
-              staffArr = staffRaw ? staffRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
-            }
-            const payload = { prefix: prefix, aiRolePrompt: aiRolePrompt.length ? aiRolePrompt : null, staff: staffArr };
-            try {
-              const res = await fetch(`/api/dashboard/${encodeURIComponent('<%= selectedGuild %>')}/settings`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload),
-              });
-              const json = await res.json();
-              if (res.ok && json.ok) {
-                status.textContent = 'Guardado';
-                setTimeout(()=> status.textContent = '', 2500);
-              } else {
-                status.textContent = json.error || 'Error';
-              }
-            } catch (err) {
-              status.textContent = 'Error de red';
-            }
-          });
-        })();
-      </script>
-
-    <% } %>
+      <% if (typeof page !== 'undefined' && page === 'settings' && selectedGuild) { %>
+        <%- include('partials/dashboard/dashboard_settings') %>
+      <% } %>
     </div>
 
     <script>
@@ -271,17 +44,26 @@
             const res = await fetch(url.toString(), { headers: { 'X-Requested-With':'XMLHttpRequest' } });
             if (!res.ok) throw new Error('fetch-failed');
             const html = await res.text();
-            const container = document.getElementById('dashContent');
-            if (!container) return;
-            container.innerHTML = html;
-            // execute inline scripts inside fragment
-            Array.from(container.querySelectorAll('script')).forEach(s=>{
-              try {
-                const n = document.createElement('script');
-                if (s.src) { n.src = s.src; n.async = false; document.head.appendChild(n); }
-                else { n.textContent = s.textContent; document.head.appendChild(n); document.head.removeChild(n); }
-              } catch(e){}
-            });
+            // parse the fragment and replace only the inner main (#dashMain) so sidebar stays
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newMain = doc.getElementById('dashMain');
+            const containerMain = document.getElementById('dashMain');
+            if (newMain && containerMain) {
+              containerMain.innerHTML = newMain.innerHTML;
+              // execute inline scripts inside the new main
+              Array.from(containerMain.querySelectorAll('script')).forEach(s=>{
+                try {
+                  const n = document.createElement('script');
+                  if (s.src) { n.src = s.src; n.async = false; document.head.appendChild(n); }
+                  else { n.textContent = s.textContent; document.head.appendChild(n); document.head.removeChild(n); }
+                } catch(e){}
+              });
+            } else {
+              // fallback: replace entire dashContent
+              const container = document.getElementById('dashContent');
+              if (container) container.innerHTML = html;
+            }
             if (push) history.pushState({ href: href }, '', href);
           } catch (err) {
             console.warn('Fragment load failed', err);
