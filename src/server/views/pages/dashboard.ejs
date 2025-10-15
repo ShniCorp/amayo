@@ -58,8 +58,18 @@
               <textarea name="aiRolePrompt" id="aiRoleInput" rows="4" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="E.g. Actúa como un moderador amigable..."><%= (guildConfig && guildConfig.aiRolePrompt) || '' %></textarea>
             </div>
             <div>
-              <label class="block text-sm text-slate-200 mb-1">Roles de staff (IDs separadas por coma)</label>
-              <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
+              <label class="block text-sm text-slate-200 mb-1">Roles de staff</label>
+              <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
+                <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
+                  <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
+                  <% guildRoles.forEach(r => { %>
+                    <option value="<%= r.id %>" <%= selectedStaff.includes(String(r.id)) ? 'selected' : '' %>><%= r.name %> — <%= r.id %></option>
+                  <% }) %>
+                </select>
+              <% } else { %>
+                <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
+                <div class="text-xs text-slate-300 mt-1">No se pudo obtener roles desde la API. Introduce IDs manualmente separadas por coma.</div>
+              <% } %>
             </div>
             <div class="flex items-center gap-3">
               <button type="submit" class="pixel-btn">Guardar</button>
@@ -72,17 +82,20 @@
         (function(){
           const form = document.getElementById('guildSettingsForm');
           const status = document.getElementById('saveStatus');
-          form.addEventListener('submit', async (e)=>{
+            form.addEventListener('submit', async (e)=>{
             e.preventDefault();
             status.textContent = 'Guardando...';
             const prefix = document.getElementById('prefixInput').value.trim();
             const aiRolePrompt = document.getElementById('aiRoleInput').value.trim();
-            const staffRaw = document.getElementById('staffInput').value.trim();
-            const payload = {
-              prefix: prefix,
-              aiRolePrompt: aiRolePrompt.length ? aiRolePrompt : null,
-              staff: staffRaw ? staffRaw.split(',').map(s=>s.trim()).filter(Boolean) : [],
-            };
+            let staffArr = [];
+            const staffSelect = document.getElementById('staffSelect');
+            if (staffSelect) {
+              for (const o of staffSelect.selectedOptions) staffArr.push(o.value);
+            } else {
+              const staffRaw = (document.getElementById('staffInput') && document.getElementById('staffInput').value) ? document.getElementById('staffInput').value.trim() : '';
+              staffArr = staffRaw ? staffRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+            }
+            const payload = { prefix: prefix, aiRolePrompt: aiRolePrompt.length ? aiRolePrompt : null, staff: staffArr };
             try {
               const res = await fetch(`/api/dashboard/${encodeURIComponent('<%= selectedGuild %>')}/settings`, {
                 method: 'POST',

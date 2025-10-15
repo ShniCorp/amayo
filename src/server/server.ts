@@ -1167,6 +1167,30 @@ export const server = createServer(
           } catch {
             guildConfig = null;
           }
+          // Attempt to fetch guild roles via Discord Bot API if token available
+          let guildRoles: Array<{ id: string; name: string }> = [];
+          try {
+            const botToken = process.env.DISCORD_BOT_TOKEN;
+            if (botToken) {
+              const rolesRes = await fetch(
+                `https://discord.com/api/guilds/${encodeURIComponent(
+                  String(guildId)
+                )}/roles`,
+                { headers: { Authorization: `Bot ${botToken}` } }
+              );
+              if (rolesRes.ok) {
+                const rolesJson = await rolesRes.json();
+                if (Array.isArray(rolesJson)) {
+                  guildRoles = rolesJson.map((r: any) => ({
+                    id: String(r.id),
+                    name: String(r.name || r.id),
+                  }));
+                }
+              }
+            }
+          } catch (err) {
+            // ignore; fallback to no roles
+          }
           // Render dashboard with selected guild context; show dashboard nav
           await renderTemplate(req, res, "dashboard", {
             appName: pkg.name ?? "Amayo Bot",
@@ -1176,6 +1200,7 @@ export const server = createServer(
             selectedGuildId: guildId,
             selectedGuildName,
             guildConfig,
+            guildRoles,
             page,
             hideNavbar: false,
             useDashboardNav: true,
