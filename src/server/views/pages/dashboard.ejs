@@ -2,85 +2,97 @@
 <div class="max-w-3xl mx-auto p-6">
   <div class="relative flex justify-center">
     <% if (!selectedGuild) { %>
-      <!-- Show server selection UI inline (replaces /dashboard/select-guild) -->
-      <div class="w-full">
-        <div class="mx-auto backdrop-blur-md bg-white/6 border border-white/10 rounded-xl p-6 shadow-lg glass-card max-w-xl text-center">
-          <h2 class="text-2xl font-bold mb-2"><%= appName %></h2>
-          <p class="text-sm text-slate-200/80 mb-4">Selecciona un servidor desde la lista abajo para administrar sus ajustes.</p>
+      <!-- Centered logo + selection card to match mock -->
+      <div class="flex flex-col items-center justify-start">
+        <!-- logo area -->
+        <div class="mt-10 mb-6">
+          <!-- reuse small logo SVG -->
+          <div class="w-12 h-12 mx-auto">
+            <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" class="w-full h-full">
+              <defs>
+                <linearGradient id="g2" x1="0" x2="1">
+                  <stop offset="0%" stop-color="#06b6d4" />
+                  <stop offset="100%" stop-color="#3b82f6" />
+                </linearGradient>
+              </defs>
+              <circle cx="50" cy="50" r="42" fill="url(#g2)" opacity="0.95" />
+              <g transform="translate(50,50)">
+                <path d="M-18,-6 L0,-28 L18,-6 L0,18 Z" fill="white" opacity="0.95"/>
+              </g>
+            </svg>
+          </div>
+        </div>
 
-          <div class="mt-4 text-left">
-            <label class="block text-xs text-slate-300 mb-2">Servidor</label>
-            <div class="relative">
-              <input id="guildInput" aria-controls="guildList" aria-expanded="false" aria-autocomplete="list" autocomplete="off" placeholder="Busca o selecciona un servidor..." class="w-full rounded-md p-3 bg-white/6 text-white placeholder:text-slate-400 focus:outline-none" />
-              <button id="clearBtn" aria-label="Limpiar" class="absolute right-2 top-2 text-slate-300 hover:text-white hidden">✕</button>
-
-              <div id="guildList" role="listbox" class="mt-2 max-h-64 overflow-auto rounded-md bg-white/4 backdrop-blur divide-y divide-white/6 hidden">
-                <% if (guilds && guilds.length) { %>
-                  <% guilds.sort((a,b)=> a.name.localeCompare(b.name)).forEach(g => { %>
-                    <div role="option" data-id="<%= g.id %>" class="p-3 cursor-pointer hover:bg-white/6 text-white flex items-center gap-3">
-                      <div class="w-8 h-8 rounded-md bg-white/10 flex items-center justify-center text-sm text-white/80">#</div>
-                      <div class="truncate">
-                        <div class="font-medium"><%= g.name %></div>
-                        <div class="text-xs text-slate-300"><%= g.id %></div>
-                      </div>
-                    </div>
-                  <% }) %>
-                <% } else { %>
-                  <div class="p-3 text-slate-300">No tienes servidores gestionados</div>
-                <% } %>
+        <div class="w-full max-w-lg">
+          <div class="mx-auto backdrop-blur-md bg-white/6 border border-white/8 rounded-xl p-6 shadow-lg glass-card">
+            <!-- user header inside card -->
+            <div class="flex items-center justify-center mb-4">
+              <div class="text-slate-200 text-sm">Logged in as</div>
+              <div class="ml-3 relative">
+                <button id="cardUserBtn" class="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-white/5 focus:outline-none" aria-expanded="false">
+                  <% if (user && user.id && user.avatar) { %>
+                    <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" class="w-8 h-8 rounded-full" alt="avatar">
+                  <% } else { %>
+                    <img src="/assets/images/snap1.svg" class="w-8 h-8 rounded-full" alt="avatar">
+                  <% } %>
+                  <span class="text-white font-medium"><%= user?.username || 'User' %></span>
+                  <svg class="w-3 h-3 text-white/80" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+                </button>
+                <div id="cardUserMenu" class="absolute right-0 mt-2 w-36 bg-white/6 backdrop-blur rounded-md p-2 hidden">
+                  <a href="/auth/logout" class="block px-3 py-2 text-sm text-rose-300 hover:bg-white/5 rounded">Log out</a>
+                </div>
               </div>
             </div>
+
+            <div id="cardList" class="divide-y divide-white/6 max-h-72 overflow-auto rounded">
+              <% if (guilds && guilds.length) { %>
+                <% guilds.sort((a,b)=> a.name.localeCompare(b.name)).forEach(g => { %>
+                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>">
+                    <div class="flex items-center gap-3">
+                      <% if (g.icon) { %>
+                        <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" class="w-8 h-8 rounded-full" alt="icon">
+                      <% } else { %>
+                        <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
+                      <% } %>
+                      <div class="text-left">
+                        <div class="font-medium"><%= g.name %></div>
+                      </div>
+                    </div>
+                    <div class="text-slate-300">&rsaquo;</div>
+                  </div>
+                <% }) %>
+              <% } else { %>
+                <div class="p-4 text-slate-300">No servers available</div>
+              <% } %>
+            </div>
           </div>
+
+          <div class="text-center text-xs text-slate-400 mt-6">© 2021–2025 Xge  •  Terms  •  Privacy  •  Legal Notice</div>
         </div>
       </div>
 
       <script>
-        (() => {
-          const input = document.getElementById('guildInput');
-          const list = document.getElementById('guildList');
-          const clearBtn = document.getElementById('clearBtn');
-          if (!input || !list) return;
-
-          const items = Array.from(list.querySelectorAll('[role="option"]'));
-          function showList() { list.classList.remove('hidden'); input.setAttribute('aria-expanded','true'); }
-          function hideList() { list.classList.add('hidden'); input.setAttribute('aria-expanded','false'); }
-
-          function filter(q) {
-            const v = String(q || '').toLowerCase().trim();
-            let any = 0;
-            items.forEach(it => {
-              const name = (it.querySelector('.font-medium')?.textContent || '').toLowerCase();
-              const id = (it.dataset.id || '');
-              if (!v || name.includes(v) || id.includes(v)) { it.style.display = ''; any++; } else { it.style.display = 'none'; }
-            });
-            return any;
+        (function(){
+          const card = document.querySelector('[data-id]')?.closest('.mx-auto');
+          // user menu toggle inside card
+          const userBtn = document.getElementById('cardUserBtn');
+          const userMenu = document.getElementById('cardUserMenu');
+          if (userBtn && userMenu) {
+            userBtn.addEventListener('click',(e)=>{ e.stopPropagation(); const open = userMenu.classList.contains('hidden'); if (open) { userMenu.classList.remove('hidden'); } else { userMenu.classList.add('hidden'); } });
+            document.addEventListener('click', ()=> userMenu.classList.add('hidden'));
           }
 
-          let focused = -1;
-          function focusItem(idx) {
-            items.forEach((it,i)=> it.classList.toggle('ring-2 ring-white/20', i===idx));
-            focused = idx;
-            if (idx>=0) { const el = items[idx]; el.scrollIntoView({ block:'nearest' }); }
-          }
-
-          input.addEventListener('input', (e) => { const v = (e.target).value; filter(v); showList(); clearBtn.classList.toggle('hidden', !v); focused = -1; });
-          input.addEventListener('focus', () => { filter(input.value); showList(); });
-          input.addEventListener('blur', () => setTimeout(hideList, 150));
-          clearBtn?.addEventListener('click', (e)=>{ e.preventDefault(); input.value=''; filter(''); input.focus(); clearBtn.classList.add('hidden'); });
-
-          // click selection
-          items.forEach((it)=>{ it.addEventListener('click', ()=>{ const id = it.getAttribute('data-id'); if (id) window.location.href = `/dashboard/${id}/overview`; }); });
-
-          // keyboard navigation
-          input.addEventListener('keydown', (e)=>{
-            const visible = items.filter(it => it.style.display !== 'none');
-            if (e.key === 'ArrowDown') { e.preventDefault(); if (visible.length) { focused = Math.min(visible.length-1, (focused+1)); const idx = items.indexOf(visible[focused]); focusItem(idx); } }
-            else if (e.key === 'ArrowUp') { e.preventDefault(); if (visible.length) { focused = Math.max(0, (focused-1)); const idx = items.indexOf(visible[focused]); focusItem(idx); } }
-            else if (e.key === 'Enter') { e.preventDefault(); if (focused>=0) { const sel = items[focused]; const id = sel.getAttribute('data-id'); if (id) window.location.href = `/dashboard/${id}/overview`; } }
+          // clicking a guild row navigates
+          document.getElementById('cardList')?.addEventListener('click', (e)=>{
+            let el = e.target;
+            while (el && !el.dataset?.id) el = el.parentElement;
+            if (el && el.dataset && el.dataset.id) {
+              const id = el.dataset.id;
+              window.location.href = `/dashboard/${id}/overview`;
+            }
           });
         })();
       </script>
-
     <% } %>
 
     <% if (typeof selectedGuild !== 'undefined' && selectedGuild) { %>
