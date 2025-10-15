@@ -31,10 +31,10 @@
             <span id="miniGuildName"><%= selectedGuildName || 'Seleccionar servidor' %></span>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
-          <div id="miniGuildList" class="origin-top-right absolute right-0 mt-2 w-72 bg-white/6 backdrop-blur rounded-md p-2 hidden transition-transform duration-180 ease-out transform scale-95 opacity-0 pointer-events-none">
+          <div id="miniGuildList" class="origin-top-right absolute right-0 mt-2 w-72 bg-white/6 backdrop-blur rounded-md p-2 hidden transition-transform duration-180 ease-out transform scale-95 opacity-0 pointer-events-none" style="-webkit-overflow-scrolling: touch;">
             <% if (guilds && guilds.length) { %>
               <% guilds.forEach(g => { %>
-                <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-2 <%= selectedGuildId && selectedGuildId.toString() === g.id.toString() ? 'bg-white/8' : '' %>" data-id="<%= g.id %>">
+                <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-2 <%= selectedGuildId && selectedGuildId.toString() === g.id.toString() ? 'bg-white/8' : '' %>" data-id="<%= g.id %>" tabindex="0" role="button">
                   <%# icono del servidor si viene (g.icon) %>
                   <% if (g.icon) { %>
                     <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" class="w-6 h-6 rounded-full" alt="icon">
@@ -87,7 +87,10 @@
       // after animation, hide to prevent tab focus
       setTimeout(()=> container.classList.add('hidden','pointer-events-none'), 180);
     }
-    if (btn && list) {
+      if (btn && list) {
+      // ensure the dropdown itself is scrollable when many guilds exist
+      list.style.maxHeight = '20rem';
+      list.style.overflowY = 'auto';
       btn.addEventListener('click', (e)=>{
         e.stopPropagation();
         const expanded = btn.getAttribute('aria-expanded') === 'true';
@@ -97,6 +100,13 @@
         it.addEventListener('click', ()=>{
           const id = it.getAttribute('data-id');
           if (id) window.location.href = `/dashboard/${id}/overview`;
+        });
+        // keyboard activation (Enter / Space)
+        it.addEventListener('keydown', (ev)=>{
+          if (ev.key === 'Enter' || ev.key === ' ') {
+            ev.preventDefault();
+            it.click();
+          }
         });
       });
     }

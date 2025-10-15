@@ -47,7 +47,10 @@
     <% if (typeof page !== 'undefined' && page === 'settings' && selectedGuild) { %>
       <div class="w-full max-w-3xl mt-6">
         <div class="backdrop-blur-md bg-white/6 border border-white/8 rounded-xl p-6 glass-card">
-          <h2 class="text-xl font-semibold mb-4">Ajustes del servidor</h2>
+          <div class="flex items-center justify-between mb-4">
+            <h2 class="text-xl font-semibold">Ajustes del servidor</h2>
+            <a href="/dashboard/<%= selectedGuild %>/overview" class="text-sm text-slate-200/80 hover:underline">← Volver al overview</a>
+          </div>
           <form id="guildSettingsForm" class="space-y-4">
             <div>
               <label class="block text-sm text-slate-200 mb-1">Prefix del bot</label>
@@ -60,6 +63,9 @@
             <div>
               <label class="block text-sm text-slate-200 mb-1">Roles de staff</label>
               <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
+                <div class="mb-2">
+                  <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
+                </div>
                 <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
                   <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
                   <% guildRoles.forEach(r => { %>
@@ -82,6 +88,18 @@
         (function(){
           const form = document.getElementById('guildSettingsForm');
           const status = document.getElementById('saveStatus');
+                const staffFilter = document.getElementById('staffFilter');
+                if (staffFilter) {
+                  staffFilter.addEventListener('input', ()=>{
+                    const q = staffFilter.value.trim().toLowerCase();
+                    const sel = document.getElementById('staffSelect');
+                    if (!sel) return;
+                    for (const opt of Array.from(sel.options)) {
+                      const txt = (opt.textContent || '').toLowerCase();
+                      opt.style.display = (!q || txt.indexOf(q) !== -1) ? '' : 'none';
+                    }
+                  });
+                }
             form.addEventListener('submit', async (e)=>{
             e.preventDefault();
             status.textContent = 'Guardando...';
