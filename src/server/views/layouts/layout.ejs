@@ -22,9 +22,9 @@
 <body class="min-h-screen pixel-grid-bg pt-14" style="background-image: url('/assets/images/background.svg'); background-size: cover; background-position: center; background-attachment: fixed; background-repeat: no-repeat;">
 
   <% if (useDashboardNav) { %>
-    <%- await include('../partials/dashboard_nav') %>
+    <%- include('../partials/dashboard_nav') %>
   <% } else if (!hideNavbar) { %>
-    <%- await include('../partials/navbar', { appName }) %>
+    <%- include('../partials/navbar', { appName }) %>
   <% } %>
 
   <div class="relative z-10">

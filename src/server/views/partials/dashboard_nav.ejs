@@ -10,7 +10,7 @@
     <div class="flex items-center gap-3">
       <% if (user) { %>
         <div class="flex items-center gap-2">
-          <%-- Mostrar avatar desde Discord CDN cuando sea posible --%>
+          <%# Mostrar avatar desde Discord CDN cuando sea posible %>
           <% if (user.id && user.avatar) { %>
             <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" class="w-8 h-8 rounded-full" alt="avatar">
           <% } else { %>
@@ -27,7 +27,7 @@
             <% if (guilds && guilds.length) { %>
               <% guilds.forEach(g => { %>
                 <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-2 <%= selectedGuildId && selectedGuildId.toString() === g.id.toString() ? 'bg-white/8' : '' %>" data-id="<%= g.id %>">
-                  <%-- icono del servidor si viene (g.icon) --%>
+                  <%# icono del servidor si viene (g.icon) %>
                   <% if (g.icon) { %>
                     <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" class="w-6 h-6 rounded-full" alt="icon">
                   <% } else { %>
