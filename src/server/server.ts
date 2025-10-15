@@ -1130,7 +1130,7 @@ export const server = createServer(
         if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
           // determine whether bot is in each guild (if we have a bot token)
           try {
-            const botToken = process.env.DISCORD_BOT_TOKEN;
+            const botToken = process.env.TOKEN;
             if (botToken && Array.isArray(guilds) && guilds.length) {
               await Promise.all(
                 guilds.map(async (g: any) => {
@@ -1143,12 +1143,14 @@ export const server = createServer(
                     );
                     g.botInGuild = check.ok;
                   } catch (e) {
-                    g.botInGuild = false;
+                    // network or other error while checking; leave undefined so UI doesn't assume absence
+                    g.botInGuild = undefined;
                   }
                 })
               );
-            } else if (Array.isArray(guilds)) {
-              guilds.forEach((g: any) => (g.botInGuild = false));
+            } else {
+              // No bot token available: do not assume the bot is absent in all guilds.
+              // Leave `botInGuild` undefined so templates treat this as unknown state.
             }
           } catch (err) {
             // ignore
