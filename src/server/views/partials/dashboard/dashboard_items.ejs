@@ -127,7 +127,7 @@
         Array.from(list.querySelectorAll('.delBtn')).forEach(b=>b.addEventListener('click', onDelete));
       }
 
-      function escapeHtml(s){ if (!s) return ''; return String(s).replace(/[&<>"']/g, (m)=>({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;','\'":"&#39;' })[m] || m); }
+  function escapeHtml(s){ if (!s) return ''; return String(s).replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m] || m); }
 
       function onEdit(e) {
         const id = e.currentTarget.getAttribute('data-id');
