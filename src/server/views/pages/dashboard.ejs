@@ -84,35 +84,6 @@
       </script>
     <% } %>
 
-    <% if (typeof selectedGuild !== 'undefined' && selectedGuild) { %>
-      <!-- Floating sidebar for guild actions -->
-      <aside class="absolute right-6 top-12 hidden lg:block transform translate-y-1">
-        <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card w-48">
-          <ul class="flex flex-col gap-3">
-            <li><a href="/dashboard/<%= selectedGuild %>/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
-          </ul>
-        </nav>
-      </aside>
-      <!-- Mobile drawer/backdrop -->
-      <div id="drawerBackdrop" class="fixed inset-0 bg-black/40 z-40 hidden"></div>
-      <div id="mobileDrawer" class="fixed left-0 top-0 bottom-0 w-64 bg-white/6 backdrop-blur z-50 transform -translate-x-full transition-transform duration-300">
-        <div class="p-4">
-          <h4 class="text-white font-semibold mb-3">Servidor: <%= selectedGuildName || selectedGuild %></h4>
-          <ul class="flex flex-col gap-3">
-            <li><a href="/dashboard/<%= selectedGuild %>/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
-          </ul>
-        </div>
-      </div>
-    <% } %>
-
     <div id="dashContent">
     <% if (typeof page !== 'undefined' && page === 'overview' && selectedGuild) { %>
       <div class="w-full max-w-7xl mx-auto mt-6 px-4">
