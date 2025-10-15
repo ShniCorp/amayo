@@ -657,6 +657,14 @@ export const server = createServer(
         return;
       }
 
+      // Explicit login route to render login page (avoid 404 when user visits /login)
+      if (url.pathname === "/login") {
+        await renderTemplate(req, res, "login", {
+          appName: pkg.name ?? "Amayo Bot",
+        });
+        return;
+      }
+
       // --- Auth routes (Discord OAuth minimal flow) ---
       if (url.pathname === "/auth/discord") {
         // Redirect to Discord OAuth2 authorize
