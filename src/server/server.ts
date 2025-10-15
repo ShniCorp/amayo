@@ -1069,6 +1069,100 @@ export const server = createServer(
       }
 
       // Dashboard routes
+      // Dev-only helper: fetch roles for a guild (requires COLLAB_TEST=1 and DISCORD_BOT_TOKEN)
+      if (url.pathname.startsWith("/__dev/fetch-roles")) {
+        if (process.env.COLLAB_TEST !== "1") {
+          res.writeHead(
+            403,
+            applySecurityHeadersForRequest(req, {
+              "Content-Type": "application/json",
+            })
+          );
+          res.end(JSON.stringify({ ok: false, error: "disabled" }));
+          return;
+        }
+        const gid = url.searchParams.get("guild");
+        if (!gid) {
+          res.writeHead(
+            400,
+            applySecurityHeadersForRequest(req, {
+              "Content-Type": "application/json",
+            })
+          );
+          res.end(JSON.stringify({ ok: false, error: "missing guild param" }));
+          return;
+        }
+        const botToken = process.env.DISCORD_BOT_TOKEN;
+        if (!botToken) {
+          res.writeHead(
+            500,
+            applySecurityHeadersForRequest(req, {
+              "Content-Type": "application/json",
+            })
+          );
+          res.end(
+            JSON.stringify({ ok: false, error: "no bot token configured" })
+          );
+          return;
+        }
+        try {
+          const rolesRes = await fetch(
+            `https://discord.com/api/guilds/${encodeURIComponent(
+              String(gid)
+            )}/roles`,
+            { headers: { Authorization: `Bot ${botToken}` } }
+          );
+          if (!rolesRes.ok) {
+            res.writeHead(
+              rolesRes.status,
+              applySecurityHeadersForRequest(req, {
+                "Content-Type": "application/json",
+              })
+            );
+            res.end(
+              JSON.stringify({
+                ok: false,
+                status: rolesRes.status,
+                statusText: rolesRes.statusText,
+              })
+            );
+            console.warn(
+              `__dev fetch-roles: got ${rolesRes.status} ${rolesRes.statusText} for guild ${gid}`
+            );
+            return;
+          }
+          const rolesJson = await rolesRes.json();
+          res.writeHead(
+            200,
+            applySecurityHeadersForRequest(req, {
+              "Content-Type": "application/json",
+            })
+          );
+          res.end(
+            JSON.stringify({
+              ok: true,
+              count: Array.isArray(rolesJson) ? rolesJson.length : 0,
+              roles: rolesJson,
+            })
+          );
+          console.info(
+            `__dev fetch-roles: fetched ${
+              Array.isArray(rolesJson) ? rolesJson.length : 0
+            } roles for guild ${gid}`
+          );
+        } catch (err) {
+          res.writeHead(
+            500,
+            applySecurityHeadersForRequest(req, {
+              "Content-Type": "application/json",
+            })
+          );
+          res.end(JSON.stringify({ ok: false, error: String(err) }));
+          console.warn("__dev fetch-roles error", err);
+        }
+        return;
+      }
+
       if (
         url.pathname === "/dashboard" ||
         url.pathname.startsWith("/dashboard")
@@ -1136,7 +1230,7 @@ export const server = createServer(
         if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
           // determine whether bot is in each guild (if we have a bot token)
           try {
-            const botToken = process.env.TOKEN;
+            const botToken = process.env.TOKEN; // No existe env var DISCORD_BOT_TOKEN si no TOKEN (compatibilidad)
             if (botToken && Array.isArray(guilds) && guilds.length) {
               await Promise.all(
                 guilds.map(async (g: any) => {
@@ -1201,7 +1295,7 @@ export const server = createServer(
           // Attempt to fetch guild roles via Discord Bot API if token available
           let guildRoles: Array<{ id: string; name: string }> = [];
           try {
-            const botToken = process.env.DISCORD_BOT_TOKEN;
+            const botToken = process.env.TOKEN; // No existe env var DISCORD_BOT_TOKEN si no TOKEN (compatibilidad)
             if (botToken) {
               const rolesRes = await fetch(
                 `https://discord.com/api/guilds/${encodeURIComponent(
@@ -1216,7 +1310,19 @@ export const server = createServer(
                     id: String(r.id),
                     name: String(r.name || r.id),
                   }));
+                  // Debug: log number of roles fetched for observability in dev
+                  try {
+                    console.info(
+                      `dashboard: fetched ${guildRoles.length} roles for guild ${guildId}`
+                    );
+                  } catch (e) {
+                    /* ignore logging errors */
+                  }
                 }
+              } else {
+                console.warn(
+                  `dashboard: roles fetch returned ${rolesRes.status} ${rolesRes.statusText} for guild ${guildId}`
+                );
               }
             }
           } catch (err) {
