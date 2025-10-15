@@ -6,16 +6,8 @@
         <h1 class="text-3xl font-bold mb-2"><%= appName %></h1>
         <p class="text-sm text-slate-200/80 mb-4">Panel de administración</p>
         <div class="mt-4">
-          <label class="block text-xs text-slate-300 mb-2">Selecciona servidor</label>
-          <select id="guildSelector" class="w-full rounded-md p-3 bg-white/6 text-white focus:outline-none">
-            <% if (guilds && guilds.length) { %>
-              <% guilds.forEach(g => { %>
-                <option value="<%= g.id %>"><%= g.name %> (<%= g.id %>)</option>
-              <% }) %>
-            <% } else { %>
-              <option disabled>No tienes servidores gestionados</option>
-            <% } %>
-          </select>
+          <p class="text-sm text-slate-200/80">Selecciona un servidor desde la página principal para administrar sus ajustes.</p>
+          <a href="/dashboard/select-guild" class="inline-block mt-3 pixel-btn">Seleccionar servidor</a>
         </div>
       </div>
     </div>
@@ -35,9 +27,4 @@
   </div>
 </div>
 
-<script>
-  document.getElementById('guildSelector')?.addEventListener('change', (e) => {
-    const v = e.target.value;
-    if (v) window.location.href = `/dashboard/${v}/overview`;
-  });
-</script>
+  

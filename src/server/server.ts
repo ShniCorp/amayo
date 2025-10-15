@@ -907,6 +907,18 @@ export const server = createServer(
             appName: pkg.name ?? "Amayo Bot",
             user,
             guilds,
+            hideNavbar: true,
+          });
+          return;
+        }
+
+        // Select guild page
+        if (url.pathname === "/dashboard/select-guild") {
+          await renderTemplate(req, res, "select_guild", {
+            appName: pkg.name ?? "Amayo Bot",
+            user,
+            guilds,
+            hideNavbar: true,
           });
           return;
         }
@@ -917,13 +929,14 @@ export const server = createServer(
         if (parts.length >= 2) {
           const guildId = parts[1];
           const page = parts[2] || "overview";
-          // For now render same dashboard with selected guild context stub
+          // Render dashboard with selected guild context; hide global navbar for server view
           await renderTemplate(req, res, "dashboard", {
             appName: pkg.name ?? "Amayo Bot",
             user,
             guilds,
             selectedGuild: guildId,
             page,
+            hideNavbar: true,
           });
           return;
         }

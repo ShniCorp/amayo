@@ -1,0 +1,32 @@
+<div class="max-w-3xl mx-auto p-6">
+  <div class="backdrop-blur-md bg-white/6 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
+    <h2 class="text-2xl font-bold mb-2">Selecciona el servidor</h2>
+    <p class="text-sm text-slate-200/80 mb-4">Elige el servidor que quieres administrar. Serás redirigido a la página del servidor.</p>
+
+    <div class="mt-4">
+      <label class="block text-xs text-slate-300 mb-2">Servidor</label>
+      <select id="guildSelector" class="w-full rounded-md p-3 bg-white/6 text-white focus:outline-none">
+        <% if (guilds && guilds.length) { %>
+          <% guilds.forEach(g => { %>
+            <option value="<%= g.id %>"><%= g.name %> (<%= g.id %>)</option>
+          <% }) %>
+        <% } else { %>
+          <option disabled>No tienes servidores gestionados</option>
+        <% } %>
+      </select>
+    </div>
+
+    <div class="mt-4 text-right">
+      <button id="goBtn" class="pixel-btn">Ir al servidor</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const sel = document.getElementById('guildSelector');
+  const btn = document.getElementById('goBtn');
+  btn?.addEventListener('click', () => {
+    const v = sel.value;
+    if (v) window.location.href = `/dashboard/${v}/overview`;
+  });
+</script>
