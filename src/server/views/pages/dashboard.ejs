@@ -96,15 +96,7 @@
                 <a href="/dashboard/<%= selectedGuild %>/overview" class="px-3 py-1 rounded-full bg-white/5 text-white text-xs">Home</a>
               </div>
               <ul class="mt-2 space-y-3 text-slate-200">
-                <li class="text-sm"><a href="/dashboard/<%= selectedGuild %>/overview" class="flex items-center gap-3"><span class="opacity-80">⚙️</span> General Settings</a></li>
-                <li class="text-sm"><a href="#" class="flex items-center gap-3"><span class="opacity-80">💬</span> Commands</a></li>
-                <li class="text-sm"><a href="#" class="flex items-center gap-3"><span class="opacity-80">📝</span> Messages</a></li>
-                <li class="text-sm"><a href="#" class="flex items-center gap-3"><span class="opacity-80">✨</span> Custom Branding</a></li>
-                <li class="mt-4 text-xs text-slate-400">MODULES</li>
-                <li class="text-sm"><a href="#" class="flex items-center gap-3"><span class="opacity-80">🛡️</span> Auto Moderation <span class="ml-2 text-xs text-rose-400">NEW</span></a></li>
-                <li class="text-sm"><a href="#" class="flex items-center gap-3"><span class="opacity-80">🔔</span> Moderation</a></li>
-                <li class="text-sm"><a href="#" class="flex items-center gap-3"><span class="opacity-80">🤝</span> Social Notifications</a></li>
-                <li class="text-sm"><a href="#" class="flex items-center gap-3"><span class="opacity-80">🎉</span> Welcome Messages <span class="ml-2 text-xs text-rose-400">NEW</span></a></li>
+                <li class="text-sm"><a href="/dashboard/<%= selectedGuild %>/settings" class="flex items-center gap-3"><span class="opacity-80">⚙️</span> General Settings</a></li>
               </ul>
             </nav>
           </aside>
@@ -325,8 +317,8 @@
       <button id="drawerClose" class="text-white/70">Cerrar</button>
     </div>
     <div class="p-4 space-y-2">
-      <a href="/dashboard/select-guild" class="block py-2 text-white">Servers</a>
-      <a href="/auth/logout" class="block py-2 text-rose-300">Log out</a>
+      <a href="/dashboard/<%= selectedGuild || '' %>/overview" class="block py-2 text-white">Home</a>
+      <a href="/dashboard/<%= selectedGuild || '' %>/settings" class="block py-2 text-white">General Settings</a>
     </div>
   </nav>
 

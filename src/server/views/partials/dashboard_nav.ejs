@@ -1,4 +1,4 @@
-<header class="hidden md:block w-full p-2 fixed top-0 left-0 right-0 z-30">
+<header class="w-full p-2 fixed top-0 left-0 right-0 z-30">
   <div class="max-w-7xl mx-auto flex items-center justify-between px-3">
     <div class="flex items-center gap-4">
       <!-- hamburger for mobile to toggle sidebar/drawer -->
@@ -14,8 +14,8 @@
         </div>
         <span class="text-white font-semibold hidden sm:inline"><%= appName %></span>
       </a>
-      <!-- mini guild selector compact -->
-      <div class="hidden md:block">
+  <!-- mini guild selector compact -->
+  <div class="block">
         <div class="relative inline-block">
           <button id="miniGuildBtn" class="px-2 py-0.5 rounded-full bg-white/5 text-white text-sm flex items-center gap-2" aria-expanded="false" aria-controls="miniGuildList">
             <span id="miniGuildName" class="text-sm"><%= selectedGuildName || 'Seleccionar servidor' %></span>
