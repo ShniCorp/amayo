@@ -267,7 +267,10 @@ function decryptJsonFromDb(maybe: any): any {
     const enc = buf.slice(28);
     const decipher = createDecipheriv("aes-256-gcm", key, iv);
     decipher.setAuthTag(tag);
-    const dec = Buffer.concat([decipher.update(enc), decipher.final()]).toString("utf8");
+    const dec = Buffer.concat([
+      decipher.update(enc),
+      decipher.final(),
+    ]).toString("utf8");
     return JSON.parse(dec);
   } catch (e) {
     return null;
@@ -1291,28 +1294,61 @@ export const server = createServer(
 
           // GET single item raw (admin) -> /api/dashboard/:guildId/items/:id?raw=1
           if (req.method === "GET" && itemId) {
-            const wantRaw = url.searchParams.get('raw') === '1';
+            const wantRaw = url.searchParams.get("raw") === "1";
             if (wantRaw) {
-              if (process.env.ALLOW_ITEM_RAW !== '1') {
-                res.writeHead(403, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
-                res.end(JSON.stringify({ ok:false, error: 'raw_disabled' }));
+              if (process.env.ALLOW_ITEM_RAW !== "1") {
+                res.writeHead(
+                  403,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "application/json",
+                  })
+                );
+                res.end(JSON.stringify({ ok: false, error: "raw_disabled" }));
                 return;
               }
               try {
-                const it = await prisma.economyItem.findUnique({ where: { id: String(itemId) } });
+                const it = await prisma.economyItem.findUnique({
+                  where: { id: String(itemId) },
+                });
                 if (!it) {
-                  res.writeHead(404, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
-                  res.end(JSON.stringify({ ok:false, error:'not_found' }));
+                  res.writeHead(
+                    404,
+                    applySecurityHeadersForRequest(req, {
+                      "Content-Type": "application/json",
+                    })
+                  );
+                  res.end(JSON.stringify({ ok: false, error: "not_found" }));
                   return;
                 }
                 const props = decryptJsonFromDb(it.props);
                 const metadata = decryptJsonFromDb(it.metadata);
-                res.writeHead(200, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
-                res.end(JSON.stringify({ ok:true, item: { id: it.id, key: it.key, name: it.name, props, metadata } }));
+                res.writeHead(
+                  200,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "application/json",
+                  })
+                );
+                res.end(
+                  JSON.stringify({
+                    ok: true,
+                    item: {
+                      id: it.id,
+                      key: it.key,
+                      name: it.name,
+                      props,
+                      metadata,
+                    },
+                  })
+                );
                 return;
               } catch (err) {
-                res.writeHead(500, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
-                res.end(JSON.stringify({ ok:false, error: String(err) }));
+                res.writeHead(
+                  500,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "application/json",
+                  })
+                );
+                res.end(JSON.stringify({ ok: false, error: String(err) }));
                 return;
               }
             }
@@ -1375,17 +1411,31 @@ export const server = createServer(
             };
             // parse JSON fields if provided as string and encrypt if key present
             try {
-              const rawProps = payload.props ? (typeof payload.props === 'string' ? JSON.parse(payload.props) : payload.props) : null;
-              const rawMeta = payload.metadata ? (typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata) : null;
-              createData.props = getItemEncryptionKey() ? encryptJsonForDb(rawProps) : rawProps;
-              createData.metadata = getItemEncryptionKey() ? encryptJsonForDb(rawMeta) : rawMeta;
+              const rawProps = payload.props
+                ? typeof payload.props === "string"
+                  ? JSON.parse(payload.props)
+                  : payload.props
+                : null;
+              const rawMeta = payload.metadata
+                ? typeof payload.metadata === "string"
+                  ? JSON.parse(payload.metadata)
+                  : payload.metadata
+                : null;
+              createData.props = getItemEncryptionKey()
+                ? encryptJsonForDb(rawProps)
+                : rawProps;
+              createData.metadata = getItemEncryptionKey()
+                ? encryptJsonForDb(rawMeta)
+                : rawMeta;
             } catch {
               createData.props = null;
               createData.metadata = null;
             }
 
             try {
-              const created = await prisma.economyItem.create({ data: createData });
+              const created = await prisma.economyItem.create({
+                data: createData,
+              });
               // Return safe summary only (do not include props/metadata)
               const safeCreated = {
                 id: created.id,
@@ -1411,14 +1461,24 @@ export const server = createServer(
               return;
             } catch (err: any) {
               // Prisma unique constraint error code P2002 -> duplicate key
-              if (err && err.code === 'P2002') {
-                res.writeHead(400, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
-                res.end(JSON.stringify({ ok:false, error:'duplicate_key' }));
+              if (err && err.code === "P2002") {
+                res.writeHead(
+                  400,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "application/json",
+                  })
+                );
+                res.end(JSON.stringify({ ok: false, error: "duplicate_key" }));
                 return;
               }
-              const errMsg = String(err || 'unknown');
-              res.writeHead(500, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
-              res.end(JSON.stringify({ ok:false, error: errMsg }));
+              const errMsg = String(err || "unknown");
+              res.writeHead(
+                500,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "application/json",
+                })
+              );
+              res.end(JSON.stringify({ ok: false, error: errMsg }));
               return;
             }
           }
@@ -1459,17 +1519,30 @@ export const server = createServer(
                       .filter(Boolean)
                   : [];
               try {
-                const rawProps = typeof payload.props === 'string' ? JSON.parse(payload.props) : payload.props;
-                const rawMeta = typeof payload.metadata === 'string' ? JSON.parse(payload.metadata) : payload.metadata;
-                updateData.props = getItemEncryptionKey() ? encryptJsonForDb(rawProps) : rawProps;
-                updateData.metadata = getItemEncryptionKey() ? encryptJsonForDb(rawMeta) : rawMeta;
+                const rawProps =
+                  typeof payload.props === "string"
+                    ? JSON.parse(payload.props)
+                    : payload.props;
+                const rawMeta =
+                  typeof payload.metadata === "string"
+                    ? JSON.parse(payload.metadata)
+                    : payload.metadata;
+                updateData.props = getItemEncryptionKey()
+                  ? encryptJsonForDb(rawProps)
+                  : rawProps;
+                updateData.metadata = getItemEncryptionKey()
+                  ? encryptJsonForDb(rawMeta)
+                  : rawMeta;
               } catch {
                 updateData.props = null;
                 updateData.metadata = null;
               }
 
               try {
-                const updated = await prisma.economyItem.update({ where: { id }, data: updateData });
+                const updated = await prisma.economyItem.update({
+                  where: { id },
+                  data: updateData,
+                });
                 // Return safe summary only (do not include props/metadata)
                 const safeUpdated = {
                   id: updated.id,
@@ -1485,16 +1558,33 @@ export const server = createServer(
                   createdAt: updated.createdAt,
                   updatedAt: updated.updatedAt,
                 };
-                res.writeHead(200, applySecurityHeadersForRequest(req, { 'Content-Type': 'application/json' }));
+                res.writeHead(
+                  200,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "application/json",
+                  })
+                );
                 res.end(JSON.stringify({ ok: true, item: safeUpdated }));
                 return;
               } catch (err: any) {
-                if (err && err.code === 'P2002') {
-                  res.writeHead(400, applySecurityHeadersForRequest(req, { 'Content-Type':'application/json' }));
-                  res.end(JSON.stringify({ ok:false, error:'duplicate_key' }));
+                if (err && err.code === "P2002") {
+                  res.writeHead(
+                    400,
+                    applySecurityHeadersForRequest(req, {
+                      "Content-Type": "application/json",
+                    })
+                  );
+                  res.end(
+                    JSON.stringify({ ok: false, error: "duplicate_key" })
+                  );
                   return;
                 }
-                res.writeHead(500, applySecurityHeadersForRequest(req, { 'Content-Type': 'application/json' }));
+                res.writeHead(
+                  500,
+                  applySecurityHeadersForRequest(req, {
+                    "Content-Type": "application/json",
+                  })
+                );
                 res.end(JSON.stringify({ ok: false, error: String(err) }));
                 return;
               }
