@@ -13,35 +13,25 @@
         <label class="block text-sm text-slate-200 mb-1">AI Role Prompt (opcional)</label>
         <textarea name="aiRolePrompt" id="aiRoleInput" rows="4" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="E.g. Actúa como un moderador amigable..."><%= (guildConfig && guildConfig.aiRolePrompt) || '' %></textarea>
       </div>
-      <div>
-        <label class="block text-sm text-slate-200 mb-1">Roles de staff</label>
-        <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
-          <div class="mb-2">
-            <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
-          </div>
-          <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
-            <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
-            <% guildRoles.forEach(r => { %>
-              <option value="<%= r.id %>" <%= selectedStaff.includes(String(r.id)) ? 'selected' : '' %>><%= r.name %> — <%= r.id %></option>
-            <% }) %>
-          </select>
-        <% } else { %>
-          <% const fallbackStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
-          <% if (fallbackStaff.length) { %>
+      
+        <div>
+          <label class="block text-sm text-slate-200 mb-1">Roles de staff</label>
+          <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
+          <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
             <div class="mb-2">
-              <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
+              <div id="staffTagsContainer" class="w-full rounded p-2 bg-transparent border border-white/6">
+                <div id="staffChips" class="flex flex-wrap gap-2"></div>
+                <input id="staffTagInput" type="text" placeholder="Buscar roles..." autocomplete="off" class="w-full bg-transparent outline-none text-sm p-1" />
+              </div>
+              <ul id="staffSuggestions" class="mt-1 bg-white/4 rounded max-h-40 overflow-auto hidden z-50"></ul>
+              <input type="hidden" id="staffHidden" name="staff" value="<%= selectedStaff.join(',') %>" />
+              <div class="text-xs text-slate-300 mt-1">Selecciona roles del servidor. Escribe para filtrar, pulsa Enter para elegir.</div>
             </div>
-            <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
-              <% fallbackStaff.forEach(id => { %>
-                <option value="<%= id %>" <%= (Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String).includes(String(id)) : String(guildConfig.staff || '').split(',').map(s=>s.trim()).includes(String(id))) ? 'selected' : '' %>>ID: <%= id %></option>
-              <% }) %>
-            </select>
           <% } else { %>
             <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
-            <div class="text-xs text-slate-300 mt-1">No se pudo obtener roles desde la API ni hay roles guardados. Introduce IDs manualmente separadas por coma.</div>
+            <div class="text-xs text-slate-300 mt-1">No se pudo obtener roles desde la API. Introduce IDs manualmente separadas por coma.</div>
           <% } %>
-        <% } %>
-      </div>
+        </div>
       <div class="flex items-center gap-3">
         <button type="submit" class="pixel-btn">Guardar</button>
         <span id="saveStatus" class="text-sm text-slate-300"></span>
@@ -98,4 +88,134 @@
       }
     });
   })();
+    (function(){
+      const form = document.getElementById('guildSettingsForm');
+      const status = document.getElementById('saveStatus');
+
+      // Multi-select tag/autocomplete for roles
+      const staffTagInput = document.getElementById('staffTagInput');
+      const staffSuggestions = document.getElementById('staffSuggestions');
+      const staffChips = document.getElementById('staffChips');
+      const staffHidden = document.getElementById('staffHidden');
+
+    // Prepare role options (id, name, color) from server-side `guildRoles`
+    <% const ROLE_JSON = JSON.stringify((guildRoles||[]).map(r=>{ var c; if (typeof r.color !== 'undefined' && r.color !== null) { if (typeof r.color === 'number') { c = '#'+('000000'+r.color.toString(16)).slice(-6); } else { c = (''+r.color).replace(/^#?/, '#'); } } else { c = (r.colorHex||r.hex||'#8b95a0'); } return { id: String(r.id), name: r.name, color: c }; })); %>
+    const ROLE_OPTIONS = <%- ROLE_JSON %>;
+    // Initial selected staff IDs (strings)
+    const INITIAL_STAFF = <%- JSON.stringify(selectedStaff || []) %>;
+
+      let selectedIds = Array.isArray(INITIAL_STAFF) ? INITIAL_STAFF.slice() : [];
+
+      function renderChips(){
+        staffChips.innerHTML = '';
+        for(const id of selectedIds){
+          const role = ROLE_OPTIONS.find(r=>r.id===String(id));
+    const label = role ? role.name : String(id);
+    const chip = document.createElement('div');
+    chip.className = 'px-2 py-1 bg-white/6 rounded-full text-sm flex items-center gap-2';
+    const swatch = role && role.color ? `<span class="w-3 h-3 rounded-full inline-block" style="background:${role.color}"></span>` : '';
+    chip.innerHTML = `${swatch}<span class="truncate">${label}</span><button type="button" class="ml-2 text-xs text-slate-300 remove-chip" data-id="${id}">✕</button>`;
+          staffChips.appendChild(chip);
+        }
+        // update hidden input
+        if(staffHidden) staffHidden.value = selectedIds.join(',');
+      }
+
+      function showSuggestions(query){
+        if(!staffSuggestions) return;
+        const q = (query||'').trim().toLowerCase();
+        const filtered = ROLE_OPTIONS.filter(r=> !selectedIds.includes(String(r.id)) && (!q || r.name.toLowerCase().includes(q) || String(r.id).includes(q)) ).slice(0,50);
+        if(!filtered.length){ staffSuggestions.classList.add('hidden'); staffSuggestions.innerHTML=''; return; }
+        staffSuggestions.classList.remove('hidden');
+    staffSuggestions.innerHTML = filtered.map(r=>`<li class="p-2 hover:bg-white/10 cursor-pointer flex items-center gap-2" data-id="${r.id}"><span class="w-3 h-3 rounded-full inline-block" style="background:${r.color}"></span><span class="truncate">${r.name}</span></li>`).join('');
+      }
+
+      function addId(id){
+        id = String(id);
+        if(!id) return;
+        if(selectedIds.includes(id)) return;
+        selectedIds.push(id);
+        renderChips();
+      }
+
+      function removeId(id){
+        id = String(id);
+        selectedIds = selectedIds.filter(i=>String(i)!==id);
+        renderChips();
+      }
+
+      if(staffTagInput){
+        // initial render
+        renderChips();
+
+        staffTagInput.addEventListener('input', (e)=>{
+          showSuggestions(e.target.value);
+        });
+
+        staffTagInput.addEventListener('keydown', (e)=>{
+          if(e.key === 'Enter'){
+            e.preventDefault();
+            // pick first suggestion if any, otherwise ignore
+            const first = staffSuggestions.querySelector('li');
+            if(first){ addId(first.dataset.id); staffTagInput.value=''; staffSuggestions.classList.add('hidden'); }
+          } else if (e.key === 'Backspace' && !staffTagInput.value){
+            // remove last
+            selectedIds.pop(); renderChips();
+          }
+        });
+
+        document.addEventListener('click', (ev)=>{
+          if(!staffSuggestions) return;
+          if(ev.target.closest && ev.target.closest('#staffSuggestions')) return;
+          if(ev.target === staffTagInput) return;
+          staffSuggestions.classList.add('hidden');
+        });
+
+        staffSuggestions.addEventListener('click', (ev)=>{
+          const li = ev.target.closest('li');
+          if(!li) return;
+          addId(li.dataset.id);
+          staffTagInput.value='';
+          staffSuggestions.classList.add('hidden');
+          staffTagInput.focus();
+        });
+
+        staffChips.addEventListener('click', (ev)=>{
+          const btn = ev.target.closest('.remove-chip');
+          if(!btn) return;
+          removeId(btn.dataset.id);
+        });
+      }
+
+      form.addEventListener('submit', async (e)=>{
+        e.preventDefault();
+        status.textContent = 'Guardando...';
+        const prefix = document.getElementById('prefixInput').value.trim();
+        const aiRolePrompt = document.getElementById('aiRoleInput').value.trim();
+        let staffArr = [];
+        if(typeof selectedIds !== 'undefined' && selectedIds && selectedIds.length){
+          staffArr = selectedIds.slice();
+        } else if (document.getElementById('staffInput')){
+          const staffRaw = document.getElementById('staffInput').value.trim();
+          staffArr = staffRaw ? staffRaw.split(',').map(s=>s.trim()).filter(Boolean) : [];
+        }
+        const payload = { prefix: prefix, aiRolePrompt: aiRolePrompt.length ? aiRolePrompt : null, staff: staffArr };
+        try {
+          const res = await fetch(`/api/dashboard/${encodeURIComponent('<%= selectedGuild %>')}/settings`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload),
+          });
+          const json = await res.json();
+          if (res.ok && json.ok) {
+            status.textContent = 'Guardado';
+            setTimeout(()=> status.textContent = '', 2500);
+          } else {
+            status.textContent = json.error || 'Error';
+          }
+        } catch (err) {
+          status.textContent = 'Error de red';
+        }
+      });
+    })();
 </script>
