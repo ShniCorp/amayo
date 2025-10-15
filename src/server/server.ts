@@ -168,8 +168,8 @@ async function refreshAccessTokenIfNeeded(session: any) {
   // If token expires in next 60s, refresh
   if (!session.expires_at || session.expires_at - now <= 60 * 1000) {
     try {
-      const clientId = process.env.CLIENT || "";
-      const clientSecret = process.env.CLIENT_SECRET || "";
+      const clientId = process.env.DISCORD_CLIENT_ID || "";
+      const clientSecret = process.env.DISCORD_CLIENT_SECRET || "";
       const tokenRes = await fetch("https://discord.com/api/oauth2/token", {
         method: "POST",
         headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -679,6 +679,11 @@ export const server = createServer(
       if (url.pathname === "/auth/discord") {
         // Redirect to Discord OAuth2 authorize
         const clientId = process.env.DISCORD_CLIENT_ID || "";
+        if (!clientId) {
+          res.writeHead(500, applySecurityHeadersForRequest(req));
+          res.end("DISCORD_CLIENT_ID not configured");
+          return;
+        }
         const redirectUri =
           process.env.DISCORD_REDIRECT_URI ||
           `http://${req.headers.host}/auth/callback`;
@@ -708,6 +713,10 @@ export const server = createServer(
         }
         const clientId = process.env.DISCORD_CLIENT_ID || "";
         const clientSecret = process.env.DISCORD_CLIENT_SECRET || "";
+        if (!clientId || !clientSecret) {
+          res.writeHead(500, applySecurityHeadersForRequest(req));
+          return res.end("DISCORD client credentials not configured");
+        }
         const redirectUri =
           process.env.DISCORD_REDIRECT_URI ||
           `http://${req.headers.host}/auth/callback`;
