@@ -1,7 +1,7 @@
 import { createServer, IncomingMessage, ServerResponse } from "node:http";
 import { promises as fs } from "node:fs";
 import { readFileSync } from "node:fs";
-import { createHash } from "node:crypto";
+import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import {
   gzipSync,
   brotliCompressSync,
@@ -73,14 +73,54 @@ function parseCookies(req: IncomingMessage) {
 }
 
 function setSessionCookie(res: ServerResponse, sid: string) {
+  // Sign the SID to prevent tampering
+  const secret = getSessionSecret();
+  const sig = createHmac("sha256", secret).update(sid).digest("base64url");
+  const token = `${sid}.${sig}`;
+  const isProd = process.env.NODE_ENV === "production";
+  const maxAge = 60 * 60 * 24 * 7; // 7 days
+  const sameSite = isProd ? "Lax" : "Lax"; // Lax works for OAuth redirects in most cases
+  const secure = isProd ? "; Secure" : "";
   const cookie = `amayo_sid=${encodeURIComponent(
-    sid
-  )}; HttpOnly; Path=/; Max-Age=${60 * 60 * 24 * 7}`; // 7 days
+    token
+  )}; HttpOnly; Path=/; Max-Age=${maxAge}; SameSite=${sameSite}${secure}`;
   res.setHeader("Set-Cookie", cookie);
 }
 
 function clearSessionCookie(res: ServerResponse) {
-  res.setHeader("Set-Cookie", `amayo_sid=; HttpOnly; Path=/; Max-Age=0`);
+  const isProd = process.env.NODE_ENV === "production";
+  const secure = isProd ? "; Secure" : "";
+  res.setHeader(
+    "Set-Cookie",
+    `amayo_sid=; HttpOnly; Path=/; Max-Age=0; SameSite=Lax${secure}`
+  );
+}
+
+function getSessionSecret() {
+  return (
+    process.env.SESSION_SECRET ||
+    process.env.DISCORD_CLIENT_SECRET ||
+    "dev-session-secret"
+  );
+}
+
+function unsignSid(signed: string | undefined): string | null {
+  if (!signed) return null;
+  const decoded = decodeURIComponent(signed);
+  const parts = decoded.split(".");
+  if (parts.length !== 2) return null;
+  const [sid, sig] = parts;
+  try {
+    const secret = getSessionSecret();
+    const expected = createHmac("sha256", secret).update(sid).digest();
+    const got = Buffer.from(sig, "base64url");
+    // timing safe compare
+    if (expected.length !== got.length) return null;
+    if (!timingSafeEqual(expected, got)) return null;
+    return sid;
+  } catch {
+    return null;
+  }
 }
 
 function storeState(state: string) {
@@ -626,7 +666,7 @@ export const server = createServer(
           `http://${req.headers.host}/auth/callback`;
         const state = randomUUID();
         // Store state in a temp session map
-        SESSIONS.set(state, { ts: Date.now() });
+        storeState(state);
         const scopes = encodeURIComponent("identify guilds");
         const urlAuth = `https://discord.com/api/oauth2/authorize?response_type=code&client_id=${encodeURIComponent(
           clientId
@@ -644,7 +684,7 @@ export const server = createServer(
         const qs = Object.fromEntries(url.searchParams.entries());
         const { code, state } = qs as any;
         // Validate state
-        if (!state || !SESSIONS.has(state)) {
+        if (!state || !hasState(state)) {
           res.writeHead(400, applySecurityHeadersForRequest(req));
           return res.end("Invalid OAuth state");
         }
@@ -723,16 +763,19 @@ export const server = createServer(
             name: sanitizeString(g.name ?? g.id, { max: 100 }),
           }));
 
-          const sid = randomUUID();
-          const session = {
+          // create session with tokens to allow refresh
+          const now = Date.now();
+          const sid = createSession({
             user: {
               id: uid,
               username: uname,
               avatar: uavatar,
             },
             guilds: safeGuilds,
-          };
-          SESSIONS.set(sid, session);
+            access_token: tokenJson.access_token,
+            refresh_token: tokenJson.refresh_token,
+            expires_at: now + Number(tokenJson.expires_in || 3600) * 1000,
+          });
           setSessionCookie(res, sid);
           res.writeHead(
             302,
@@ -748,7 +791,8 @@ export const server = createServer(
 
       if (url.pathname === "/auth/logout") {
         const cookies = parseCookies(req);
-        const sid = cookies["amayo_sid"];
+        const signed = cookies["amayo_sid"];
+        const sid = unsignSid(signed);
         if (sid) SESSIONS.delete(sid);
         clearSessionCookie(res);
         res.writeHead(
@@ -764,7 +808,8 @@ export const server = createServer(
         url.pathname.startsWith("/dashboard")
       ) {
         const cookies = parseCookies(req);
-        const sid = cookies["amayo_sid"];
+        const signed = cookies["amayo_sid"];
+        const sid = unsignSid(signed);
         const session = sid ? SESSIONS.get(sid) : null;
         const user = session?.user ?? null;
 
@@ -775,6 +820,14 @@ export const server = createServer(
           });
           return;
         }
+
+        // Touch and refresh session tokens as user is active
+        try {
+          await refreshAccessTokenIfNeeded(session);
+        } catch (err) {
+          console.warn("refreshAccessTokenIfNeeded failed", err);
+        }
+        touchSession(sid!);
 
         // Simple guild list: for demo, fetch guilds where guild.staff contains user.id (not implemented fully)
         const guilds = await (async () => {
