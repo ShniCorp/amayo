@@ -6,6 +6,8 @@
     </div>
   </div>
 
+  <div id="pageAlert" class="hidden mb-3"></div>
+
   <div id="itemsList" class="space-y-3">
     <% if (typeof guildRoles !== 'undefined') { %>
       <!-- placeholder: server will not inject items; client will fetch -->
@@ -342,14 +344,18 @@
       function setCurrentRewards(arr) { document.getElementById('rewardsList').dataset.rewards = JSON.stringify(arr || []); }
 
       document.getElementById('addRewardBtn').addEventListener('click', ()=>{
+        clearModalError();
         const type = document.getElementById('newRewardType').value;
-        const amt = Number(document.getElementById('newRewardAmount').value) || 0;
+        const amtRaw = document.getElementById('newRewardAmount').value;
+        const amt = Number(amtRaw);
         const key = document.getElementById('newRewardItemKey').value.trim();
         const list = getCurrentRewards();
         if (type === 'coins') {
+          if (!amtRaw || isNaN(amt) || amt <= 0) { setModalError('Cantidad de coins debe ser mayor a 0'); return; }
           list.push({ coins: amt });
         } else {
           if (!key) { setModalError('item.key requerido'); return; }
+          if (!amtRaw || isNaN(amt) || amt <= 0) { setModalError('Cantidad de item debe ser mayor a 0'); return; }
           list.push({ items: [{ key, quantity: amt || 1 }] });
         }
         setCurrentRewards(list);
@@ -357,6 +363,7 @@
         // clear input
         document.getElementById('newRewardAmount').value = '';
         document.getElementById('newRewardItemKey').value = '';
+        clearModalError();
       });
 
       // Hide item key input when reward type is coins
@@ -437,6 +444,21 @@
         Array.from(list.querySelectorAll('.editBtn')).forEach(b=>b.addEventListener('click', onEdit));
         Array.from(list.querySelectorAll('.delBtn')).forEach(b=>b.addEventListener('click', onDelete));
       }
+
+      // Page-level alerts (non-blocking)
+      function showPageAlert(type, msg, ttl) {
+        try {
+          const c = document.getElementById('pageAlert');
+          if (!c) return;
+          const color = (type === 'success') ? 'bg-green-600' : (type === 'danger' ? 'bg-red-700' : (type === 'warning' ? 'bg-amber-700' : 'bg-sky-600'));
+          c.innerHTML = `<div class="p-3 rounded ${color} text-white flex items-center justify-between"><div>${escapeHtml(msg)}</div><button id=\"pageAlertClose\" class=\"ml-4 font-bold\">✕</button></div>`;
+          c.classList.remove('hidden');
+          const close = document.getElementById('pageAlertClose');
+          if (close) close.addEventListener('click', ()=>{ c.classList.add('hidden'); c.innerHTML = ''; });
+          if (typeof ttl === 'number' && ttl > 0) setTimeout(()=>{ c.classList.add('hidden'); c.innerHTML = ''; }, ttl);
+        } catch (e) { console.error('showPageAlert error', e); }
+      }
+      function clearPageAlert() { const c = document.getElementById('pageAlert'); if (c) { c.classList.add('hidden'); c.innerHTML=''; } }
 
   function escapeHtml(s){ if (!s) return ''; return String(s).replace(/[&<>"']/g, (m)=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[m] || m); }
 
@@ -543,7 +565,7 @@
           if (!res.ok) throw new Error('delete-failed');
           await fetchItems();
         } catch (err) {
-          alert('Error al eliminar');
+          showPageAlert('danger','Error al eliminar');
         }
       }
 
@@ -688,7 +710,8 @@
       // load raw props button handler
       document.getElementById('loadRawPropsBtn').addEventListener('click', async ()=>{
         const id = document.getElementById('itemId').value;
-        if (!id) return alert('Abra un item primero para cargar props raw');
+        if (!id) { setModalError('Abra un item primero para cargar props raw'); return; }
+        clearPageAlert();
         const raw = await tryLoadRawProps(id);
         if (!raw) return;
         try {
