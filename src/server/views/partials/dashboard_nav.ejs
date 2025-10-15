@@ -31,6 +31,9 @@
                       <div class="w-5 h-5 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
                     <% } %>
                     <div class="flex-1 text-sm truncate pl-1"><%= g.name %></div>
+                    <% if (typeof g.botInGuild === 'boolean' && !g.botInGuild) { %>
+                      <a href="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>" class="text-xs text-sky-400 hover:underline ml-2" target="_blank" rel="noopener">Invitar bot</a>
+                    <% } %>
                   </div>
                 <% }) %>
           <% } else { %>

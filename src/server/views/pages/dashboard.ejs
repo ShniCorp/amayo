@@ -55,7 +55,12 @@
                         <div class="font-medium"><%= g.name %></div>
                       </div>
                     </div>
-                    <div class="text-slate-300">&rsaquo;</div>
+                    <div class="flex items-center gap-2">
+                      <% if (typeof g.botInGuild === 'boolean' && !g.botInGuild) { %>
+                        <a href="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>" class="text-xs text-sky-400 hover:underline mr-2" target="_blank" rel="noopener">Invitar bot</a>
+                      <% } %>
+                      <div class="text-slate-300">&rsaquo;</div>
+                    </div>
                   </div>
                 <% }) %>
               <% } else { %>

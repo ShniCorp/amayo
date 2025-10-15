@@ -1128,6 +1128,31 @@ export const server = createServer(
 
         // /dashboard -> main dashboard
         if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
+          // determine whether bot is in each guild (if we have a bot token)
+          try {
+            const botToken = process.env.DISCORD_BOT_TOKEN;
+            if (botToken && Array.isArray(guilds) && guilds.length) {
+              await Promise.all(
+                guilds.map(async (g: any) => {
+                  try {
+                    const check = await fetch(
+                      `https://discord.com/api/guilds/${encodeURIComponent(
+                        String(g.id)
+                      )}`,
+                      { headers: { Authorization: `Bot ${botToken}` } }
+                    );
+                    g.botInGuild = check.ok;
+                  } catch (e) {
+                    g.botInGuild = false;
+                  }
+                })
+              );
+            } else if (Array.isArray(guilds)) {
+              guilds.forEach((g: any) => (g.botInGuild = false));
+            }
+          } catch (err) {
+            // ignore
+          }
           await renderTemplate(req, res, "dashboard", {
             appName: pkg.name ?? "Amayo Bot",
             user,
