@@ -9,21 +9,29 @@
     </div>
     <div class="flex items-center gap-3">
       <% if (user) { %>
-        <div class="flex items-center gap-2">
-          <%# Mostrar avatar desde Discord CDN cuando sea posible %>
-          <% if (user.id && user.avatar) { %>
-            <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" class="w-8 h-8 rounded-full" alt="avatar">
-          <% } else { %>
-            <img src="<%= user.avatar || '/assets/images/snap1.svg' %>" class="w-8 h-8 rounded-full" alt="avatar">
-          <% } %>
-          <span class="text-white"><%= user.username %></span>
-        </div>
         <div class="relative">
-          <button id="miniGuildBtn" class="ml-3 px-3 py-2 rounded-md bg-white/5 text-white hover:bg-white/6 flex items-center gap-2">
+              <%# User menu: avatar + name that toggles a small dropdown for logout %>
+              <button id="userBtn" class="flex items-center gap-2 px-2 py-1 rounded-md hover:bg-white/5 focus:outline-none" aria-expanded="false" aria-haspopup="true">
+                <% if (user.id && user.avatar) { %>
+                  <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" class="w-8 h-8 rounded-full" alt="avatar">
+                <% } else { %>
+                  <img src="<%= user.avatar || '/assets/images/snap1.svg' %>" class="w-8 h-8 rounded-full" alt="avatar">
+                <% } %>
+                <span class="text-white hidden sm:inline"><%= user.username %></span>
+                <svg class="w-3 h-3 text-white/80 ml-1" viewBox="0 0 20 20" fill="none" aria-hidden>
+                  <path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+              </button>
+              <div id="userMenu" class="origin-top-right absolute right-0 mt-2 w-44 bg-white/6 backdrop-blur rounded-md p-2 hidden transition-transform duration-150 ease-out transform scale-95 opacity-0 pointer-events-none">
+                <a href="/auth/logout" class="block px-3 py-2 text-sm text-rose-300 hover:bg-white/5 rounded">Cerrar sesión</a>
+              </div>
+            </div>
+        <div class="relative">
+          <button id="miniGuildBtn" class="ml-3 px-3 py-2 rounded-md bg-white/5 text-white hover:bg-white/6 flex items-center gap-2" aria-expanded="false" aria-controls="miniGuildList">
             <span id="miniGuildName"><%= selectedGuildName || 'Seleccionar servidor' %></span>
             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
           </button>
-          <div id="miniGuildList" class="absolute right-0 mt-2 w-72 bg-white/6 backdrop-blur rounded-md p-2 hidden">
+          <div id="miniGuildList" class="origin-top-right absolute right-0 mt-2 w-72 bg-white/6 backdrop-blur rounded-md p-2 hidden transition-transform duration-180 ease-out transform scale-95 opacity-0 pointer-events-none">
             <% if (guilds && guilds.length) { %>
               <% guilds.forEach(g => { %>
                 <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-2 <%= selectedGuildId && selectedGuildId.toString() === g.id.toString() ? 'bg-white/8' : '' %>" data-id="<%= g.id %>">
@@ -60,16 +68,56 @@
   (function(){
     const btn = document.getElementById('miniGuildBtn');
     const list = document.getElementById('miniGuildList');
-    if (!btn || !list) return;
-    btn.addEventListener('click', ()=> list.classList.toggle('hidden'));
-    document.addEventListener('click', (e)=>{
-      if (!btn.contains(e.target) && !list.contains(e.target)) list.classList.add('hidden');
-    });
-    Array.from(list.querySelectorAll('.guild-item')).forEach(it=>{
-      it.addEventListener('click', ()=>{
-        const id = it.getAttribute('data-id');
-        if (id) window.location.href = `/dashboard/${id}/overview`;
+    const userBtn = document.getElementById('userBtn');
+    const userMenu = document.getElementById('userMenu');
+    function openDropdown(el, container) {
+      if (!el || !container) return;
+      container.classList.remove('hidden');
+      // animate in
+      requestAnimationFrame(()=>{
+        container.classList.remove('scale-95','opacity-0','pointer-events-none');
+        container.classList.add('scale-100','opacity-100');
+        el.setAttribute('aria-expanded','true');
       });
+    }
+    function closeDropdown(el, container) {
+      if (!el || !container) return;
+      container.classList.add('scale-95','opacity-0');
+      container.classList.remove('scale-100','opacity-100');
+      el.setAttribute('aria-expanded','false');
+      // after animation, hide to prevent tab focus
+      setTimeout(()=> container.classList.add('hidden','pointer-events-none'), 180);
+    }
+    if (btn && list) {
+      btn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const expanded = btn.getAttribute('aria-expanded') === 'true';
+        if (expanded) closeDropdown(btn, list); else openDropdown(btn, list);
+      });
+      Array.from(list.querySelectorAll('.guild-item')).forEach(it=>{
+        it.addEventListener('click', ()=>{
+          const id = it.getAttribute('data-id');
+          if (id) window.location.href = `/dashboard/${id}/overview`;
+        });
+      });
+    }
+    if (userBtn && userMenu) {
+      userBtn.addEventListener('click', (e)=>{
+        e.stopPropagation();
+        const expanded = userBtn.getAttribute('aria-expanded') === 'true';
+        if (expanded) closeDropdown(userBtn, userMenu); else openDropdown(userBtn, userMenu);
+      });
+    }
+    // close on outside click or Escape
+    document.addEventListener('click', (e)=>{
+      if (btn && list && !btn.contains(e.target) && !list.contains(e.target)) closeDropdown(btn, list);
+      if (userBtn && userMenu && !userBtn.contains(e.target) && !userMenu.contains(e.target)) closeDropdown(userBtn, userMenu);
+    });
+    document.addEventListener('keydown', (e)=>{
+      if (e.key === 'Escape') {
+        if (btn && list) closeDropdown(btn, list);
+        if (userBtn && userMenu) closeDropdown(userBtn, userMenu);
+      }
     });
   })();
 </script>
