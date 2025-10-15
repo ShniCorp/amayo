@@ -936,7 +936,8 @@ export const server = createServer(
             guilds,
             selectedGuild: guildId,
             page,
-            hideNavbar: true,
+            hideNavbar: false,
+            useDashboardNav: true,
           });
           return;
         }

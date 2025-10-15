@@ -1,8 +1,8 @@
-<div class="max-w-6xl mx-auto p-4">
-  <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-    <!-- Card principal -->
-    <div class="col-span-2">
-      <div class="backdrop-blur-md bg-white/10 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
+<div class="max-w-3xl mx-auto p-6">
+  <div class="relative flex justify-center">
+    <!-- Card principal (centered) -->
+    <div class="w-full">
+      <div class="mx-auto backdrop-blur-md bg-white/10 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
         <h1 class="text-3xl font-bold mb-2"><%= appName %></h1>
         <p class="text-sm text-slate-200/80 mb-4">Panel de administración</p>
         <div class="mt-4">
@@ -12,19 +12,58 @@
       </div>
     </div>
 
-    <!-- Sidebar navegación móvil estilo app -->
-    <aside class="col-span-1 md:col-span-1">
-      <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card">
-        <ul class="flex md:flex-col gap-2">
-          <li><a href="/dashboard/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
-          <li><a href="/dashboard/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
-          <li><a href="/dashboard/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
-          <li><a href="/dashboard/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
-          <li><a href="/dashboard/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
-        </ul>
-      </nav>
-    </aside>
+    <% if (typeof selectedGuild !== 'undefined' && selectedGuild) { %>
+      <!-- Floating sidebar for guild actions -->
+      <aside class="absolute right-8 top-20 hidden lg:block">
+        <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card w-48">
+          <ul class="flex flex-col gap-3">
+            <li><a href="/dashboard/<%= selectedGuild %>/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
+          </ul>
+        </nav>
+      </aside>
+      <!-- Mobile drawer/backdrop -->
+      <div id="drawerBackdrop" class="fixed inset-0 bg-black/40 z-40 hidden"></div>
+      <div id="mobileDrawer" class="fixed left-0 top-0 bottom-0 w-64 bg-white/6 backdrop-blur z-50 transform -translate-x-full transition-transform duration-300">
+        <div class="p-4">
+          <h4 class="text-white font-semibold mb-3">Servidor: <%= selectedGuild %></h4>
+          <ul class="flex flex-col gap-3">
+            <li><a href="/dashboard/<%= selectedGuild %>/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
+            <li><a href="/dashboard/<%= selectedGuild %>/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
+          </ul>
+        </div>
+      </div>
+    <% } %>
+
   </div>
 </div>
 
   
+
+  <script>
+    // Drawer toggle logic
+    const drawerToggle = document.getElementById('drawerToggle');
+    const mobileDrawer = document.getElementById('mobileDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+    function openDrawer() {
+      mobileDrawer.classList.remove('-translate-x-full');
+      drawerBackdrop.classList.remove('hidden');
+    }
+    function closeDrawer() {
+      mobileDrawer.classList.add('-translate-x-full');
+      drawerBackdrop.classList.add('hidden');
+    }
+    drawerToggle?.addEventListener('click', openDrawer);
+    drawerBackdrop?.addEventListener('click', closeDrawer);
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') closeDrawer();
+    });
+  </script>
+
+
