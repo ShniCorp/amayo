@@ -44,7 +44,7 @@
             <div id="cardList" class="max-h-72 overflow-auto rounded">
               <% if (guilds && guilds.length) { %>
                 <% guilds.sort((a,b)=> a.name.localeCompare(b.name)).forEach(g => { %>
-                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white <%= (typeof g.botInGuild === 'boolean' && !g.botInGuild) ? 'opacity-60' : '' %>" data-id="<%= g.id %>" data-bot="<%= (typeof g.botInGuild === 'boolean' && g.botInGuild) ? '1' : '0' %>" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
+                  <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white <%= (g.botInGuild === false) ? 'opacity-60' : '' %>" data-id="<%= g.id %>" data-bot="<%= (g.botInGuild === false) ? '0' : '1' %>" data-invite="https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot&guild_id=<%= g.id %>">
                     <div class="flex items-center gap-3">
                       <% if (g.icon) { %>
                         <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
