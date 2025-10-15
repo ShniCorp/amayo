@@ -172,7 +172,10 @@
     const floatBtn = document.getElementById('floatingTouchGuildBtn');
     try {
       const isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
-      if (floatBtn && isTouch) {
+      const w = window.innerWidth || document.documentElement.clientWidth;
+      const h = window.innerHeight || document.documentElement.clientHeight;
+      const isSmallViewport = (h <= 800) || (w/h > 1.6);
+      if (floatBtn && (isTouch || isSmallViewport)) {
         floatBtn.classList.remove('hidden');
         floatBtn.addEventListener('click', (e) => { e.preventDefault(); mobileGuildModal?.classList.remove('hidden'); });
       }
