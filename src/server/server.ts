@@ -1418,6 +1418,29 @@ export const server = createServer(
             // ignore; fallback to no roles
           }
           // Render dashboard with selected guild context; show dashboard nav
+          // Ensure we know whether the bot is in each guild (so small selectors/nav show correct state)
+          try {
+            const botToken = process.env.DISCORD_BOT_TOKEN ?? process.env.TOKEN;
+            if (botToken && Array.isArray(guilds) && guilds.length) {
+              await Promise.all(
+                guilds.map(async (g: any) => {
+                  try {
+                    const check = await fetch(
+                      `https://discord.com/api/guilds/${encodeURIComponent(
+                        String(g.id)
+                      )}`,
+                      { headers: { Authorization: `Bot ${botToken}` } }
+                    );
+                    g.botInGuild = check.ok;
+                  } catch (e) {
+                    g.botInGuild = undefined;
+                  }
+                })
+              );
+            }
+          } catch (err) {
+            // ignore
+          }
           // If caller requested a fragment, render only the page template (no layout)
           if (fragment) {
             // Render the dashboard page and extract the inner #dashContent fragment

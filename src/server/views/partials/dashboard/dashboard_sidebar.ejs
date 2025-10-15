@@ -14,18 +14,32 @@
         if(!btn) return;
         btn.addEventListener('click', async function(e){
           e.preventDefault();
-          const guildId = '<%= selectedGuild %>';
+          const injected = '<%= selectedGuild || "" %>';
+          let guildId = injected || '';
+          if(!guildId && typeof location !== 'undefined'){
+            try{
+              const parts = location.pathname.split('/').filter(Boolean);
+              // expect /dashboard/<guildId>/...
+              if(parts.length >= 2 && parts[0] === 'dashboard') guildId = parts[1];
+            }catch(e){ guildId = '' }
+          }
           if(!guildId) return;
+
+          // visual feedback: disable while loading
+          btn.disabled = true;
+          btn.classList.add('opacity-50','pointer-events-none');
           try{
             const res = await fetch(`/api/dashboard/${encodeURIComponent(guildId)}/roles`, { method: 'GET', headers: { 'Accept': 'application/json' } });
-            if(!res.ok) {
-              return;
-            }
-            const j = await res.json();
-            if(j && Array.isArray(j.roles)){
-              window.dispatchEvent(new CustomEvent('roles:loaded', { detail: { roles: j.roles } }));
+            if(res && res.ok){
+              const j = await res.json();
+              if(j && Array.isArray(j.roles)){
+                window.dispatchEvent(new CustomEvent('roles:loaded', { detail: { roles: j.roles } }));
+              }
             }
           }catch(err){ /* ignore errors */ }
+          // restore
+          btn.disabled = false;
+          btn.classList.remove('opacity-50','pointer-events-none');
         });
       })();
     </script>

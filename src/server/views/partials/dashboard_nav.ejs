@@ -135,6 +135,39 @@
           // close other menus first
           closeAllMenus();
           openDropdown(btn, list);
+          // runtime-check: for items that were not marked as having the bot, try fetching roles
+          (async function refreshMissingBotFlags(){
+            try{
+              const items = Array.from(list.querySelectorAll('.guild-item')) || [];
+              for(const el of items){
+                try{
+                  const botAttr = el.getAttribute('data-bot');
+                  if(botAttr === '1') continue;
+                  const gid = el.getAttribute('data-id');
+                  if(!gid) continue;
+                  const res = await fetch(`/api/dashboard/${encodeURIComponent(gid)}/roles`, { method: 'GET', headers: { 'Accept': 'application/json' } });
+                  if(res && res.ok){
+                    // update element to show the bot is present
+                    el.setAttribute('data-bot','1');
+                    el.classList.remove('opacity-60');
+                    const infoSpan = el.querySelector('.text-xs');
+                    if(infoSpan) infoSpan.textContent = '(Bot)';
+                    const nameDiv = el.querySelector('.flex-1');
+                    if(nameDiv){
+                      // ensure (Bot) marker exists after name
+                      let marker = nameDiv.querySelector('.bot-marker');
+                      if(!marker){
+                        marker = document.createElement('span');
+                        marker.className = 'ml-2 text-xs text-emerald-300 bot-marker';
+                        marker.textContent = '(Bot)';
+                        nameDiv.appendChild(marker);
+                      }
+                    }
+                  }
+                }catch(e){ /* ignore per-item errors */ }
+              }
+            }catch(e){ /* ignore */ }
+          })();
         }
       });
       // Use event delegation on the list so clicks on children are handled reliably
