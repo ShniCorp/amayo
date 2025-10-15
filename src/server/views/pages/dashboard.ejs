@@ -173,12 +173,14 @@
 
         </div>
       </div>
-      <!-- blurred hex backgrounds -->
-      <div class="absolute right-8 top-40 opacity-80 pointer-events-none">
-        <img src="/assets/images/snap1.svg" class="w-48 h-48 filter blur-[8px] opacity-80" alt="hex" />
-      </div>
-      <div class="absolute left-8 top-64 opacity-80 pointer-events-none">
-        <img src="/assets/images/snap2.svg" class="w-32 h-32 filter blur-[6px] opacity-80" alt="hex2" />
+      <!-- blurred hex backgrounds: placed behind content -->
+      <div class="absolute inset-0 pointer-events-none -z-10">
+        <div class="absolute right-8 top-40 opacity-80 pointer-events-none -z-10">
+          <img src="/assets/images/snap1.svg" class="w-48 h-48 filter blur-[8px] opacity-80" alt="hex" />
+        </div>
+        <div class="absolute left-8 top-64 opacity-80 pointer-events-none -z-10">
+          <img src="/assets/images/snap2.svg" class="w-32 h-32 filter blur-[6px] opacity-80" alt="hex2" />
+        </div>
       </div>
     <% } %>
 

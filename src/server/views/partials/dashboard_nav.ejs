@@ -18,7 +18,7 @@
           <span id="miniGuildName" class="text-sm"><%= selectedGuildName || 'Seleccionar servidor' %></span>
           <svg class="w-3 h-3 text-white/80" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
         </button>
-        <div id="miniGuildList" class="origin-top-left absolute left-4 mt-12 w-72 bg-white/6 backdrop-blur rounded-md p-2 hidden transition-transform duration-150" style="max-height:20rem; overflow:auto;">
+  <div id="miniGuildList" class="origin-top-left absolute left-4 mt-12 w-72 bg-white/80/10 backdrop-blur-md rounded-md p-2 hidden transition-transform duration-150 z-50" style="max-height:20rem; overflow:auto; background-color: rgba(12,15,18,0.85);">
           <% if (guilds && guilds.length) { %>
             <% guilds.forEach(g => { %>
               <div class="p-2 rounded-md hover:bg-white/5 cursor-pointer text-white guild-item flex items-center gap-2" data-id="<%= g.id %>">
@@ -47,7 +47,7 @@
             <% } %>
             <svg class="w-3 h-3 text-white/80 ml-1" viewBox="0 0 20 20" fill="none"><path d="M6 8l4 4 4-4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
-          <div id="userMenu" class="origin-top-right absolute right-0 mt-2 w-36 bg-white/6 backdrop-blur rounded-md p-2 hidden">
+          <div id="userMenu" class="origin-top-right absolute right-0 mt-2 w-36 bg-white/80 backdrop-blur-md rounded-md p-2 hidden z-50" style="background-color: rgba(12,15,18,0.9);">
             <a href="/auth/logout" class="block px-3 py-2 text-sm text-rose-300 hover:bg-white/5 rounded">Log out</a>
           </div>
         </div>
