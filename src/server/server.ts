@@ -707,9 +707,19 @@ export const server = createServer(
         const qs = Object.fromEntries(url.searchParams.entries());
         const { code, state } = qs as any;
         // Validate state
-        if (!state || !hasState(state)) {
+        if (!state) {
           res.writeHead(400, applySecurityHeadersForRequest(req));
-          return res.end("Invalid OAuth state");
+          return res.end("Missing OAuth state parameter");
+        }
+        if (!hasState(state)) {
+          console.warn("OAuth callback with invalid/expired state", {
+            state,
+            ip: clientIp,
+          });
+          res.writeHead(400, applySecurityHeadersForRequest(req));
+          return res.end(
+            "Invalid or expired OAuth state. Please try logging in again."
+          );
         }
         const clientId = process.env.DISCORD_CLIENT_ID || "";
         const clientSecret = process.env.DISCORD_CLIENT_SECRET || "";
@@ -719,7 +729,7 @@ export const server = createServer(
         }
         const redirectUri =
           process.env.DISCORD_REDIRECT_URI ||
-          `http://${req.headers.host}/auth/callback`;
+          `https://${req.headers.host}/auth/callback`;
 
         if (!code) {
           res.writeHead(400, applySecurityHeadersForRequest(req));
@@ -739,7 +749,12 @@ export const server = createServer(
               redirect_uri: redirectUri,
             } as any).toString(),
           });
-          if (!tokenRes.ok) throw new Error("Token exchange failed");
+          if (!tokenRes.ok) {
+            const text = await tokenRes.text().catch(() => "<no-body>");
+            throw new Error(
+              `Token exchange failed: ${tokenRes.status} ${tokenRes.statusText} ${text}`
+            );
+          }
           const tokenJson = await tokenRes.json();
           const accessToken = tokenJson.access_token;
 
@@ -747,7 +762,12 @@ export const server = createServer(
           const userRes = await fetch("https://discord.com/api/users/@me", {
             headers: { Authorization: `Bearer ${accessToken}` },
           });
-          if (!userRes.ok) throw new Error("Failed fetching user");
+          if (!userRes.ok) {
+            const text = await userRes.text().catch(() => "<no-body>");
+            throw new Error(
+              `Failed fetching user: ${userRes.status} ${userRes.statusText} ${text}`
+            );
+          }
           const userJson = await userRes.json();
 
           // Fetch guilds
@@ -757,6 +777,17 @@ export const server = createServer(
               headers: { Authorization: `Bearer ${accessToken}` },
             }
           );
+          if (!guildsRes.ok) {
+            const text = await guildsRes.text().catch(() => "<no-body>");
+            console.warn(
+              "Failed fetching guilds for user; continuing with empty list",
+              {
+                status: guildsRes.status,
+                statusText: guildsRes.statusText,
+                body: text,
+              }
+            );
+          }
           const guildsJson = guildsRes.ok ? await guildsRes.json() : [];
 
           // Filter guilds where user is owner or has ADMINISTRATOR bit
@@ -804,6 +835,10 @@ export const server = createServer(
             expires_at: now + Number(tokenJson.expires_in || 3600) * 1000,
           });
           setSessionCookie(res, sid);
+          // consume the state so it cannot be replayed
+          try {
+            STATE_STORE.delete(state);
+          } catch {}
           res.writeHead(
             302,
             applySecurityHeadersForRequest(req, { Location: "/dashboard" })
