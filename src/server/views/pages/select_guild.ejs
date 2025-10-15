@@ -6,8 +6,9 @@
     <div class="mt-4">
       <label class="block text-xs text-slate-300 mb-2">Servidor</label>
       <select id="guildSelector" class="w-full rounded-md p-3 bg-white/6 text-white focus:outline-none">
+        <option value="">Selecciona un servidor...</option>
         <% if (guilds && guilds.length) { %>
-          <% guilds.forEach(g => { %>
+          <% guilds.sort((a,b)=> a.name.localeCompare(b.name)).forEach(g => { %>
             <option value="<%= g.id %>"><%= g.name %> (<%= g.id %>)</option>
           <% }) %>
         <% } else { %>
@@ -15,18 +16,13 @@
         <% } %>
       </select>
     </div>
-
-    <div class="mt-4 text-right">
-      <button id="goBtn" class="pixel-btn">Ir al servidor</button>
-    </div>
   </div>
 </div>
 
 <script>
   const sel = document.getElementById('guildSelector');
-  const btn = document.getElementById('goBtn');
-  btn?.addEventListener('click', () => {
-    const v = sel.value;
+  sel?.addEventListener('change', (e)=>{
+    const v = e.target.value;
     if (v) window.location.href = `/dashboard/${v}/overview`;
   });
 </script>

@@ -898,15 +898,23 @@ export const server = createServer(
         }
         touchSession(sid!);
 
-        // Simple guild list: for demo, fetch guilds where guild.staff contains user.id (not implemented fully)
-        const guilds = await (async () => {
+        // Guild list: prefer session-stored guilds from OAuth (accurate), otherwise fallback to DB
+        const sessionGuilds: Array<{ id: string; name?: string }> =
+          session?.guilds || [];
+        let guilds: Array<{ id: string; name: string }> = [];
+        if (sessionGuilds && sessionGuilds.length) {
+          guilds = sessionGuilds.map((g: any) => ({
+            id: String(g.id),
+            name: String(g.name || g.id),
+          }));
+        } else {
           try {
-            const rows = await prisma.guild.findMany({ take: 10 });
-            return rows.map((r) => ({ id: r.id, name: r.name }));
+            const rows = await prisma.guild.findMany({ take: 50 });
+            guilds = rows.map((r) => ({ id: r.id, name: r.name }));
           } catch {
-            return [];
+            guilds = [];
           }
-        })();
+        }
 
         // /dashboard -> main dashboard
         if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
@@ -936,12 +944,16 @@ export const server = createServer(
         if (parts.length >= 2) {
           const guildId = parts[1];
           const page = parts[2] || "overview";
-          // Render dashboard with selected guild context; hide global navbar for server view
+          // find a nicer display name for selected guild
+          const found = guilds.find((g) => String(g.id) === String(guildId));
+          const selectedGuildName = found ? found.name : guildId;
+          // Render dashboard with selected guild context; show dashboard nav
           await renderTemplate(req, res, "dashboard", {
             appName: pkg.name ?? "Amayo Bot",
             user,
             guilds,
             selectedGuild: guildId,
+            selectedGuildName,
             page,
             hideNavbar: false,
             useDashboardNav: true,

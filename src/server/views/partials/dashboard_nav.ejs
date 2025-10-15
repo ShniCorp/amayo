@@ -13,6 +13,10 @@
           <img src="<%= user.avatar || '/assets/images/snap1.svg' %>" class="w-8 h-8 rounded-full" alt="avatar">
           <span class="text-white"><%= user.username %></span>
         </div>
+        <span class="text-sm text-white/70 px-3">|</span>
+        <% if (typeof selectedGuildName !== 'undefined' && selectedGuildName) { %>
+          <span class="text-white/80"> <%= selectedGuildName %> </span>
+        <% } %>
         <a href="/auth/logout" class="text-sm text-white/70 px-3 py-2 rounded-md hover:bg-white/5">Salir</a>
       <% } else { %>
         <a href="/auth/discord" class="text-sm text-white/70 px-3 py-2 rounded-md hover:bg-white/5">Entrar</a>
