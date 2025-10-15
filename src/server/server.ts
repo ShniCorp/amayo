@@ -536,6 +536,13 @@ const renderTemplate = async (
           month: "long",
           year: "numeric",
         }),
+      // ensure nav flags exist to avoid ReferenceError inside templates
+      hideNavbar:
+        typeof locals.hideNavbar !== "undefined" ? locals.hideNavbar : false,
+      useDashboardNav:
+        typeof locals.useDashboardNav !== "undefined"
+          ? locals.useDashboardNav
+          : false,
       ...locals,
       title: locals.title ?? defaultTitle,
       body: pageBody,
