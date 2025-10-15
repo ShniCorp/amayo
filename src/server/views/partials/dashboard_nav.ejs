@@ -165,6 +165,15 @@
         mobileGuildModal.classList.remove('hidden');
       });
     }
+    // floating touch CTA logic
+    const floatBtn = document.getElementById('floatingTouchGuildBtn');
+    try {
+      const isTouch = (navigator.maxTouchPoints && navigator.maxTouchPoints > 0) || ('ontouchstart' in window);
+      if (floatBtn && isTouch) {
+        floatBtn.classList.remove('hidden');
+        floatBtn.addEventListener('click', (e) => { e.preventDefault(); mobileGuildModal?.classList.remove('hidden'); });
+      }
+    } catch(e){}
   });
 </script>
 
