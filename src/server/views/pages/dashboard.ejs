@@ -1,7 +1,7 @@
 <!-- dashboard_nav is rendered by the layout via renderTemplate to avoid unresolved Promise output -->
-<div class="max-w-3xl mx-auto p-6">
+  <div class="max-w-3xl mx-auto p-6">
   <div class="relative flex justify-center">
-    <% if (!selectedGuild) { %>
+  <% if (!selectedGuild) { %>
       <!-- Centered logo + selection card to match mock -->
   <div class="hidden md:flex flex-col items-center justify-start">
         <!-- logo area -->
@@ -10,6 +10,11 @@
           <div class="w-12 h-12 mx-auto">
               <img src="/assets/images/logo-amayo.svg" alt="logo" class="mx-auto mb-4 rounded-full" />
           </div>
+        </div>
+
+        <!-- Mobile CTA: open server list sheet when no guild selected -->
+        <div class="md:hidden text-center mt-8">
+          <button id="openMobileGuildList" class="px-4 py-2 rounded-md bg-slate-700 text-white">Seleccionar servidor</button>
         </div>
 
         <div class="w-full max-w-lg">

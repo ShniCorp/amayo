@@ -154,6 +154,20 @@
   })();
 </script>
 
+<script>
+  // Bind the mobile CTA (if present) to open the mobile guild modal
+  document.addEventListener('DOMContentLoaded', () => {
+    const openBtn = document.getElementById('openMobileGuildList');
+    const mobileGuildModal = document.getElementById('mobileGuildModal');
+    if (openBtn && mobileGuildModal) {
+      openBtn.addEventListener('click', (e) => {
+        e.preventDefault();
+        mobileGuildModal.classList.remove('hidden');
+      });
+    }
+  });
+</script>
+
 <!-- Mobile modals -->
 <div id="mobileGuildModal" class="fixed inset-0 bg-black/60 hidden z-50">
   <div class="fixed inset-x-0 bottom-0 bg-[#1f2933] rounded-t-xl p-4 max-h-[80vh] overflow-auto" style="margin:0;">
