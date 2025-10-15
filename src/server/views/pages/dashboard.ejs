@@ -44,6 +44,7 @@
       </div>
     <% } %>
 
+    <div id="dashContent">
     <% if (typeof page !== 'undefined' && page === 'settings' && selectedGuild) { %>
       <div class="w-full max-w-3xl mt-6">
         <div class="backdrop-blur-md bg-white/6 border border-white/8 rounded-xl p-6 glass-card">
@@ -73,8 +74,20 @@
                   <% }) %>
                 </select>
               <% } else { %>
-                <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
-                <div class="text-xs text-slate-300 mt-1">No se pudo obtener roles desde la API. Introduce IDs manualmente separadas por coma.</div>
+                <% const fallbackStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
+                <% if (fallbackStaff.length) { %>
+                  <div class="mb-2">
+                    <input id="staffFilter" type="search" placeholder="Filtrar roles..." class="w-full rounded p-2 bg-transparent border border-white/6" />
+                  </div>
+                  <select id="staffSelect" name="staffSelect" multiple class="w-full rounded p-2 bg-transparent border border-white/6 h-36">
+                    <% fallbackStaff.forEach(id => { %>
+                      <option value="<%= id %>" <%= (Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String).includes(String(id)) : String(guildConfig.staff || '').split(',').map(s=>s.trim()).includes(String(id))) ? 'selected' : '' %>>ID: <%= id %></option>
+                    <% }) %>
+                  </select>
+                <% } else { %>
+                  <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
+                  <div class="text-xs text-slate-300 mt-1">No se pudo obtener roles desde la API ni hay roles guardados. Introduce IDs manualmente separadas por coma.</div>
+                <% } %>
               <% } %>
             </div>
             <div class="flex items-center gap-3">
@@ -133,7 +146,56 @@
           });
         })();
       </script>
+
     <% } %>
+    </div>
+
+    <script>
+      // Simple fragment navigation for a SPA-like feel inside /dashboard
+      (function(){
+        async function loadFragment(href, push=true) {
+          try {
+            const url = new URL(href, location.origin);
+            url.searchParams.set('fragment','1');
+            const res = await fetch(url.toString(), { headers: { 'X-Requested-With':'XMLHttpRequest' } });
+            if (!res.ok) throw new Error('fetch-failed');
+            const html = await res.text();
+            const container = document.getElementById('dashContent');
+            if (!container) return;
+            container.innerHTML = html;
+            // execute inline scripts inside fragment
+            Array.from(container.querySelectorAll('script')).forEach(s=>{
+              try {
+                const n = document.createElement('script');
+                if (s.src) { n.src = s.src; n.async = false; document.head.appendChild(n); }
+                else { n.textContent = s.textContent; document.head.appendChild(n); document.head.removeChild(n); }
+              } catch(e){}
+            });
+            if (push) history.pushState({ href: href }, '', href);
+          } catch (err) {
+            console.warn('Fragment load failed', err);
+            location.href = href; // fallback full navigation
+          }
+        }
+
+        document.addEventListener('click', (e)=>{
+          const a = e.target.closest && e.target.closest('a');
+          if (!a) return;
+          const href = a.getAttribute('href');
+          if (!href) return;
+          // intercept internal dashboard links
+          if (href.startsWith('/dashboard') || href.indexOf(location.origin + '/dashboard') === 0) {
+            e.preventDefault();
+            loadFragment(href);
+          }
+        });
+
+        window.addEventListener('popstate', (e)=>{
+          const href = (e.state && e.state.href) || location.pathname + location.search;
+          loadFragment(href, false);
+        });
+      })();
+    </script>
 
   </div>
 </div>

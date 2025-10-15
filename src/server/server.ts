@@ -1192,6 +1192,42 @@ export const server = createServer(
             // ignore; fallback to no roles
           }
           // Render dashboard with selected guild context; show dashboard nav
+          // If caller requested a fragment, render only the page template (no layout)
+          const fragment =
+            url.searchParams.get("fragment") || url.searchParams.get("ajax");
+          if (fragment) {
+            const pageFile = path.join(viewsDir, "pages", `${page}.ejs`);
+            const pageLocals = {
+              appName: pkg.name ?? "Amayo Bot",
+              user,
+              guilds,
+              selectedGuild: guildId,
+              selectedGuildId: guildId,
+              selectedGuildName,
+              guildConfig,
+              guildRoles,
+              page,
+              hideNavbar: false,
+              useDashboardNav: true,
+            };
+            try {
+              const fragmentHtml = await ejs.renderFile(pageFile, pageLocals, {
+                async: true,
+              });
+              res.writeHead(
+                200,
+                applySecurityHeadersForRequest(req, {
+                  "Content-Type": "text/html; charset=utf-8",
+                })
+              );
+              res.end(fragmentHtml);
+              return;
+            } catch (err) {
+              console.warn("Failed rendering page fragment:", err);
+              // fallthrough to full render
+            }
+          }
+
           await renderTemplate(req, res, "dashboard", {
             appName: pkg.name ?? "Amayo Bot",
             user,
