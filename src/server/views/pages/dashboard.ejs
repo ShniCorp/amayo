@@ -1,48 +1,42 @@
-<div class="max-w-3xl mx-auto p-6">
-  <div class="relative flex justify-center">
-    <% if (!selectedGuild) { %>
-      <!-- Card principal (centered) -->
-      <div class="w-full">
-        <div class="mx-auto backdrop-blur-md bg-white/10 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
-          <h1 class="text-3xl font-bold mb-2"><%= appName %></h1>
-          <p class="text-sm text-slate-200/80 mb-4">Panel de administración</p>
-          <div class="mt-4">
-            <p class="text-sm text-slate-200/80">Selecciona un servidor desde la página principal para administrar sus ajustes.</p>
-            <a href="/dashboard/select-guild" class="inline-block mt-3 pixel-btn">Seleccionar servidor</a>
-          </div>
+<div class="max-w-7xl mx-auto p-6">
+  <div class="flex flex-col lg:flex-row gap-6">
+    <!-- Left sidebar (menu 1) -->
+    <aside class="hidden lg:block w-60">
+      <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card h-[70vh]">
+        <ul class="flex flex-col gap-4">
+          <li class="text-slate-300">Item L1</li>
+          <li class="text-slate-300">Item L2</li>
+          <li class="text-slate-300">Item L3</li>
+          <li class="text-slate-300">Item L4</li>
+        </ul>
+      </nav>
+    </aside>
+
+    <!-- Center panel (overview) -->
+    <main class="flex-1">
+      <div class="backdrop-blur-md bg-white/8 border border-white/8 rounded-xl p-8 shadow-lg min-h-[70vh]">
+        <h2 class="text-xl text-slate-200 mb-6">Overview</h2>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          <div class="bg-white/5 rounded p-4">Panel A</div>
+          <div class="bg-white/5 rounded p-4">Panel B</div>
+          <div class="bg-white/5 rounded p-4">Panel C</div>
+          <div class="bg-white/5 rounded p-4">Panel D</div>
         </div>
       </div>
-    <% } %>
+    </main>
 
-    <% if (typeof selectedGuild !== 'undefined' && selectedGuild) { %>
-      <!-- Floating sidebar for guild actions -->
-  <aside class="absolute right-6 top-12 hidden lg:block transform translate-y-1">
-        <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card w-48">
-          <ul class="flex flex-col gap-3">
-            <li><a href="/dashboard/<%= selectedGuild %>/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
-          </ul>
-        </nav>
-      </aside>
-      <!-- Mobile drawer/backdrop -->
-      <div id="drawerBackdrop" class="fixed inset-0 bg-black/40 z-40 hidden"></div>
-      <div id="mobileDrawer" class="fixed left-0 top-0 bottom-0 w-64 bg-white/6 backdrop-blur z-50 transform -translate-x-full transition-transform duration-300">
-        <div class="p-4">
-          <h4 class="text-white font-semibold mb-3">Servidor: <%= selectedGuild %></h4>
-          <ul class="flex flex-col gap-3">
-            <li><a href="/dashboard/<%= selectedGuild %>/overview" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/members" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/settings" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/areas" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
-            <li><a href="/dashboard/<%= selectedGuild %>/mobs" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
-          </ul>
-        </div>
-      </div>
-    <% } %>
-
+    <!-- Right sidebar (menu 2) -->
+    <aside class="hidden lg:block w-56">
+      <nav class="bg-white/6 backdrop-blur rounded-xl p-4 glass-card h-[70vh]">
+        <ul class="flex flex-col gap-3">
+          <li><a href="#" class="block p-2 rounded-md hover:bg-white/5">Overview</a></li>
+          <li><a href="#" class="block p-2 rounded-md hover:bg-white/5">Miembros</a></li>
+          <li><a href="#" class="block p-2 rounded-md hover:bg-white/5">Ajustes</a></li>
+          <li><a href="#" class="block p-2 rounded-md hover:bg-white/5">Game Areas</a></li>
+          <li><a href="#" class="block p-2 rounded-md hover:bg-white/5">Mobs</a></li>
+        </ul>
+      </nav>
+    </aside>
   </div>
 </div>
 
