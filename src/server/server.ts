@@ -1138,14 +1138,10 @@ export const server = createServer(
           return;
         }
 
-        // Select guild page
+        // Keep /dashboard/select-guild for compatibility: redirect to /dashboard
         if (url.pathname === "/dashboard/select-guild") {
-          await renderTemplate(req, res, "select_guild", {
-            appName: pkg.name ?? "Amayo Bot",
-            user,
-            guilds,
-            hideNavbar: true,
-          });
+          res.writeHead(302, { Location: "/dashboard" });
+          res.end();
           return;
         }
 

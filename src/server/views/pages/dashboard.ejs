@@ -2,17 +2,85 @@
 <div class="max-w-3xl mx-auto p-6">
   <div class="relative flex justify-center">
     <% if (!selectedGuild) { %>
-      <!-- Card principal (centered) -->
+      <!-- Show server selection UI inline (replaces /dashboard/select-guild) -->
       <div class="w-full">
-        <div class="mx-auto backdrop-blur-md bg-white/10 border border-white/10 rounded-xl p-6 shadow-lg glass-card">
-          <h1 class="text-3xl font-bold mb-2"><%= appName %></h1>
-          <p class="text-sm text-slate-200/80 mb-4">Panel de administración</p>
-          <div class="mt-4">
-            <p class="text-sm text-slate-200/80">Selecciona un servidor desde la página principal para administrar sus ajustes.</p>
-            <a href="/dashboard/select-guild" class="inline-block mt-3 pixel-btn">Seleccionar servidor</a>
+        <div class="mx-auto backdrop-blur-md bg-white/6 border border-white/10 rounded-xl p-6 shadow-lg glass-card max-w-xl text-center">
+          <h2 class="text-2xl font-bold mb-2"><%= appName %></h2>
+          <p class="text-sm text-slate-200/80 mb-4">Selecciona un servidor desde la lista abajo para administrar sus ajustes.</p>
+
+          <div class="mt-4 text-left">
+            <label class="block text-xs text-slate-300 mb-2">Servidor</label>
+            <div class="relative">
+              <input id="guildInput" aria-controls="guildList" aria-expanded="false" aria-autocomplete="list" autocomplete="off" placeholder="Busca o selecciona un servidor..." class="w-full rounded-md p-3 bg-white/6 text-white placeholder:text-slate-400 focus:outline-none" />
+              <button id="clearBtn" aria-label="Limpiar" class="absolute right-2 top-2 text-slate-300 hover:text-white hidden">✕</button>
+
+              <div id="guildList" role="listbox" class="mt-2 max-h-64 overflow-auto rounded-md bg-white/4 backdrop-blur divide-y divide-white/6 hidden">
+                <% if (guilds && guilds.length) { %>
+                  <% guilds.sort((a,b)=> a.name.localeCompare(b.name)).forEach(g => { %>
+                    <div role="option" data-id="<%= g.id %>" class="p-3 cursor-pointer hover:bg-white/6 text-white flex items-center gap-3">
+                      <div class="w-8 h-8 rounded-md bg-white/10 flex items-center justify-center text-sm text-white/80">#</div>
+                      <div class="truncate">
+                        <div class="font-medium"><%= g.name %></div>
+                        <div class="text-xs text-slate-300"><%= g.id %></div>
+                      </div>
+                    </div>
+                  <% }) %>
+                <% } else { %>
+                  <div class="p-3 text-slate-300">No tienes servidores gestionados</div>
+                <% } %>
+              </div>
+            </div>
           </div>
         </div>
       </div>
+
+      <script>
+        (() => {
+          const input = document.getElementById('guildInput');
+          const list = document.getElementById('guildList');
+          const clearBtn = document.getElementById('clearBtn');
+          if (!input || !list) return;
+
+          const items = Array.from(list.querySelectorAll('[role="option"]'));
+          function showList() { list.classList.remove('hidden'); input.setAttribute('aria-expanded','true'); }
+          function hideList() { list.classList.add('hidden'); input.setAttribute('aria-expanded','false'); }
+
+          function filter(q) {
+            const v = String(q || '').toLowerCase().trim();
+            let any = 0;
+            items.forEach(it => {
+              const name = (it.querySelector('.font-medium')?.textContent || '').toLowerCase();
+              const id = (it.dataset.id || '');
+              if (!v || name.includes(v) || id.includes(v)) { it.style.display = ''; any++; } else { it.style.display = 'none'; }
+            });
+            return any;
+          }
+
+          let focused = -1;
+          function focusItem(idx) {
+            items.forEach((it,i)=> it.classList.toggle('ring-2 ring-white/20', i===idx));
+            focused = idx;
+            if (idx>=0) { const el = items[idx]; el.scrollIntoView({ block:'nearest' }); }
+          }
+
+          input.addEventListener('input', (e) => { const v = (e.target).value; filter(v); showList(); clearBtn.classList.toggle('hidden', !v); focused = -1; });
+          input.addEventListener('focus', () => { filter(input.value); showList(); });
+          input.addEventListener('blur', () => setTimeout(hideList, 150));
+          clearBtn?.addEventListener('click', (e)=>{ e.preventDefault(); input.value=''; filter(''); input.focus(); clearBtn.classList.add('hidden'); });
+
+          // click selection
+          items.forEach((it)=>{ it.addEventListener('click', ()=>{ const id = it.getAttribute('data-id'); if (id) window.location.href = `/dashboard/${id}/overview`; }); });
+
+          // keyboard navigation
+          input.addEventListener('keydown', (e)=>{
+            const visible = items.filter(it => it.style.display !== 'none');
+            if (e.key === 'ArrowDown') { e.preventDefault(); if (visible.length) { focused = Math.min(visible.length-1, (focused+1)); const idx = items.indexOf(visible[focused]); focusItem(idx); } }
+            else if (e.key === 'ArrowUp') { e.preventDefault(); if (visible.length) { focused = Math.max(0, (focused-1)); const idx = items.indexOf(visible[focused]); focusItem(idx); } }
+            else if (e.key === 'Enter') { e.preventDefault(); if (focused>=0) { const sel = items[focused]; const id = sel.getAttribute('data-id'); if (id) window.location.href = `/dashboard/${id}/overview`; } }
+          });
+        })();
+      </script>
+
     <% } %>
 
     <% if (typeof selectedGuild !== 'undefined' && selectedGuild) { %>
