@@ -532,6 +532,20 @@ const renderTemplate = async (
 ) => {
   const pageFile = path.join(viewsDir, "pages", `${template}.ejs`);
   const layoutFile = path.join(viewsDir, "layouts", "layout.ejs");
+  // Ensure common defaults exist on locals so page templates can reference them safely
+  locals.hideNavbar =
+    typeof locals.hideNavbar !== "undefined" ? locals.hideNavbar : false;
+  locals.useDashboardNav =
+    typeof locals.useDashboardNav !== "undefined"
+      ? locals.useDashboardNav
+      : false;
+  locals.selectedGuild =
+    typeof locals.selectedGuild !== "undefined" ? locals.selectedGuild : null;
+  locals.selectedGuildId =
+    typeof locals.selectedGuildId !== "undefined"
+      ? locals.selectedGuildId
+      : null;
+
   const pageBody = await ejs.renderFile(pageFile, locals, { async: true });
   const defaultTitle = `${
     locals.appName ?? pkg.name ?? "Amayo Bot"
