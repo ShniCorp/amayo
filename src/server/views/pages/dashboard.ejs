@@ -1,6 +1,4 @@
-<% if (typeof useDashboardNav !== 'undefined' && useDashboardNav) { %>
-  <%- include('../partials/dashboard_nav') %>
-<% } %>
+<!-- dashboard_nav is rendered by the layout via renderTemplate to avoid unresolved Promise output -->
 <div class="max-w-3xl mx-auto p-6">
   <div class="relative flex justify-center">
     <% if (!selectedGuild) { %>
