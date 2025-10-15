@@ -2,7 +2,6 @@
   <div class="backdrop-blur-md bg-white/6 rounded-xl p-6 glass-card">
     <div class="flex items-center justify-between mb-4">
       <h2 class="text-xl font-semibold">Ajustes del servidor</h2>
-      <a href="/dashboard/<%= selectedGuild %>/overview" class="text-sm text-slate-200/80 hover:underline">← Volver al overview</a>
     </div>
     <form id="guildSettingsForm" class="space-y-4">
       <div>
@@ -19,13 +18,31 @@
           <% const selectedStaff = (guildConfig && Array.isArray(guildConfig.staff) ? guildConfig.staff.map(String) : (guildConfig && guildConfig.staff ? String(guildConfig.staff).split(',') : [])) || []; %>
           <% if (typeof guildRoles !== 'undefined' && guildRoles && guildRoles.length) { %>
             <div class="mb-2">
-              <div id="staffTagsContainer" class="w-full rounded p-2 bg-transparent border border-white/6">
-                <div id="staffChips" class="flex flex-wrap gap-2"></div>
-                <input id="staffTagInput" type="text" placeholder="Buscar roles..." autocomplete="off" class="w-full bg-transparent outline-none text-sm p-1" />
+              <div id="staffTagsContainer" class="w-full rounded p-3 bg-transparent border border-white/6 flex items-center gap-2 flex-wrap">
+                <div id="staffChips" class="flex items-center gap-2 flex-wrap"></div>
+                <button id="openRolePicker" type="button" class="ml-2 self-stretch inline-flex items-center justify-center px-3 py-1 rounded bg-white/6 hover:bg-white/10">
+                  <!-- plus svg -->
+                  <svg xmlns="http://www.w3.org/2000/svg" class="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14"/></svg>
+                </button>
+                <input type="hidden" id="staffHidden" name="staff" value="<%= selectedStaff.join(',') %>" />
               </div>
-              <ul id="staffSuggestions" class="mt-1 bg-white/4 rounded max-h-40 overflow-auto hidden z-50"></ul>
-              <input type="hidden" id="staffHidden" name="staff" value="<%= selectedStaff.join(',') %>" />
-              <div class="text-xs text-slate-300 mt-1">Selecciona roles del servidor. Escribe para filtrar, pulsa Enter para elegir.</div>
+              <div class="text-xs text-slate-300 mt-1">Pulsa + para seleccionar roles del servidor.</div>
+
+              <!-- Role picker modal (hidden by default) -->
+              <div id="rolePickerModal" class="fixed inset-0 flex items-center justify-center z-50 hidden">
+                <div class="absolute inset-0 bg-black/50" id="rolePickerBackdrop"></div>
+                <div class="relative w-full max-w-md bg-white/6 rounded p-4 shadow-lg glass-card">
+                  <div class="flex items-center justify-between mb-2">
+                    <strong class="text-sm">Seleccionar roles</strong>
+                    <button id="closeRolePicker" type="button" class="text-slate-300">✕</button>
+                  </div>
+                  <input id="rolePickerSearch" class="w-full rounded p-2 bg-transparent border border-white/6 mb-2" placeholder="Filtrar roles..." />
+                  <div id="rolePickerList" class="max-h-60 overflow-auto rounded bg-white/4 p-1"></div>
+                  <div class="mt-3 flex justify-end">
+                    <button id="rolePickerDone" class="pixel-btn">Listo</button>
+                  </div>
+                </div>
+              </div>
             </div>
           <% } else { %>
             <input type="text" name="staff" id="staffInput" value="<%= (guildConfig && (Array.isArray(guildConfig.staff) ? guildConfig.staff.join(',') : guildConfig.staff)) || '' %>" class="w-full rounded p-2 bg-transparent border border-white/6" placeholder="123... , 456..." />
@@ -99,10 +116,25 @@
       const staffHidden = document.getElementById('staffHidden');
 
     // Prepare role options (id, name, color) from server-side `guildRoles`
-    <% const ROLE_JSON = JSON.stringify((guildRoles||[]).map(r=>{ var c; if (typeof r.color !== 'undefined' && r.color !== null) { if (typeof r.color === 'number') { c = '#'+('000000'+r.color.toString(16)).slice(-6); } else { c = (''+r.color).replace(/^#?/, '#'); } } else { c = (r.colorHex||r.hex||'#8b95a0'); } return { id: String(r.id), name: r.name, color: c }; })); %>
-    const ROLE_OPTIONS = <%- ROLE_JSON %>;
+    <% 
+      // Build a simple roles array with normalized color (hex string)
+      const _roles = (guildRoles||[]).map(r=>{
+        let c = '#8b95a0';
+        if (r && (typeof r.color !== 'undefined') && r.color !== null) {
+          if (typeof r.color === 'number') {
+            c = '#'+('000000'+(r.color).toString(16)).slice(-6);
+          } else {
+            c = String(r.color).replace(/^#?/, '#');
+          }
+        } else if (r && (r.colorHex || r.hex)) {
+          c = String(r.colorHex || r.hex).replace(/^#?/, '#');
+        }
+        return { id: String(r.id), name: String(r.name || r.id), color: c };
+      });
+    %>
+    const ROLE_OPTIONS = <%- JSON.stringify(_roles) %>;
     // Initial selected staff IDs (strings)
-    const INITIAL_STAFF = <%- JSON.stringify(selectedStaff || []) %>;
+  const INITIAL_STAFF = <%- JSON.stringify(selectedStaff || []) %>;
 
       let selectedIds = Array.isArray(INITIAL_STAFF) ? INITIAL_STAFF.slice() : [];
 
@@ -144,48 +176,75 @@
         renderChips();
       }
 
-      if(staffTagInput){
-        // initial render
-        renderChips();
+    // initial render of chips
+    renderChips();
 
-        staffTagInput.addEventListener('input', (e)=>{
-          showSuggestions(e.target.value);
-        });
+    // Role picker modal logic
+    const openRolePicker = document.getElementById('openRolePicker');
+    const rolePickerModal = document.getElementById('rolePickerModal');
+    const rolePickerBackdrop = document.getElementById('rolePickerBackdrop');
+    const rolePickerList = document.getElementById('rolePickerList');
+    const rolePickerSearch = document.getElementById('rolePickerSearch');
+    const closeRolePicker = document.getElementById('closeRolePicker');
+    const rolePickerDone = document.getElementById('rolePickerDone');
 
-        staffTagInput.addEventListener('keydown', (e)=>{
-          if(e.key === 'Enter'){
-            e.preventDefault();
-            // pick first suggestion if any, otherwise ignore
-            const first = staffSuggestions.querySelector('li');
-            if(first){ addId(first.dataset.id); staffTagInput.value=''; staffSuggestions.classList.add('hidden'); }
-          } else if (e.key === 'Backspace' && !staffTagInput.value){
-            // remove last
-            selectedIds.pop(); renderChips();
-          }
-        });
+    function populateRolePicker(filter){
+      if(!rolePickerList) return;
+      const q = (filter||'').trim().toLowerCase();
+      const items = ROLE_OPTIONS.filter(r=> !selectedIds.includes(String(r.id)) && (!q || r.name.toLowerCase().includes(q)) ).slice(0,200);
+      rolePickerList.innerHTML = items.map(r=>`<div class="p-2 hover:bg-white/10 cursor-pointer flex items-center gap-3 role-item" data-id="${r.id}" data-name="${r.name}"><span class="w-3 h-3 rounded-full inline-block" style="background:${r.color}"></span><span class="truncate">${r.name}</span></div>`).join('');
+    }
 
-        document.addEventListener('click', (ev)=>{
-          if(!staffSuggestions) return;
-          if(ev.target.closest && ev.target.closest('#staffSuggestions')) return;
-          if(ev.target === staffTagInput) return;
-          staffSuggestions.classList.add('hidden');
-        });
+    function openPicker(){
+      if(!rolePickerModal) return;
+      rolePickerModal.classList.remove('hidden');
+      populateRolePicker('');
+      setTimeout(()=>{ if(rolePickerSearch) rolePickerSearch.focus(); },50);
+    }
+    function closePicker(){
+      if(!rolePickerModal) return;
+      rolePickerModal.classList.add('hidden');
+      if(rolePickerSearch) rolePickerSearch.value = '';
+      if(rolePickerList) rolePickerList.innerHTML = '';
+    }
 
-        staffSuggestions.addEventListener('click', (ev)=>{
-          const li = ev.target.closest('li');
-          if(!li) return;
-          addId(li.dataset.id);
-          staffTagInput.value='';
-          staffSuggestions.classList.add('hidden');
-          staffTagInput.focus();
-        });
+    if(openRolePicker){
+      openRolePicker.addEventListener('click', (e)=>{ e.preventDefault(); openPicker(); });
+    }
+    if(rolePickerBackdrop){ rolePickerBackdrop.addEventListener('click', closePicker); }
+    if(closeRolePicker){ closeRolePicker.addEventListener('click', closePicker); }
 
-        staffChips.addEventListener('click', (ev)=>{
-          const btn = ev.target.closest('.remove-chip');
-          if(!btn) return;
-          removeId(btn.dataset.id);
-        });
-      }
+    if(rolePickerSearch){
+      rolePickerSearch.addEventListener('input', ()=> populateRolePicker(rolePickerSearch.value));
+      rolePickerSearch.addEventListener('keydown', (e)=>{
+        if(e.key === 'Enter'){
+          e.preventDefault();
+          // pick first item
+          const first = rolePickerList && rolePickerList.querySelector('.role-item');
+          if(first){ addId(first.dataset.id); closePicker(); }
+        } else if(e.key === 'Escape'){
+          closePicker();
+        }
+      });
+    }
+
+    if(rolePickerList){
+      rolePickerList.addEventListener('click', (ev)=>{
+        const it = ev.target.closest && ev.target.closest('.role-item');
+        if(!it) return;
+        addId(it.dataset.id);
+        // remove the clicked item from list
+        it.remove();
+      });
+    }
+
+    if(rolePickerDone){ rolePickerDone.addEventListener('click', (e)=>{ e.preventDefault(); closePicker(); }); }
+
+    staffChips.addEventListener('click', (ev)=>{
+      const btn = ev.target.closest('.remove-chip');
+      if(!btn) return;
+      removeId(btn.dataset.id);
+    });
 
       form.addEventListener('submit', async (e)=>{
         e.preventDefault();
