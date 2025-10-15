@@ -595,6 +595,15 @@ const renderTemplate = async (
         typeof locals.useDashboardNav !== "undefined"
           ? locals.useDashboardNav
           : false,
+      // ensure selected guild defaults exist so templates can safely check
+      selectedGuild:
+        typeof locals.selectedGuild !== "undefined"
+          ? locals.selectedGuild
+          : null,
+      selectedGuildId:
+        typeof locals.selectedGuildId !== "undefined"
+          ? locals.selectedGuildId
+          : null,
       // Pre-rendered partial HTML (if produced above)
       dashboardNav: dashboardNavHtml,
       navbar: navbarHtml,
