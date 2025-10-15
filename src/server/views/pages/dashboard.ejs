@@ -20,7 +20,7 @@
               <div class="ml-3 relative">
                 <button id="cardUserBtn" class="flex items-center gap-2 px-3 py-1 rounded-md hover:bg-white/5 focus:outline-none" aria-expanded="false">
                   <% if (user && user.id && user.avatar) { %>
-                    <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.png" class="w-8 h-8 rounded-full" alt="avatar">
+                    <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.webp" class="w-8 h-8 rounded-full" alt="avatar">
                   <% } else { %>
                     <img src="/assets/images/snap1.svg" class="w-8 h-8 rounded-full" alt="avatar">
                   <% } %>
@@ -40,7 +40,7 @@
                   <div class="p-3 cursor-pointer hover:bg-white/5 flex items-center justify-between text-white" data-id="<%= g.id %>">
                     <div class="flex items-center gap-3">
                       <% if (g.icon) { %>
-                        <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.png" class="w-8 h-8 rounded-full" alt="icon">
+                        <img src="https://cdn.discordapp.com/icons/<%= g.id %>/<%= g.icon %>.webp" class="w-8 h-8 rounded-full" alt="icon">
                       <% } else { %>
                         <div class="w-8 h-8 rounded-full bg-white/8 flex items-center justify-center text-xs text-white">S</div>
                       <% } %>
@@ -320,9 +320,30 @@
     }
     drawerToggle?.addEventListener('click', openDrawer);
     drawerBackdrop?.addEventListener('click', closeDrawer);
+    // support close button inside the drawer
+    const drawerClose = document.getElementById('drawerClose');
+    drawerClose?.addEventListener('click', closeDrawer);
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') closeDrawer();
     });
   </script>
+
+  <!-- Mobile drawer & backdrop (used by hamburger) -->
+  <div id="drawerBackdrop" class="fixed inset-0 bg-black/60 hidden z-40"></div>
+  <nav id="mobileDrawer" class="fixed top-0 left-0 bottom-0 w-72 max-w-xs bg-[#0f1720] -translate-x-full transform transition-transform duration-200 z-50">
+    <div class="p-4 border-b border-white/6 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <% if (user && user.id && user.avatar) { %>
+          <img src="https://cdn.discordapp.com/avatars/<%= user.id %>/<%= user.avatar %>.webp" class="w-8 h-8 rounded-full" alt="avatar">
+        <% } %>
+        <div class="text-white font-medium"><%= user?.username || '' %></div>
+      </div>
+      <button id="drawerClose" class="text-white/70">Cerrar</button>
+    </div>
+    <div class="p-4 space-y-2">
+      <a href="/dashboard/select-guild" class="block py-2 text-white">Servers</a>
+      <a href="/auth/logout" class="block py-2 text-rose-300">Log out</a>
+    </div>
+  </nav>
 
 
