@@ -929,6 +929,7 @@ export const server = createServer(
           const guildsJson = guildsRes.ok ? await guildsRes.json() : [];
 
           // Filter guilds where user is owner or has ADMINISTRATOR bit
+
           const ADMIN_BIT = 0x8;
           const adminGuilds = (
             Array.isArray(guildsJson) ? guildsJson : []
@@ -1918,6 +1919,7 @@ export const server = createServer(
         if (parts.length >= 2) {
           const guildId = parts[1];
           const page = parts[2] || "overview";
+
           const fragment =
             url.searchParams.get("fragment") || url.searchParams.get("ajax");
           // find a nicer display name for selected guild
