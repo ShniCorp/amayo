@@ -1,42 +1,21 @@
-<div class="min-h-screen py-8">
-  <div class="container mx-auto px-4 sm:px-6 lg:px-8">
-    <div class="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-4 gap-8">
-      <!-- Sidebar area (toc/menus) -->
-      <aside class="lg:col-span-1">
-        <div class="bg-[#0f1720]/60 border border-[#22262b] rounded-lg p-4 sticky top-20">
-          <div class="flex items-center gap-3 mb-4">
-            <img src="/assets/images/logo-amayo.svg" alt="logo" class="w-10 h-10">
-            <div>
-              <div class="text-sm font-semibold"><%= user?.username || 'Usuario' %></div>
-              <div class="text-xs text-gray-400">ID: <%= user?.id || '—' %></div>
-            </div>
-          </div>
-          <nav class="flex flex-col gap-2">
-            <a href="/dashboard" class="block px-3 py-2 rounded hover:bg-white/5">Resumen</a>
-            <a href="#guilds" class="block px-3 py-2 rounded hover:bg-white/5">Servidores</a>
-            <a href="#settings" class="block px-3 py-2 rounded hover:bg-white/5">Ajustes</a>
-            <a href="/auth/logout" class="block px-3 py-2 rounded hover:bg-white/5 text-red-400">Cerrar sesión</a>
-          </nav>
-        </div>
-      </aside>
+<div class="min-h-screen pt-20 pb-12" style="background: radial-gradient(ellipse at center, rgba(255,255,255,0.02) 0%, rgba(0,0,0,0) 40%), linear-gradient(180deg,#1b0b1b 0%, #100615 100%);">
+      <main class="lg:col-span-9">
+        <div class="bg-gradient-to-b from-[#251428]/80 via-[#1b0f1a] to-[#0f0810] border border-[#3a243a] rounded-2xl p-6 shadow-lg">
+          <h1 class="text-2xl font-bold text-purple-300 mb-2">Dashboard</h1>
+          <p class="text-sm text-gray-300 mb-6">Bienvenido, <strong class="text-white"><%= user?.username || 'Usuario' %></strong>. Aquí puedes administrar tus servidores y configurar el bot.</p>
 
-      <main class="lg:col-span-3">
-        <div class="bg-[#0f1720]/60 border border-[#22262b] rounded-lg p-6">
-          <h1 class="text-2xl font-bold mb-2">Dashboard</h1>
-          <p class="text-sm text-gray-300 mb-4">Bienvenido, <strong><%= user?.username || 'Usuario' %></strong>. Aquí puedes administrar tus servidores y configurar el bot.</p>
-
-          <section id="guilds" class="mb-6">
-            <h2 class="text-lg font-semibold mb-3">Servidores asociados</h2>
+          <div class="p-6 bg-gradient-to-b from-[#241127]/30 to-transparent border border-[#3a243a] rounded-xl">
+            <h2 class="text-2xl font-semibold text-purple-300 mb-4">Servidores asociados</h2>
             <% if (Array.isArray(guilds) && guilds.length > 0) { %>
-              <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <% guilds.forEach(function(g) { %>
-                  <div class="p-3 rounded border border-[#22262b] bg-[#0b1114]/50 flex items-center justify-between">
+                  <div class="flex items-center justify-between p-4 rounded-lg border border-[#3a243a] bg-gradient-to-b from-[#1a0b18]/50 to-[#150812]/30">
                     <div>
-                      <div class="font-medium"><%= g.name %></div>
+                      <div class="font-medium text-white"><%= g.name %></div>
                       <div class="text-xs text-gray-400">ID: <%= g.id %></div>
                     </div>
-                    <div class="flex items-center gap-2">
-                      <a href="/dashboard/guild/<%= g.id %>" class="text-sm text-blue-400 hover:underline">Abrir</a>
+                    <div>
+                      <a href="/dashboard/guild/<%= g.id %>" class="text-sm text-indigo-300 hover:underline">Abrir</a>
                     </div>
                   </div>
                 <% }) %>
@@ -44,15 +23,7 @@
             <% } else { %>
               <div class="text-sm text-gray-400">No hay servidores asociados a tu cuenta.</div>
             <% } %>
-          </section>
-
-          <section id="settings">
-            <h2 class="text-lg font-semibold mb-3">Ajustes rápidos</h2>
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div class="p-3 rounded border border-[#22262b] bg-[#071114]/40">Configuración general</div>
-              <div class="p-3 rounded border border-[#22262b] bg-[#071114]/40">Roles y permisos</div>
-            </div>
-          </section>
+          </div>
         </div>
       </main>
     </div>
