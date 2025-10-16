@@ -304,6 +304,7 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         selectedGuild: session?.guilds?.[0] ?? null,
         selectedGuildId: session?.guilds?.[0]?.id ?? null,
         session,
+        user: session?.user ?? null,
       });
       return;
     }
@@ -325,6 +326,7 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       await renderTemplate(req, res, "select_guild", {
         appName: pkg.name ?? "Amayo Bot",
         session,
+        user: session?.user ?? null,
         guilds: session.guilds || [],
       });
       return;
