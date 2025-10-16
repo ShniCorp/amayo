@@ -1,19 +1,11 @@
 import { IncomingMessage, ServerResponse } from "node:http";
 import path from "node:path";
-import { prisma } from "../core/database/prisma";
 import {
   parseCookies,
   sanitizeString,
   validateDiscordId,
-  formatHumanDate,
   publicDir,
-  viewsDir,
-  ejs,
   pkg,
-  gzipSync,
-  brotliCompressSync,
-  zlibConstants,
-  computeEtag,
 } from "./lib/utils";
 import {
   storeState,
@@ -33,7 +25,6 @@ import {
   hitSuspicious,
   BLOCKED_PATTERNS,
   applySecurityHeadersForRequest,
-  applySecurityHeaders,
 } from "./lib/security";
 
 export const handler = async (req: IncomingMessage, res: ServerResponse) => {
