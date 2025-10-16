@@ -217,4 +217,4 @@
 
   // initial
   fetchItems();
-})();
+}})()
