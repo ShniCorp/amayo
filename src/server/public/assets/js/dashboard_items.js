@@ -48,10 +48,10 @@
 
   async function onDelete(e){ const id = e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.id : null; if(!id) return; if(!confirm('Eliminar item?')) return; try{ const res = await fetch('/api/dashboard/' + encodeURIComponent(guildId) + '/items/' + encodeURIComponent(id), { method:'DELETE' }); if(!res.ok) throw new Error('delete-failed'); await fetchItems(); alert('Item eliminado'); }catch(err){ alert('Error al eliminar'); } }
 
-  function onEdit(e){ const id = e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.id : null; if(!id) return; window.location.href = '/dashboard/' + encodeURIComponent(guildId) + '/items/lab?edit=' + encodeURIComponent(id); }
+  function onEdit(e){ const id = e.currentTarget && e.currentTarget.dataset ? e.currentTarget.dataset.id : null; if(!id) return; window.location.href = '/items/lab?guild=' + encodeURIComponent(guildId) + '&edit=' + encodeURIComponent(id); }
 
   // wire create button (if present) to navigate to lab
-  const createBtn = $('createItemBtn'); if(createBtn) createBtn.addEventListener('click', ()=>{ window.location.href = '/dashboard/' + encodeURIComponent(guildId) + '/items/lab'; });
+  const createBtn = $('createItemBtn'); if(createBtn) createBtn.addEventListener('click', (ev)=>{ ev.preventDefault(); window.location.href = '/items/lab?guild=' + encodeURIComponent(guildId); });
 
   // initial load
   fetchItems();

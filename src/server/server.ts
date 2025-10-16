@@ -1867,6 +1867,41 @@ export const server = createServer(
           }
         }
 
+        // Standalone Item Lab (opens as a separate page, not inside dashboard)
+        if (url.pathname === "/items/lab" || url.pathname === "/item-lab") {
+          try {
+            const publicViews = path.join(__dirname, "public", "views");
+            const locals = {
+              appName: pkg.name ?? "Amayo Bot",
+              user,
+              selectedGuildId: url.searchParams.get("guild") || null,
+            };
+            const pageFile = path.join(publicViews, "item_lab.ejs");
+            const pageBody = await ejs.renderFile(pageFile, locals, {
+              async: true,
+              views: [publicViews, viewsDir],
+            });
+            res.writeHead(
+              200,
+              applySecurityHeaders({
+                "Content-Type": "text/html; charset=utf-8",
+              })
+            );
+            res.end(pageBody);
+            return;
+          } catch (err) {
+            console.error("render item lab failed", err);
+            res.writeHead(
+              500,
+              applySecurityHeaders({
+                "Content-Type": "text/plain; charset=utf-8",
+              })
+            );
+            res.end("Item Lab render error");
+            return;
+          }
+        }
+
         // /dashboard -> main dashboard
         if (url.pathname === "/dashboard" || url.pathname === "/dashboard/") {
           // determine whether bot is in each guild (if we have a bot token)

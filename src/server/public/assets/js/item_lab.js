@@ -1,6 +1,14 @@
 (function(){
   const $ = id => document.getElementById(id);
-  const guildId = (() => { try{ return (document.getElementById('itemsRoot') && document.getElementById('itemsRoot').dataset && document.getElementById('itemsRoot').dataset.guildId) || ''; }catch(e){ return ''; } })();
+  // Detect guildId from itemsRoot dataset when embedded, otherwise read ?guild= from query string when opened as standalone page
+  const guildId = (() => {
+    try{
+      const root = document.getElementById('itemsRoot');
+      if(root && root.dataset && root.dataset.guildId) return root.dataset.guildId;
+      const p = new URLSearchParams(location.search || '');
+      return p.get('guild') || '';
+    }catch(e){ return ''; }
+  })();
 
   // form elements
   const form = $('itemLabForm');
@@ -53,6 +61,34 @@
     });
     labReset.addEventListener('click', resetForm);
   }
+
+  // Prefill when editing: detect ?edit=<id>
+  (async function tryPrefill(){
+    try{
+      const params = new URLSearchParams(location.search || '');
+      const editId = params.get('edit');
+      if(!editId) return;
+      // show temporary loading state
+      const prev = labPreview.textContent;
+      labPreview.textContent = 'Cargando item...';
+      const res = await fetch('/api/dashboard/' + encodeURIComponent(guildId) + '/items/' + encodeURIComponent(editId));
+      if(!res.ok){ labPreview.textContent = 'Error cargando item: HTTP ' + res.status; return; }
+      const j = await res.json();
+      if(!j || !j.ok || !j.item){ labPreview.textContent = 'Item no encontrado'; return; }
+      const item = j.item;
+      // populate fields safely
+      if(labKey) labKey.value = item.key || '';
+      if(labName) labName.value = item.name || '';
+      if(labCategory) labCategory.value = item.category || '';
+      if(labIcon) labIcon.value = item.icon || '';
+      if(labDescription) labDescription.value = item.description || '';
+      if(labTags) labTags.value = Array.isArray(item.tags) ? item.tags.join(',') : (item.tags||'');
+      try{ labProps.value = item.props && typeof item.props === 'object' ? JSON.stringify(item.props, null, 2) : (item.props||'{}'); }catch(e){ labProps.value = '{}'; }
+      renderPreview();
+      // update browser history to remove query param (optional)
+      try{ const u = new URL(location.href); u.searchParams.delete('edit'); window.history.replaceState({}, '', u.toString()); }catch(e){}
+    }catch(e){ console.warn('prefill failed', e); }
+  })();
 
   // minimal three.js preview
   function init3D(){
