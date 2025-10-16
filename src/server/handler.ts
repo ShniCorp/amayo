@@ -263,7 +263,8 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         } catch {}
         res.writeHead(
           302,
-          applySecurityHeadersForRequest(req, { Location: "/dashboard" })
+          // Redirect to index so the user sees the centered 'logged in' card before entering /dashboard
+          applySecurityHeadersForRequest(req, { Location: "/" })
         );
         return res.end();
       } catch (err: any) {
