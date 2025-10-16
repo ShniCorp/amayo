@@ -27,12 +27,20 @@
   const list = $('itemsList');
 
   async function fetchItems(){
-    if(!guildId) return;
+    if(!guildId){ showPageAlert('warning','No hay servidor seleccionado. Selecciona un servidor o inicia sesión.'); return; }
     if(list) list.textContent = 'Cargando items...';
     try{
       const res = await fetch('/api/dashboard/' + encodeURIComponent(guildId) + '/items', { headers:{ 'Accept':'application/json' } });
-      if(!res.ok) throw new Error('fetch-failed');
-      const j = await res.json(); if(!j || !j.ok) throw new Error('bad');
+      if(!res.ok){
+        // Show helpful message depending on status
+        if(res.status === 401) { showPageAlert('danger','No autenticado. Inicia sesión y vuelve a intentarlo.'); }
+        else if(res.status === 403) { showPageAlert('danger','No tienes permisos para ver items en este servidor.'); }
+        else { showPageAlert('danger','Error al cargar items (HTTP ' + res.status + ')'); }
+        if(list) list.innerHTML = '<div class="text-red-400">Error cargando items: HTTP ' + res.status + '</div>';
+        try{ const errBody = await res.text(); console.debug('items fetch non-ok body:', errBody); }catch(e){}
+        return;
+      }
+      const j = await res.json(); if(!j || !j.ok) { showPageAlert('danger','Respuesta inválida del servidor al listar items'); if(list) list.innerHTML = '<div class="text-red-400">Respuesta inválida del servidor</div>'; return; }
       cachedItems = j.items || [];
       renderList(cachedItems);
     }catch(err){ if(list) list.innerHTML = '<div class="text-red-400">Error cargando items</div>'; }
