@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="es" class="scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Item Lab</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="/assets/css/styles.css?v=1" />
+</head>
+<body class="min-h-screen pixel-grid-bg pt-14">
+<div id="item-lab-root" class="p-6 max-w-6xl mx-auto">
+  <h1 class="text-xl font-bold mb-4">Item Lab</h1>
+  <div class="grid grid-cols-2 gap-4">
+    <div>
+      <form id="itemLabForm" class="space-y-4 bg-[#071a2a] p-4 rounded">
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label>Key</label>
+            <input id="labKey" class="w-full" />
+          </div>
+          <div class="flex-1">
+            <label>Name</label>
+            <input id="labName" class="w-full" />
+          </div>
+        </div>
+        <div class="flex gap-2">
+          <div class="flex-1">
+            <label>Category</label>
+            <input id="labCategory" class="w-full" />
+          </div>
+          <div class="flex-1">
+            <label>Icon</label>
+            <input id="labIcon" class="w-full" />
+          </div>
+        </div>
+        <div>
+          <label>Description</label>
+          <textarea id="labDescription" class="w-full h-20"></textarea>
+        </div>
+        <div>
+          <label>Tags (comma)</label>
+          <input id="labTags" class="w-full" />
+        </div>
+        <div>
+          <label>Props (JSON)</label>
+          <textarea id="labProps" class="w-full h-32 font-mono"></textarea>
+        </div>
+        <div class="flex gap-2 justify-end">
+          <button type="button" id="labReset" class="btn">Reset</button>
+          <button type="submit" id="labSave" class="btn btn-primary">Guardar</button>
+        </div>
+      </form>
+    </div>
+
+    <div>
+      <div class="mb-4 bg-[#071a2a] p-4 rounded">
+        <h2 class="font-semibold mb-2">Preview 3D</h2>
+        <div id="lab3d" style="width:100%;height:300px;background:#001827;border-radius:6px;"></div>
+      </div>
+
+      <div class="bg-[#071a2a] p-4 rounded">
+        <h2 class="font-semibold mb-2">Preview JSON</h2>
+        <pre id="labPreview" class="text-sm max-h-60 overflow-auto p-2"></pre>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/assets/js/three.min.js"></script>
+<script src="/assets/js/item_lab.js"></script>
+</body>
+</html>
