@@ -276,6 +276,71 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       return res.end();
     }
 
+    // Dashboard routes (require session)
+    if (
+      url.pathname === "/dashboard" ||
+      url.pathname.startsWith("/dashboard/")
+    ) {
+      const cookies = parseCookies(req);
+      const signed = cookies["amayo_sid"];
+      const sid = unsignSid(signed);
+      const session = sid ? SESSIONS.get(sid) : null;
+      if (!session) {
+        // not authenticated -> redirect to login
+        res.writeHead(
+          302,
+          applySecurityHeadersForRequest(req, { Location: "/login" })
+        );
+        return res.end();
+      }
+      // refresh token if needed and mark session active
+      await refreshAccessTokenIfNeeded(session).catch(() => {});
+      if (sid) touchSession(sid);
+      await renderTemplate(req, res, "dashboard", {
+        appName: pkg.name ?? "Amayo Bot",
+        version: pkg.version ?? "2.0.0",
+        djsVersion: pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
+        useDashboardNav: true,
+        selectedGuild: session?.guilds?.[0] ?? null,
+        selectedGuildId: session?.guilds?.[0]?.id ?? null,
+        session,
+      });
+      return;
+    }
+
+    if (url.pathname === "/select_guild") {
+      const cookies = parseCookies(req);
+      const signed = cookies["amayo_sid"];
+      const sid = unsignSid(signed);
+      const session = sid ? SESSIONS.get(sid) : null;
+      if (!session) {
+        res.writeHead(
+          302,
+          applySecurityHeadersForRequest(req, { Location: "/login" })
+        );
+        return res.end();
+      }
+      await refreshAccessTokenIfNeeded(session).catch(() => {});
+      if (sid) touchSession(sid);
+      await renderTemplate(req, res, "select_guild", {
+        appName: pkg.name ?? "Amayo Bot",
+        session,
+        guilds: session.guilds || [],
+      });
+      return;
+    }
+
+    if (url.pathname === "/favicon.ico") {
+      // redirect favicon requests to a known image in public assets
+      res.writeHead(
+        302,
+        applySecurityHeadersForRequest(req, {
+          Location: "/assets/images/logo-amayo.svg",
+        })
+      );
+      return res.end();
+    }
+
     // NOTE: For brevity not all routes ported here; remaining dashboard/api routes will be handled by the original server when present in public directory
 
     const filePath = path.join(
