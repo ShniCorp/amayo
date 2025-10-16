@@ -305,6 +305,7 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         selectedGuildId: session?.guilds?.[0]?.id ?? null,
         session,
         user: session?.user ?? null,
+        selectedGuildName: session?.guilds?.[0]?.name ?? null,
       });
       return;
     }
