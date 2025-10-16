@@ -345,6 +345,39 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       return res.end();
     }
 
+    // API proxy for dashboard roles: GET /api/dashboard/:id/roles
+    if (
+      url.pathname.startsWith("/api/dashboard/") &&
+      url.pathname.endsWith("/roles")
+    ) {
+      const parts = url.pathname.split("/").filter(Boolean); // ['api','dashboard','<id>','roles']
+      const gid = parts[2];
+      if (!gid) {
+        res.writeHead(400, applySecurityHeadersForRequest(req));
+        return res.end("Missing guild id");
+      }
+      try {
+        const { getGuildRoles } = await import("../core/api/discordAPI.js");
+        const roles = await getGuildRoles(gid);
+        res.writeHead(
+          200,
+          applySecurityHeadersForRequest(req, {
+            "Content-Type": "application/json; charset=utf-8",
+          })
+        );
+        return res.end(JSON.stringify(roles));
+      } catch (err: any) {
+        console.warn("Failed proxy roles", err);
+        res.writeHead(
+          500,
+          applySecurityHeadersForRequest(req, {
+            "Content-Type": "application/json; charset=utf-8",
+          })
+        );
+        return res.end(JSON.stringify({ error: String(err?.message || err) }));
+      }
+    }
+
     // NOTE: For brevity not all routes ported here; remaining dashboard/api routes will be handled by the original server when present in public directory
 
     const filePath = path.join(
