@@ -296,17 +296,50 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       // refresh token if needed and mark session active
       await refreshAccessTokenIfNeeded(session).catch(() => {});
       if (sid) touchSession(sid);
+
+      // Try to get the running bot instance to know where the bot is present.
+      let botInstance: any = null;
+      try {
+        // use require to avoid circular import issues at TS compile time
+        const maybe = require("../main");
+        botInstance = maybe && maybe.bot ? maybe.bot : null;
+      } catch (e) {
+        botInstance = null;
+      }
+
+      let botAvailable = false;
+      let botGuildIds = new Set<string>();
+      try {
+        if (botInstance && botInstance.guilds && botInstance.guilds.cache) {
+          botAvailable = true;
+          for (const [id] of botInstance.guilds.cache) {
+            botGuildIds.add(String(id));
+          }
+        }
+      } catch (e) {
+        botAvailable = false;
+      }
+
+      // session.guilds contains the guilds the user is admin of (from OAuth)
+      const sessionGuilds = session?.guilds || [];
+      // If we have bot guild IDs, show only the intersection (where bot exists too).
+      const visibleGuilds = botAvailable
+        ? sessionGuilds.filter((g: any) => botGuildIds.has(String(g.id)))
+        : sessionGuilds;
+
       await renderTemplate(req, res, "dashboard", {
         appName: pkg.name ?? "Amayo Bot",
         version: pkg.version ?? "2.0.0",
         djsVersion: pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
         useDashboardNav: true,
-        selectedGuild: session?.guilds?.[0] ?? null,
-        selectedGuildId: session?.guilds?.[0]?.id ?? null,
+        selectedGuild: visibleGuilds?.[0] ?? session?.guilds?.[0] ?? null,
+        selectedGuildId: visibleGuilds?.[0]?.id ?? session?.guilds?.[0]?.id ?? null,
         session,
         user: session?.user ?? null,
-        guilds: session?.guilds || [],
-        selectedGuildName: session?.guilds?.[0]?.name ?? null,
+        guilds: visibleGuilds || [],
+        botAvailable,
+        selectedGuildName:
+          visibleGuilds?.[0]?.name ?? session?.guilds?.[0]?.name ?? null,
       });
       return;
     }
