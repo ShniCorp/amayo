@@ -30,7 +30,7 @@
               <% const isSelected = String(selectedGuildId || '') === String(g.id); %>
               <% const iconUrl = g.icon ? `https://cdn.discordapp.com/icons/${g.id}/${g.icon}.png?size=128` : null; %>
               <li>
-                <a href="/dashboard/<%= encodeURIComponent(g.id) %>" class="group flex items-center justify-between px-4 py-3 hover:bg-slate-700/40 transition-colors <%= isSelected ? 'bg-slate-700/60' : '' %>">
+                <a href="/dashboard/labs?guild=<%= encodeURIComponent(g.id) %>" class="group flex items-center justify-between px-4 py-3 hover:bg-slate-700/40 transition-colors <%= isSelected ? 'bg-slate-700/60' : '' %>">
                   <div class="flex items-center gap-3">
                     <% if (iconUrl) { %>
                       <img src="<%= iconUrl %>" alt="icon" class="h-10 w-10 rounded-md object-cover bg-slate-600/40" onerror="this.style.display='none'" />

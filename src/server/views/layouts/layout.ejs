@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title><%= title || `${appName} | Guía Completa` %></title>
+  <title><%= (typeof title !== 'undefined' ? title : (String(appName || 'Amayo') + ' | Guía Completa')) %></title>
   <meta name="description" content="Guía completa de Amayo Bot: comandos, minijuegos, economía, misiones, logros, creación de contenido y más">
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- highlight.js (ligero y CDN) -->

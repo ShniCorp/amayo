@@ -267,10 +267,10 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       return res.end();
     }
 
-    // Dashboard routes (require session)
+    // Dashboard routes (require session) — exclude labs which has its own handler
     if (
       url.pathname === "/dashboard" ||
-      url.pathname.startsWith("/dashboard/")
+      (url.pathname.startsWith("/dashboard/") && !url.pathname.startsWith("/dashboard/labs"))
     ) {
       const cookies = parseCookies(req);
       const signed = cookies["amayo_sid"];
@@ -322,7 +322,8 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         appName: pkg.name ?? "Amayo Bot",
         version: pkg.version ?? "2.0.0",
         djsVersion: pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
-        useDashboardNav: true,
+        // dashboard should not render the site's navbar
+        hideNavbar: true,
         selectedGuild: visibleGuilds?.[0] ?? session?.guilds?.[0] ?? null,
         selectedGuildId: visibleGuilds?.[0]?.id ?? session?.guilds?.[0]?.id ?? null,
         session,
@@ -331,6 +332,83 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         botAvailable,
         selectedGuildName:
           visibleGuilds?.[0]?.name ?? session?.guilds?.[0]?.name ?? null,
+      });
+      return;
+    }
+
+    // Dashboard labs route (specific)
+    if (url.pathname === "/dashboard/labs") {
+      const cookies = parseCookies(req);
+      const signed = cookies["amayo_sid"];
+      const sid = unsignSid(signed);
+      const session = sid ? SESSIONS.get(sid) : null;
+      if (!session) {
+        res.writeHead(
+          302,
+          applySecurityHeadersForRequest(req, { Location: "/login" })
+        );
+        return res.end();
+      }
+      await refreshAccessTokenIfNeeded(session).catch(() => {});
+      if (sid) touchSession(sid);
+
+      // Determine bot presence similar to dashboard route
+      let botInstance: any = null;
+      try {
+        const maybe = require("../main");
+        botInstance = maybe && maybe.bot ? maybe.bot : null;
+      } catch (e) {
+        botInstance = null;
+      }
+      let botAvailable = false;
+      let botGuildIds = new Set<string>();
+      try {
+        if (botInstance && botInstance.guilds && botInstance.guilds.cache) {
+          botAvailable = true;
+          for (const [id] of botInstance.guilds.cache) {
+            botGuildIds.add(String(id));
+          }
+        }
+      } catch (e) {
+        botAvailable = false;
+      }
+
+      const sessionGuilds = session?.guilds || [];
+      const visibleGuilds = botAvailable
+        ? sessionGuilds.filter((g: any) => botGuildIds.has(String(g.id)))
+        : sessionGuilds;
+
+      const gid = String(url.searchParams.get("guild") || "");
+      let selectedGuild = null;
+      if (gid) {
+        selectedGuild =
+          visibleGuilds.find((g: any) => String(g.id) === gid) ||
+          sessionGuilds.find((g: any) => String(g.id) === gid) ||
+          null;
+      }
+
+      // If no guild selected, redirect back to dashboard list
+      if (!selectedGuild) {
+        res.writeHead(
+          302,
+          applySecurityHeadersForRequest(req, { Location: "/dashboard" })
+        );
+        return res.end();
+      }
+
+      await renderTemplate(req, res, "labs", {
+        appName: pkg.name ?? "Amayo Bot",
+        version: pkg.version ?? "2.0.0",
+        djsVersion: pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
+        // enable dashboard nav for labs since a guild is selected
+        useDashboardNav: true,
+        selectedGuild,
+        selectedGuildId: String(selectedGuild.id),
+        selectedGuildName: selectedGuild.name,
+        session,
+        user: session?.user ?? null,
+        guilds: visibleGuilds || [],
+        botAvailable,
       });
       return;
     }
