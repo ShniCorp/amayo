@@ -12,11 +12,18 @@ import {
 } from "node:zlib";
 import path from "node:path";
 import ejs from "ejs";
-import { promises as fs, readFileSync } from "node:fs";
+import { promises as fs, readFileSync, existsSync } from "node:fs";
 import { prisma } from "../../core/database/prisma";
 
-const publicDir = path.join(__dirname, "public");
-const viewsDir = path.join(__dirname, "views");
+// Prefer project src paths (in case process.cwd differs between environments)
+const projectPublic = path.join(process.cwd(), "src", "server", "public");
+const projectViews = path.join(process.cwd(), "src", "server", "views");
+const publicDir = existsSync(projectPublic)
+  ? projectPublic
+  : path.join(__dirname, "..", "public");
+const viewsDir = existsSync(projectViews)
+  ? projectViews
+  : path.join(__dirname, "..", "views");
 
 export const MIME_TYPES: Record<string, string> = {
   ".html": "text/html; charset=utf-8",

@@ -86,8 +86,28 @@ export const renderTemplate = async (
   locals: Record<string, any> = {},
   statusCode = 200
 ) => {
-  const pageFile = path.join(viewsDir, "pages", `${template}.ejs`);
-  const layoutFile = path.join(viewsDir, "layouts", "layout.ejs");
+  const candidatePaths = [
+    path.join(viewsDir, "pages", `${template}.ejs`),
+    // fallback: lib is one level deeper, try ../views
+    path.join(__dirname, "..", "views", "pages", `${template}.ejs`),
+    // fallback: project src path
+    path.join(
+      process.cwd(),
+      "src",
+      "server",
+      "views",
+      "pages",
+      `${template}.ejs`
+    ),
+  ];
+  const pageFile = (await findFirstExisting(candidatePaths)) || "";
+
+  const layoutCandidates = [
+    path.join(viewsDir, "layouts", "layout.ejs"),
+    path.join(__dirname, "..", "views", "layouts", "layout.ejs"),
+    path.join(process.cwd(), "src", "server", "views", "layouts", "layout.ejs"),
+  ];
+  const layoutFile = (await findFirstExisting(layoutCandidates)) || "";
   locals.hideNavbar =
     typeof locals.hideNavbar !== "undefined" ? locals.hideNavbar : false;
   locals.useDashboardNav =
@@ -101,19 +121,40 @@ export const renderTemplate = async (
       ? locals.selectedGuildId
       : null;
 
-  const pageBody = await ejs.renderFile(pageFile, locals, { async: true });
+  let pageBody: string;
+  if (!pageFile) {
+    // no page template found -> return 404-friendly HTML
+    pageBody = `<h1>404 - Página no encontrada</h1><p>Template ${template} no disponible.</p>`;
+    statusCode = 404;
+  } else {
+    pageBody = await ejs.renderFile(pageFile, locals, { async: true });
+  }
   const defaultTitle = `${
     locals.appName ?? pkg.name ?? "Amayo Bot"
   } | Guía Completa`;
   let dashboardNavHtml: string | null = null;
   try {
     if (locals.useDashboardNav) {
-      const partialPath = path.join(viewsDir, "partials", "dashboard_nav.ejs");
-      dashboardNavHtml = await ejs.renderFile(
-        partialPath,
-        { ...locals },
-        { async: true }
-      );
+      const partialCandidates = [
+        path.join(viewsDir, "partials", "dashboard_nav.ejs"),
+        path.join(__dirname, "..", "views", "partials", "dashboard_nav.ejs"),
+        path.join(
+          process.cwd(),
+          "src",
+          "server",
+          "views",
+          "partials",
+          "dashboard_nav.ejs"
+        ),
+      ];
+      const partialPath = (await findFirstExisting(partialCandidates)) || null;
+      if (partialPath) {
+        dashboardNavHtml = await ejs.renderFile(
+          partialPath,
+          { ...locals },
+          { async: true }
+        );
+      }
     }
   } catch (err) {
     console.warn("Failed rendering dashboard_nav partial:", err);
@@ -123,54 +164,80 @@ export const renderTemplate = async (
   try {
     const shouldShowNavbar = !locals.hideNavbar && !locals.useDashboardNav;
     if (shouldShowNavbar) {
-      const navPath = path.join(viewsDir, "partials", "navbar.ejs");
-      navbarHtml = await ejs.renderFile(
-        navPath,
-        { appName: locals.appName ?? pkg.name ?? "Amayo Bot" },
-        { async: true }
-      );
+      const navCandidates = [
+        path.join(viewsDir, "partials", "navbar.ejs"),
+        path.join(__dirname, "..", "views", "partials", "navbar.ejs"),
+        path.join(
+          process.cwd(),
+          "src",
+          "server",
+          "views",
+          "partials",
+          "navbar.ejs"
+        ),
+      ];
+      const navPath = (await findFirstExisting(navCandidates)) || null;
+      if (navPath) {
+        navbarHtml = await ejs.renderFile(
+          navPath,
+          { appName: locals.appName ?? pkg.name ?? "Amayo Bot" },
+          { async: true }
+        );
+      }
     }
   } catch (err) {
     console.warn("Failed rendering navbar partial:", err);
     navbarHtml = null;
   }
 
-  const html = await ejs.renderFile(
-    layoutFile,
-    {
-      head: null,
-      scripts: null,
-      version: locals.version ?? pkg.version ?? "2.0.0",
-      djsVersion:
-        locals.djsVersion ?? pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
-      currentDateHuman:
-        locals.currentDateHuman ??
-        new Date().toLocaleDateString("es-ES", {
-          month: "long",
-          year: "numeric",
-        }),
-      hideNavbar:
-        typeof locals.hideNavbar !== "undefined" ? locals.hideNavbar : false,
-      useDashboardNav:
-        typeof locals.useDashboardNav !== "undefined"
-          ? locals.useDashboardNav
-          : false,
-      selectedGuild:
-        typeof locals.selectedGuild !== "undefined"
-          ? locals.selectedGuild
-          : null,
-      selectedGuildId:
-        typeof locals.selectedGuildId !== "undefined"
-          ? locals.selectedGuildId
-          : null,
-      dashboardNav: dashboardNavHtml,
-      navbar: navbarHtml,
-      ...locals,
-      title: locals.title ?? defaultTitle,
-      body: pageBody,
-    },
-    { async: true }
-  );
+  let html: string;
+  if (!layoutFile) {
+    // If layout not available, use the page body directly
+    console.warn(
+      "Layout template not found, returning page body directly for:",
+      template
+    );
+    html = pageBody;
+  } else {
+    html = await ejs.renderFile(
+      layoutFile,
+      {
+        head: null,
+        scripts: null,
+        version: locals.version ?? pkg.version ?? "2.0.0",
+        djsVersion:
+          locals.djsVersion ??
+          pkg?.dependencies?.["discord.js"] ??
+          "15.0.0-dev",
+        currentDateHuman:
+          locals.currentDateHuman ??
+          new Date().toLocaleDateString("es-ES", {
+            month: "long",
+            year: "numeric",
+          }),
+        hideNavbar:
+          typeof locals.hideNavbar !== "undefined" ? locals.hideNavbar : false,
+        useDashboardNav:
+          typeof locals.useDashboardNav !== "undefined"
+            ? locals.useDashboardNav
+            : false,
+        selectedGuild:
+          typeof locals.selectedGuild !== "undefined"
+            ? locals.selectedGuild
+            : null,
+        selectedGuildId:
+          typeof locals.selectedGuildId !== "undefined"
+            ? locals.selectedGuildId
+            : null,
+        dashboardNav: dashboardNavHtml,
+        navbar: navbarHtml,
+        ...locals,
+        title: locals.title ?? defaultTitle,
+        body: pageBody,
+      },
+      { async: true }
+    );
+  }
 
   const htmlBuffer = Buffer.from(html, "utf8");
   const etag = computeEtag(htmlBuffer);
@@ -214,3 +281,14 @@ export const renderTemplate = async (
   res.writeHead(statusCode, applySecurityHeadersForRequest(req, headers));
   res.end(respBody);
 };
+
+async function findFirstExisting(paths: string[]): Promise<string | null> {
+  for (const p of paths) {
+    try {
+      if (!p) continue;
+      const st = await fs.stat(p).catch(() => undefined);
+      if (st && st.isFile()) return p;
+    } catch {}
+  }
+  return null;
+}
