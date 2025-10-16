@@ -98,21 +98,11 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         year: "numeric",
       });
       const djsVersion = pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev";
-      // detect session and forward user/guilds to index so we can show quick dashboard card
-      const cookies = parseCookies(req);
-      const signed = cookies["amayo_sid"];
-      const sid = unsignSid(signed);
-      const session = sid ? SESSIONS.get(sid) : null;
-      if (sid) touchSession(sid);
       await renderTemplate(req, res, "index", {
         appName: pkg.name ?? "Amayo Bot",
         version: pkg.version ?? "2.0.0",
         djsVersion,
         currentDateHuman,
-        session,
-        user: session?.user ?? null,
-        guilds: session?.guilds || [],
-        selectedGuildName: session?.guilds?.[0]?.name ?? null,
       });
       return;
     }
@@ -263,8 +253,7 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         } catch {}
         res.writeHead(
           302,
-          // Redirect to index so the user sees the centered 'logged in' card before entering /dashboard
-          applySecurityHeadersForRequest(req, { Location: "/" })
+          applySecurityHeadersForRequest(req, { Location: "/dashboard" })
         );
         return res.end();
       } catch (err: any) {
