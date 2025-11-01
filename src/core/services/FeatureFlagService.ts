@@ -99,7 +99,10 @@ class FeatureFlagService {
         );
       }
 
-      const flags = await prisma.featureFlag.findMany();
+      // Capturar referencia local al delegado
+      const featureFlagDelegate = (prisma as any).featureFlag;
+
+      const flags = await featureFlagDelegate.findMany();
 
       this.flagsCache.clear();
 
@@ -593,6 +596,21 @@ class FeatureFlagService {
           "Prisma.featureFlag delegate missing or upsert not available"
         );
       }
+
+      // Capturar referencia local al delegado para evitar race conditions
+      const featureFlagDelegate = (prisma as any).featureFlag;
+
+      if (
+        !featureFlagDelegate ||
+        typeof featureFlagDelegate.upsert !== "function"
+      ) {
+        logger.error({
+          msg: "[FeatureFlags] FeatureFlag delegate lost between validation and use",
+          typeofDelegate: typeof featureFlagDelegate,
+        });
+        throw new Error("FeatureFlag delegate became undefined");
+      }
+
       const data = {
         name: config.name,
         description: config.description || null,
@@ -607,7 +625,7 @@ class FeatureFlagService {
         metadata: config.metadata ? JSON.stringify(config.metadata) : null,
       };
 
-      await prisma.featureFlag.upsert({
+      await featureFlagDelegate.upsert({
         where: { name: config.name },
         create: data,
         update: data,
@@ -636,7 +654,23 @@ class FeatureFlagService {
    */
   async removeFlag(flagName: string): Promise<void> {
     try {
-      await prisma.featureFlag.delete({
+      // Defensive check and capture delegate reference
+      if (
+        !(prisma as any).featureFlag ||
+        typeof (prisma as any).featureFlag.delete !== "function"
+      ) {
+        logger.error({
+          msg: "[FeatureFlags] Prisma featureFlag delegate missing before delete",
+          typeofPrisma: typeof prisma,
+        });
+        throw new Error(
+          "Prisma.featureFlag delegate missing or delete not available"
+        );
+      }
+
+      const featureFlagDelegate = (prisma as any).featureFlag;
+
+      await featureFlagDelegate.delete({
         where: { name: flagName },
       });
 
@@ -697,5 +731,3 @@ class FeatureFlagService {
 
 // Singleton
 export const featureFlagService = new FeatureFlagService();
-
-// TODOs updated by agent
