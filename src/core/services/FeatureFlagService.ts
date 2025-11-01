@@ -83,6 +83,22 @@ class FeatureFlagService {
    */
   async refreshCache(): Promise<void> {
     try {
+      // Defensive check: ensure prisma delegate exists
+      if (
+        !(prisma as any).featureFlag ||
+        typeof (prisma as any).featureFlag.findMany !== "function"
+      ) {
+        const keys = Object.keys(prisma as any).slice(0, 20);
+        logger.error({
+          msg: "[FeatureFlags] Prisma featureFlag delegate missing before refreshCache",
+          keys,
+          typeofPrisma: typeof prisma,
+        });
+        throw new Error(
+          "Prisma.featureFlag delegate missing or findMany not available"
+        );
+      }
+
       const flags = await prisma.featureFlag.findMany();
 
       this.flagsCache.clear();
@@ -545,6 +561,38 @@ class FeatureFlagService {
    */
   async setFlag(config: FeatureFlagConfig): Promise<void> {
     try {
+      // Diagnóstico defensivo: comprobar que prisma y el delegado del modelo existen
+      try {
+        if (typeof prisma === "undefined" || prisma === null) {
+          logger.error({
+            msg: "[FeatureFlags] Prisma client is undefined before upsert",
+          });
+          throw new Error("Prisma client is undefined");
+        }
+      } catch (diagErr) {
+        // Si falla el acceso a prisma, logueamos detalles adicionales y re-lanzamos
+        logger.error({
+          msg: "[FeatureFlags] Diagnóstico prisma fallido",
+          diagErr: String(diagErr),
+        });
+        throw diagErr;
+      }
+
+      // Comprobar que el delegado del modelo existe y tiene upsert
+      if (
+        !(prisma as any).featureFlag ||
+        typeof (prisma as any).featureFlag.upsert !== "function"
+      ) {
+        const keys = Object.keys(prisma as any).slice(0, 20);
+        logger.error({
+          msg: "[FeatureFlags] Prisma featureFlag delegate missing or invalid",
+          keys,
+          typeofPrisma: typeof prisma,
+        });
+        throw new Error(
+          "Prisma.featureFlag delegate missing or upsert not available"
+        );
+      }
       const data = {
         name: config.name,
         description: config.description || null,
@@ -649,3 +697,5 @@ class FeatureFlagService {
 
 // Singleton
 export const featureFlagService = new FeatureFlagService();
+
+// TODOs updated by agent
