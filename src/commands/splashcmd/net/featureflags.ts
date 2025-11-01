@@ -16,6 +16,7 @@ import {
 } from "../../../core/types/featureFlags";
 import logger from "../../../core/lib/logger";
 import { CommandSlash } from "../../../core/types/commands";
+import { requireTestGuildAndAdmin } from "../../../core/lib/security";
 
 export const command: CommandSlash = {
   name: "featureflags",
@@ -180,6 +181,11 @@ export const command: CommandSlash = {
     },
   ],
   run: async (interaction) => {
+    // 🔒 SECURITY: Solo guild de testing + admin
+    if (!(await requireTestGuildAndAdmin(interaction))) {
+      return;
+    }
+
     const subcommand = interaction.options.getSubcommand();
 
     try {
