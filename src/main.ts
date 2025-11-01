@@ -14,6 +14,7 @@ import { cleanExpiredGuildCache } from "./core/database/guildCache";
 import logger from "./core/lib/logger";
 import { applyModalSubmitInteractionPatch } from "./core/patches/discordModalPatch";
 import { server } from "./server/server";
+import loadFeatureFlags from "./core/loaders/featureFlagsLoader";
 
 // Activar monitor de memoria si se define la variable
 const __memInt = parseInt(process.env.MEMORY_LOG_INTERVAL_SECONDS || "0", 10);
@@ -211,7 +212,13 @@ async function bootstrap() {
   } catch (e) {
     logger.error({ err: e }, "Error cargando eventos");
   }
+  try {
+    await loadFeatureFlags();
+  } catch (e) {
+    logger.error({ err: e }, "Error cargando feature flags");
+  }
 
+  /*
   // Inicializar repositorio de mobs (intenta cargar mobs desde DB si existe)
   try {
     // import dinamico para evitar ciclos en startup
@@ -220,6 +227,7 @@ async function bootstrap() {
   } catch (e) {
     logger.warn({ err: e }, "No se pudo inicializar el repositorio de mobs");
   }
+  */
 
   // Registrar comandos en segundo plano con reintentos; no bloquea el arranque del bot
   withRetry("Registrar slash commands", async () => {
