@@ -215,8 +215,16 @@ export const command: CommandSlash = {
           });
       }
     } catch (error: any) {
-      logger.error("[FeatureFlagsCmd]", error?.message || error);
-      const errorMessage = "❌ Error al ejecutar el comando";
+      logger.error({
+        msg: "[FeatureFlagsCmd] Error ejecutando comando",
+        error: {
+          message: error?.message,
+          stack: error?.stack,
+          code: error?.code,
+          name: error?.name,
+        },
+      });
+      const errorMessage = `❌ Error: ${error?.message || "Error desconocido"}`;
 
       if (interaction.replied || interaction.deferred) {
         await interaction.followUp({

@@ -65,10 +65,14 @@ class FeatureFlagService {
         `[FeatureFlags] Inicializado con ${this.flagsCache.size} flags`
       );
     } catch (error: any) {
-      logger.error("[FeatureFlags] Error al inicializar:", {
-        message: error?.message,
-        stack: error?.stack,
-        name: error?.name,
+      logger.error({
+        msg: "[FeatureFlags] Error al inicializar",
+        error: {
+          message: error?.message,
+          stack: error?.stack,
+          name: error?.name,
+          code: error?.code,
+        },
       });
       throw error;
     }
@@ -110,11 +114,14 @@ class FeatureFlagService {
         `[FeatureFlags] Caché actualizado: ${this.flagsCache.size} flags`
       );
     } catch (error: any) {
-      logger.error("[FeatureFlags] Error al refrescar caché:", {
-        message: error?.message,
-        stack: error?.stack,
-        code: error?.code,
-        meta: error?.meta,
+      logger.error({
+        msg: "[FeatureFlags] Error al refrescar caché",
+        error: {
+          message: error?.message,
+          stack: error?.stack,
+          code: error?.code,
+          meta: error?.meta,
+        },
       });
       throw error;
     }
@@ -563,11 +570,14 @@ class FeatureFlagService {
 
       logger.info(`[FeatureFlags] Flag "${config.name}" actualizado`);
     } catch (error: any) {
-      logger.error(`[FeatureFlags] Error al setear flag "${config.name}":`, {
-        message: error?.message,
-        stack: error?.stack,
-        code: error?.code,
-        meta: error?.meta,
+      logger.error({
+        msg: `[FeatureFlags] Error al setear flag "${config.name}"`,
+        error: {
+          message: error?.message,
+          stack: error?.stack,
+          code: error?.code,
+          meta: error?.meta,
+        },
       });
       throw error;
     }
@@ -587,11 +597,14 @@ class FeatureFlagService {
 
       logger.info(`[FeatureFlags] Flag "${flagName}" eliminado`);
     } catch (error: any) {
-      logger.error(`[FeatureFlags] Error al eliminar flag "${flagName}":`, {
-        message: error?.message,
-        stack: error?.stack,
-        code: error?.code,
-        meta: error?.meta,
+      logger.error({
+        msg: `[FeatureFlags] Error al eliminar flag "${flagName}"`,
+        error: {
+          message: error?.message,
+          stack: error?.stack,
+          code: error?.code,
+          meta: error?.meta,
+        },
       });
       throw error;
     }
