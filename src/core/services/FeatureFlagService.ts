@@ -64,9 +64,12 @@ class FeatureFlagService {
       logger.info(
         `[FeatureFlags] Inicializado con ${this.flagsCache.size} flags`
       );
-    } catch (error) {
-      //@ts-ignore
-      logger.error("[FeatureFlags] Error al inicializar:", error);
+    } catch (error: any) {
+      logger.error("[FeatureFlags] Error al inicializar:", {
+        message: error?.message,
+        stack: error?.stack,
+        name: error?.name,
+      });
       throw error;
     }
   }
@@ -106,9 +109,13 @@ class FeatureFlagService {
       logger.debug(
         `[FeatureFlags] Caché actualizado: ${this.flagsCache.size} flags`
       );
-    } catch (error) {
-      //@ts-ignore
-      logger.error("[FeatureFlags] Error al refrescar caché:", error);
+    } catch (error: any) {
+      logger.error("[FeatureFlags] Error al refrescar caché:", {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        meta: error?.meta,
+      });
       throw error;
     }
   }
@@ -555,12 +562,13 @@ class FeatureFlagService {
       this.flagsCache.set(config.name, config);
 
       logger.info(`[FeatureFlags] Flag "${config.name}" actualizado`);
-    } catch (error) {
-      logger.error(
-        `[FeatureFlags] Error al setear flag "${config.name}":`,
-        //@ts-ignore
-        error
-      );
+    } catch (error: any) {
+      logger.error(`[FeatureFlags] Error al setear flag "${config.name}":`, {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        meta: error?.meta,
+      });
       throw error;
     }
   }
@@ -578,12 +586,13 @@ class FeatureFlagService {
       this.stats.delete(flagName);
 
       logger.info(`[FeatureFlags] Flag "${flagName}" eliminado`);
-    } catch (error) {
-      logger.error(
-        `[FeatureFlags] Error al eliminar flag "${flagName}":`,
-        //@ts-ignore
-        error
-      );
+    } catch (error: any) {
+      logger.error(`[FeatureFlags] Error al eliminar flag "${flagName}":`, {
+        message: error?.message,
+        stack: error?.stack,
+        code: error?.code,
+        meta: error?.meta,
+      });
       throw error;
     }
   }

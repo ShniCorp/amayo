@@ -11,9 +11,12 @@ export async function loadFeatureFlags(): Promise<void> {
     logger.info("[FeatureFlags] Inicializando servicio...");
     await featureFlagService.initialize();
     logger.info("[FeatureFlags] ✅ Servicio inicializado correctamente");
-  } catch (error) {
-    //@ts-ignore
-    logger.error("[FeatureFlags] ❌ Error al inicializar:", error);
+  } catch (error: any) {
+    logger.error("[FeatureFlags] ❌ Error al inicializar:");
+    logger.error("[FeatureFlags] Message:", error?.message);
+    logger.error("[FeatureFlags] Stack:", error?.stack);
+    logger.error("[FeatureFlags] Code:", error?.code);
+    logger.error("[FeatureFlags] Meta:", error?.meta);
     // No lanzamos el error para no bloquear el arranque del bot
     // El servicio funcionará en modo fail-safe (todos los flags disabled)
   }
