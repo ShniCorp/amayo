@@ -270,7 +270,8 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
     // Dashboard routes (require session) — exclude labs which has its own handler
     if (
       url.pathname === "/dashboard" ||
-      (url.pathname.startsWith("/dashboard/") && !url.pathname.startsWith("/dashboard/labs"))
+      (url.pathname.startsWith("/dashboard/") &&
+        !url.pathname.startsWith("/dashboard/labs"))
     ) {
       const cookies = parseCookies(req);
       const signed = cookies["amayo_sid"];
@@ -325,7 +326,8 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         // dashboard should not render the site's navbar
         hideNavbar: true,
         selectedGuild: visibleGuilds?.[0] ?? session?.guilds?.[0] ?? null,
-        selectedGuildId: visibleGuilds?.[0]?.id ?? session?.guilds?.[0]?.id ?? null,
+        selectedGuildId:
+          visibleGuilds?.[0]?.id ?? session?.guilds?.[0]?.id ?? null,
         session,
         user: session?.user ?? null,
         guilds: visibleGuilds || [],
@@ -445,6 +447,17 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         })
       );
       return res.end();
+    }
+
+    // API endpoint for entity test: GET /api/entity.json
+    if (url.pathname === "/api/entity.json") {
+      res.writeHead(
+        200,
+        applySecurityHeadersForRequest(req, {
+          "Content-Type": "application/json; charset=utf-8",
+        })
+      );
+      return res.end(JSON.stringify({ conexion: "establecida" }));
     }
 
     // API proxy for dashboard roles: GET /api/dashboard/:id/roles
