@@ -3,8 +3,8 @@
     <div class="hero-content">
       <div class="hero-text">
         <h1 class="hero-title">
-          <span class="typewriter">{{ displayText }}</span>
-          <span class="cursor" :class="{ blink: showCursor }">|</span>
+          <span ref="typewriterRef" class="typewriter">{{ displayText }}</span>
+          <span ref="cursorRef" class="cursor" :class="{ blink: showCursor }">|</span>
         </h1>
         <p class="hero-subtitle">{{ t('hero.subtitle') }}</p>
         
@@ -52,7 +52,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, watch } from 'vue'
+import { ref, onMounted, watch, nextTick } from 'vue'
 import { useI18n } from 'vue-i18n'
 import { botService } from '@/services/bot'
 
@@ -68,6 +68,8 @@ const showCursor = ref(true)
 const currentIndex = ref(0)
 const isDeleting = ref(false)
 const isLoading = ref(true)
+const typewriterRef = ref(null)
+const cursorRef = ref(null)
 
 const stats = ref({
   servers: '...',
@@ -106,6 +108,7 @@ const typewriterEffect = () => {
     if (currentIndex.value < currentText.length) {
       displayText.value = currentText.substring(0, currentIndex.value + 1)
       currentIndex.value++
+      nextTick(() => updateCursorPosition())
       setTimeout(typewriterEffect, speed)
     } else {
       // Pause at the end
@@ -118,11 +121,19 @@ const typewriterEffect = () => {
     if (currentIndex.value > 0) {
       displayText.value = currentText.substring(0, currentIndex.value - 1)
       currentIndex.value--
+      nextTick(() => updateCursorPosition())
       setTimeout(typewriterEffect, speed)
     } else {
       isDeleting.value = false
       setTimeout(typewriterEffect, 500)
     }
+  }
+}
+
+const updateCursorPosition = () => {
+  if (typewriterRef.value && cursorRef.value) {
+    const textWidth = typewriterRef.value.offsetWidth
+    cursorRef.value.style.left = `${textWidth}px`
   }
 }
 
@@ -167,11 +178,11 @@ const inviteBot = () => {
 }
 
 .hero-content {
-  max-width: 1200px;
+  max-width: 1400px;
   width: 100%;
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
+  grid-template-columns: 600px 1fr;
+  gap: 80px;
   align-items: center;
 }
 
@@ -184,26 +195,44 @@ const inviteBot = () => {
   font-weight: 800;
   margin-bottom: 24px;
   line-height: 1.2;
+  min-height: 120px;
+  position: relative;
+  width: 100%;
+  max-width: 600px;
+}
+
+.hero-title::before {
+  content: 'Un bot con mucha personalidad';
+  font-size: 4rem;
+  font-weight: 800;
+  visibility: hidden;
+  display: block;
+  height: 0;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.typewriter {
   background: linear-gradient(135deg, #fff, var(--color-secondary, #ff5252));
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
-  min-height: 120px;
-  display: flex;
-  align-items: center;
-}
-
-.typewriter {
-  display: inline-block;
-  min-width: 0;
   white-space: nowrap;
+  display: inline-block;
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
 .cursor {
-  display: inline-block;
   color: var(--color-primary, #ff1744);
   opacity: 1;
   transition: opacity 0.1s;
+  background: none;
+  -webkit-text-fill-color: var(--color-primary, #ff1744);
+  position: absolute;
+  left: 0;
+  top: 0;
 }
 
 .cursor.blink {
@@ -215,6 +244,7 @@ const inviteBot = () => {
   color: rgba(255, 255, 255, 0.7);
   margin-bottom: 32px;
   line-height: 1.6;
+  max-width: 600px;
 }
 
 .hero-actions {
@@ -288,8 +318,10 @@ const inviteBot = () => {
   height: 500px;
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: flex-end;
   width: 100%;
+  padding-right: 0;
+  overflow: visible;
 }
 
 .floating-card {
@@ -316,20 +348,20 @@ const inviteBot = () => {
 }
 
 .card-1 {
-  top: 40px;
-  right: 0;
+  top: 30px;
+  right: -538px;
   animation: float 6s ease-in-out infinite;
 }
 
 .card-2 {
-  top: 180px;
-  right: 140px;
+  top: 190px;
+  right: -772px;
   animation: float 6s ease-in-out infinite 2s;
 }
 
 .card-3 {
-  bottom: 60px;
-  right: 40px;
+  bottom: 50px;
+  right: -540px;
   animation: float 6s ease-in-out infinite 4s;
 }
 
@@ -363,12 +395,22 @@ const inviteBot = () => {
   .hero-title {
     font-size: 2.5rem;
     min-height: 80px;
+    max-width: 500px;
+  }
+
+  .hero-title::before {
+    font-size: 2.5rem;
+  }
+
+  .hero-subtitle {
+    max-width: 500px;
   }
 
   .hero-visual {
     height: 400px;
     padding-right: 0;
-    justify-content: center;
+    justify-content: flex-end;
+    overflow: visible;
   }
 
   .floating-card {
@@ -378,18 +420,18 @@ const inviteBot = () => {
   }
 
   .card-1 {
-    top: 40px;
-    right: 10px;
+    top: 30px;
+    right: -200px;
   }
 
   .card-2 {
-    top: 180px;
-    right: 120px;
+    top: 170px;
+    right: -300px;
   }
 
   .card-3 {
-    bottom: 80px;
-    right: 60px;
+    bottom: 70px;
+    right: -210px;
   }
 
   .card-icon {
@@ -412,6 +454,16 @@ const inviteBot = () => {
 @media (max-width: 640px) {
   .hero-title {
     font-size: 2rem;
+    min-height: 70px;
+    max-width: 100%;
+  }
+
+  .hero-title::before {
+    font-size: 2rem;
+  }
+
+  .hero-subtitle {
+    max-width: 100%;
   }
 
   .hero-actions {
@@ -425,6 +477,7 @@ const inviteBot = () => {
   .hero-visual {
     height: 300px;
     padding-right: 0;
+    overflow: visible;
   }
 
   .floating-card {
@@ -435,17 +488,17 @@ const inviteBot = () => {
 
   .card-1 {
     top: 20px;
-    right: 5px;
+    right: -80px;
   }
 
   .card-2 {
     top: 130px;
-    right: 80px;
+    right: -150px;
   }
 
   .card-3 {
-    bottom: 60px;
-    right: 30px;
+    bottom: 50px;
+    right: -90px;
   }
 
   .card-icon {
