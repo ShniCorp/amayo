@@ -189,10 +189,14 @@ const inviteBot = () => {
   -webkit-text-fill-color: transparent;
   background-clip: text;
   min-height: 120px;
+  display: flex;
+  align-items: center;
 }
 
 .typewriter {
   display: inline-block;
+  min-width: 0;
+  white-space: nowrap;
 }
 
 .cursor {
@@ -284,8 +288,8 @@ const inviteBot = () => {
   height: 500px;
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding-right: 40px;
+  justify-content: center;
+  width: 100%;
 }
 
 .floating-card {
@@ -297,11 +301,12 @@ const inviteBot = () => {
   padding: 24px;
   display: flex;
   flex-direction: column;
-  align-items: end;
+  align-items: center;
   gap: 12px;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   transition: transform 0.3s ease, box-shadow 0.3s ease;
-  min-width: 160px;
+  min-width: 180px;
+  max-width: 200px;
 }
 
 .floating-card:hover {
@@ -311,20 +316,20 @@ const inviteBot = () => {
 }
 
 .card-1 {
-  top: 60px;
-  right: 20px;
+  top: 40px;
+  right: 0;
   animation: float 6s ease-in-out infinite;
 }
 
 .card-2 {
-  top: 200px;
-  right: 160px;
+  top: 180px;
+  right: 140px;
   animation: float 6s ease-in-out infinite 2s;
 }
 
 .card-3 {
-  bottom: 80px;
-  right: 60px;
+  bottom: 60px;
+  right: 40px;
   animation: float 6s ease-in-out infinite 4s;
 }
 
@@ -362,28 +367,29 @@ const inviteBot = () => {
 
   .hero-visual {
     height: 400px;
-    padding-right: 20px;
+    padding-right: 0;
     justify-content: center;
   }
 
   .floating-card {
     padding: 20px;
     min-width: 140px;
+    max-width: 160px;
   }
 
   .card-1 {
-    top: 60px;
-    right: 120px;
+    top: 40px;
+    right: 10px;
   }
 
   .card-2 {
     top: 180px;
-    right: 20px;
+    right: 120px;
   }
 
   .card-3 {
     bottom: 80px;
-    right: 140px;
+    right: 60px;
   }
 
   .card-icon {
@@ -418,27 +424,28 @@ const inviteBot = () => {
 
   .hero-visual {
     height: 300px;
-    padding-right: 10px;
+    padding-right: 0;
   }
 
   .floating-card {
     padding: 16px;
-    min-width: 120px;
+    min-width: 110px;
+    max-width: 130px;
   }
 
   .card-1 {
-    top: 40px;
-    right: 80px;
+    top: 20px;
+    right: 5px;
   }
 
   .card-2 {
-    top: 140px;
-    right: 10px;
+    top: 130px;
+    right: 80px;
   }
 
   .card-3 {
     bottom: 60px;
-    right: 100px;
+    right: 30px;
   }
 
   .card-icon {
@@ -446,7 +453,7 @@ const inviteBot = () => {
   }
 
   .card-text {
-    font-size: 0.8rem;
+    font-size: 0.75rem;
   }
 
   .hero-stats {

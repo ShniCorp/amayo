@@ -45,5 +45,8 @@ body {
 #app {
   position: relative;
   min-height: 100vh;
+  max-width: 100%;
+  margin: 0;
+  padding: 0;
 }
 </style>
