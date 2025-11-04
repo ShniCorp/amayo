@@ -191,10 +191,11 @@ process.on("SIGTERM", gracefulShutdown);
 
 async function bootstrap() {
   logger.info("🚀 Iniciando bot...");
-  await server.listen(process.env.PORT || 3000, () => {
-    logger.info(
-      `📘 Amayo Docs disponible en http://localhost:${process.env.PORT || 3000}`
-    );
+  const apiPort = process.env.API_PORT || process.env.PORT || 3000;
+  await server.listen(apiPort, () => {
+    logger.info(`📘 Amayo API disponible en http://localhost:${apiPort}`);
+    logger.info(`🌐 Production API URL: https://api.amayo.dev`);
+    logger.info(`📝 Frontend URL: https://docs.amayo.dev`);
   });
   // Cargar recursos locales (no deberían tirar el proceso si fallan)
   try {

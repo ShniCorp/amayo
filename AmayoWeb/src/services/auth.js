@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.PROD 
   ? 'https://api.amayo.dev/api' 
-  : 'http://localhost:3001/api'
+  : 'http://localhost:3000/api'
 
 export const authService = {
   // Redirigir al usuario a Discord OAuth2

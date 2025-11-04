@@ -2,7 +2,7 @@ import axios from 'axios'
 
 const API_URL = import.meta.env.PROD 
   ? 'https://api.amayo.dev' 
-  : 'http://localhost:3001'
+  : 'http://localhost:3000'
 
 export const botService = {
   // Obtener estadísticas del bot
