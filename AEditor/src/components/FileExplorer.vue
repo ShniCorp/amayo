@@ -331,6 +331,11 @@ function showDeleteConfirmation() {
   const target = contextMenu.value.target;
   if (!target) return;
 
+  console.log('🗑️ Preparando eliminación de:', target);
+  console.log('   name:', target.name);
+  console.log('   path:', target.path);
+  console.log('   relativePath:', target.relativePath);
+
   deleteModal.value = {
     visible: true,
     target: target,
@@ -422,9 +427,15 @@ async function handleCreateFolder(folderName: string, parentFolder: string) {
 
 async function handleRename(file: FileInfo, newName: string) {
   try {
-    const oldPath = `${props.projectRoot}/${file.relative_path}`;
-    const dirPath = file.relative_path.substring(0, file.relative_path.lastIndexOf('/'));
-    const newPath = `${props.projectRoot}/${dirPath}/${newName}`;
+    // Usar el path completo directamente
+    const oldPath = file.path;
+    
+    // Extraer el directorio del path completo
+    const lastSlash = oldPath.lastIndexOf('/') !== -1 ? oldPath.lastIndexOf('/') : oldPath.lastIndexOf('\\');
+    const dirPath = oldPath.substring(0, lastSlash);
+    const newPath = `${dirPath}/${newName}`;
+
+    console.log('📝 Renombrando:', oldPath, '→', newPath);
 
     await invoke('rename_file', { oldPath, newPath });
     
@@ -441,7 +452,14 @@ async function handleDelete() {
   if (!target) return;
 
   try {
-    const fullPath = `${props.projectRoot}/${target.relative_path}`;
+    // Construir la ruta completa
+    // El path ya es la ruta completa desde Rust
+    let fullPath: string = target.path;
+    
+    console.log('🗑️ Eliminando archivo:', fullPath);
+    console.log('   Target completo:', JSON.stringify(target, null, 2));
+    console.log('   basePath:', props.basePath);
+    console.log('   projectRoot:', props.projectRoot);
     
     if (deleteModal.value.isFolder) {
       await invoke('delete_folder', { folderPath: fullPath });
@@ -449,10 +467,11 @@ async function handleDelete() {
       await invoke('delete_file', { filePath: fullPath });
     }
     
-    emit('notify', `✅ Eliminado correctamente`, 'success');
+    emit('notify', `✅ Eliminado correctamente: ${target.name}`, 'success');
     emit('refresh');
     closeDeleteModal();
   } catch (error: any) {
+    console.error('❌ Error eliminando:', error);
     emit('notify', `❌ Error eliminando: ${error}`, 'error');
   }
 }

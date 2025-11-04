@@ -42,7 +42,7 @@ export interface ProjectStats {
 export interface FileInfo {
   name: string;
   path: string;
-  relative_path: string;
+  relativePath: string; // camelCase porque Rust usa #[serde(rename_all = "camelCase")]
   type: "command" | "event";
   commandType?: "message" | "slash";
   eventType?: "standard" | "extra";
