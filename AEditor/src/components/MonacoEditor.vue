@@ -13,12 +13,31 @@
       </div>
     </div>
     <div class="editor-content" ref="editorContainer"></div>
+    
+    <!-- Widget de acciones de IA -->
+    <Transition name="fade">
+      <div v-if="showAIActions" class="ai-actions-widget" :style="aiWidgetPosition">
+        <button @click="handleAIAction('fix')" class="ai-action-btn fix-btn" title="Corregir código">
+          🔧 Fix
+        </button>
+        <button @click="handleAIAction('explain')" class="ai-action-btn explain-btn" title="Explicar código">
+          💡 Explain
+        </button>
+        <button @click="handleAIAction('refactor')" class="ai-action-btn refactor-btn" title="Refactorizar código">
+          ♻️ Refactor
+        </button>
+        <button @click="handleAIAction('optimize')" class="ai-action-btn optimize-btn" title="Optimizar código">
+          ⚡ Optimize
+        </button>
+      </div>
+    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, onUnmounted, watch, nextTick } from 'vue';
 import * as monaco from 'monaco-editor';
+import { invoke } from '@tauri-apps/api/core';
 import type { FileInfo } from '../types/bot';
 
 const props = defineProps<{
@@ -34,6 +53,9 @@ const emit = defineEmits<{
 const editorContainer = ref<HTMLElement | null>(null);
 let editor: monaco.editor.IStandaloneCodeEditor | null = null;
 const hasChanges = ref(false);
+const showAIActions = ref(false);
+const aiWidgetPosition = ref({ top: '0px', left: '0px' });
+const selectedText = ref('');
 
 function getFileIcon(): string {
   if (!props.fileInfo) return '📄';
@@ -41,6 +63,95 @@ function getFileIcon(): string {
     return props.fileInfo.commandType === 'slash' ? '⚡' : '📝';
   }
   return props.fileInfo.eventType === 'extra' ? '✨' : '🎯';
+}
+
+async function handleAIAction(action: 'fix' | 'explain' | 'refactor' | 'optimize') {
+  console.log('🎯 Acción de IA:', action);
+  
+  if (!editor || !selectedText.value) {
+    console.log('⚠️ No hay editor o texto seleccionado');
+    return;
+  }
+  
+  const apiKey = localStorage.getItem('gemini_api_key');
+  const model = localStorage.getItem('gemini_model') || 'gemini-2.5-flash';
+  
+  if (!apiKey) {
+    alert('⚠️ Configura tu API key de Gemini primero en la sección "✨ Gemini IA"');
+    return;
+  }
+
+  const selection = editor.getSelection();
+  if (!selection) {
+    console.log('⚠️ No hay selección válida');
+    return;
+  }
+
+  console.log('📝 Texto seleccionado:', selectedText.value.substring(0, 50) + '...');
+
+  const prompts = {
+    fix: `Fix any errors or bugs in this code. Return ONLY the corrected code, no explanations:\n\n${selectedText.value}`,
+    explain: `Explain what this code does in Spanish. Be concise and clear:\n\n${selectedText.value}`,
+    refactor: `Refactor this code to make it cleaner and more maintainable. Return ONLY the refactored code:\n\n${selectedText.value}`,
+    optimize: `Optimize this code for better performance. Return ONLY the optimized code:\n\n${selectedText.value}`
+  };
+
+  try {
+    showAIActions.value = false;
+    console.log('🚀 Llamando a Gemini con ask_gemini...');
+    console.log('📝 Prompt:', prompts[action].substring(0, 100) + '...');
+    
+    const result = await invoke<string>('ask_gemini', {
+      prompt: prompts[action],
+      apiKey,
+      model,
+      useThinking: true // Usar thinking para mejores resultados
+    });
+
+    console.log('✅ Respuesta recibida:', result.substring(0, 100) + '...');
+
+    if (result && result.length > 0) {
+      if (action === 'explain') {
+        // Mostrar explicación en un mensaje
+        alert(`💡 Explicación:\n\n${result}`);
+      } else {
+        // Reemplazar código seleccionado
+        const edit = {
+          range: selection,
+          text: result
+        };
+        editor.executeEdits('ai-action', [edit]);
+        hasChanges.value = true;
+        console.log('✅ Código reemplazado');
+      }
+    } else {
+      console.log('⚠️ No se recibió respuesta');
+      alert('⚠️ No se pudo obtener una respuesta de Gemini. Intenta de nuevo.');
+    }
+  } catch (error) {
+    console.error('❌ Error en acción de IA:', error);
+    alert(`❌ Error: ${error}`);
+  }
+}
+
+function getLanguageFromFile(): string {
+  const ext = props.fileInfo?.path?.split('.').pop() || 'txt';
+  const langMap: Record<string, string> = {
+    'ts': 'typescript',
+    'js': 'javascript',
+    'json': 'json',
+    'md': 'markdown',
+    'py': 'python',
+    'rs': 'rust',
+    'go': 'go',
+    'java': 'java',
+    'cpp': 'cpp',
+    'c': 'c',
+    'html': 'html',
+    'css': 'css',
+    'vue': 'vue'
+  };
+  return langMap[ext] || 'text';
 }
 
 function saveFile() {
@@ -668,8 +779,9 @@ onMounted(() => {
       // Sugerencias inline (como GitHub Copilot)
       inlineSuggest: {
         enabled: true,
-        mode: 'prefix',
-        showToolbar: 'onHover'
+        mode: 'subwordSmart',
+        showToolbar: 'always',
+        suppressSuggestions: false
       },
       
       // Peekable definition/references
@@ -1499,10 +1611,166 @@ onMounted(() => {
       }
     });
 
+    // ============================================
+    // CODEIUM INLINE COMPLETION PROVIDER
+    // ============================================
+    
+    let lastCompletionTimeout: number | null = null;
+    
+    // Solo registrar si el usuario tiene activadas las sugerencias inline
+    const inlineSuggestionsEnabled = localStorage.getItem('gemini_inline_suggestions') === 'true';
+    
+    if (inlineSuggestionsEnabled) {
+      console.log('✅ Sugerencias inline de Gemini habilitadas');
+      
+      // Registrar proveedor de completación inline (estilo Copilot)
+      monaco.languages.registerInlineCompletionsProvider('typescript', {
+        provideInlineCompletions: async (model, position) => {
+          // Cancelar solicitud anterior si existe
+          if (lastCompletionTimeout) {
+            clearTimeout(lastCompletionTimeout);
+          }
+          
+          return new Promise((resolve) => {
+            lastCompletionTimeout = window.setTimeout(async () => {
+              try {
+                const text = model.getValue();
+                const offset = model.getOffsetAt(position);
+                const lineContent = model.getLineContent(position.lineNumber);
+                
+                // Solo sugerir si hay contenido en la línea actual o si es inicio de línea
+                if (lineContent.trim().length === 0 && position.column > 1) {
+                  resolve({ items: [] });
+                  return;
+                }
+                
+                console.log('🤖 Solicitando sugerencia de Gemini...');
+                
+                // Llamar al backend para obtener sugerencias
+                const suggestions = await invoke<string[]>('get_gemini_completion', {
+                  text,
+                  cursorPosition: offset,
+                  language: 'typescript',
+                  filePath: props.fileInfo?.path || 'untitled.ts',
+                  apiKey: localStorage.getItem('gemini_api_key') || '',
+                  model: localStorage.getItem('gemini_model') || 'gemini-2.5-flash',
+                  agentMode: localStorage.getItem('gemini_agent_mode') === 'true'
+                });
+                
+                if (suggestions && suggestions.length > 0) {
+                  console.log('✅ Sugerencias recibidas:', suggestions);
+                  const items = suggestions.map((suggestion: string) => ({
+                    insertText: suggestion,
+                    range: {
+                      startLineNumber: position.lineNumber,
+                      startColumn: position.column,
+                      endLineNumber: position.lineNumber,
+                      endColumn: position.column
+                    }
+                  }));
+                  
+                  console.log('📤 Items a mostrar:', items);
+                  resolve({ items });
+                } else {
+                  console.log('⚠️ No se recibieron sugerencias');
+                  resolve({ items: [] });
+                }
+              } catch (error) {
+                console.error('❌ Error obteniendo sugerencia:', error);
+                resolve({ items: [] });
+              }
+            }, 500); // Debounce de 500ms
+          });
+        },
+        // Método requerido por Monaco para liberar recursos
+        disposeInlineCompletions: () => {}
+      });
+      
+      // También para JavaScript
+      monaco.languages.registerInlineCompletionsProvider('javascript', {
+        provideInlineCompletions: async (model, position) => {
+          if (lastCompletionTimeout) {
+            clearTimeout(lastCompletionTimeout);
+          }
+          
+          return new Promise((resolve) => {
+            lastCompletionTimeout = window.setTimeout(async () => {
+              try {
+                const text = model.getValue();
+                const offset = model.getOffsetAt(position);
+                
+                const suggestions = await invoke<string[]>('get_gemini_completion', {
+                  text,
+                  cursorPosition: offset,
+                  language: 'javascript',
+                  filePath: props.fileInfo?.path || 'untitled.js',
+                  apiKey: localStorage.getItem('gemini_api_key') || '',
+                  model: localStorage.getItem('gemini_model') || 'gemini-2.5-flash',
+                  agentMode: localStorage.getItem('gemini_agent_mode') === 'true'
+                });
+                
+                if (suggestions && suggestions.length > 0) {
+                  const items = suggestions.map((suggestion: string) => ({
+                    insertText: suggestion,
+                    range: {
+                      startLineNumber: position.lineNumber,
+                      startColumn: position.column,
+                      endLineNumber: position.lineNumber,
+                      endColumn: position.column
+                    }
+                  }));
+                  
+                  resolve({ items });
+                } else {
+                  resolve({ items: [] });
+                }
+              } catch (error) {
+                console.error('❌ Error obteniendo sugerencia:', error);
+                resolve({ items: [] });
+              }
+            }, 500);
+          });
+        },
+        disposeInlineCompletions: () => {}
+      });
+    } else {
+      console.log('ℹ️ Sugerencias inline de Gemini deshabilitadas. Usa los botones de acción (Fix, Explain, etc.) para invocar la IA.');
+    }
+    
+    console.log('🤖 Gemini inline completion provider registrado');
+
     // Detectar cambios
     editor.onDidChangeModelContent(() => {
       hasChanges.value = true;
       emit('change', editor!.getValue());
+    });
+
+    // Detectar selección de texto para mostrar widget de IA
+    editor.onDidChangeCursorSelection(() => {
+      const selection = editor!.getSelection();
+      if (selection && !selection.isEmpty()) {
+        const text = editor!.getModel()!.getValueInRange(selection);
+        if (text.trim().length > 0) {
+          selectedText.value = text;
+          console.log('✅ Texto seleccionado para IA:', text.substring(0, 50) + '...');
+          
+          // Posicionar widget relativo al editor
+          const layoutInfo = editor!.getLayoutInfo();
+          const selectionStart = editor!.getScrolledVisiblePosition(selection.getStartPosition());
+          
+          if (selectionStart) {
+            aiWidgetPosition.value = {
+              top: `${Math.max(0, selectionStart.top - 50)}px`,
+              left: `${Math.min(selectionStart.left, layoutInfo.width - 400)}px`
+            };
+            showAIActions.value = true;
+            console.log('🔧 Widget mostrado');
+          }
+        }
+      } else {
+        showAIActions.value = false;
+        selectedText.value = '';
+      }
     });
 
     // Atajos de teclado
@@ -1548,6 +1816,7 @@ onUnmounted(() => {
   flex-direction: column;
   height: 100%;
   background-color: #1e1e1e;
+  position: relative;
 }
 
 .editor-header {
@@ -1612,6 +1881,77 @@ onUnmounted(() => {
 .editor-content {
   flex: 1;
   overflow: hidden;
+}
+
+/* Widget de acciones de IA */
+.ai-actions-widget {
+  position: absolute;
+  display: flex;
+  gap: 6px;
+  padding: 8px;
+  background: #252526;
+  border: 2px solid #007acc;
+  border-radius: 8px;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.6);
+  z-index: 999999;
+  pointer-events: all;
+}
+
+.fade-enter-active, .fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from, .fade-leave-to {
+  opacity: 0;
+}
+
+.ai-action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 600;
+  transition: all 0.2s;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.ai-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.fix-btn {
+  background: linear-gradient(135deg, #f48771 0%, #e74c3c 100%);
+}
+
+.fix-btn:hover {
+  background: linear-gradient(135deg, #ff9a85 0%, #ff5c4d 100%);
+}
+
+.explain-btn {
+  background: linear-gradient(135deg, #4fc3f7 0%, #2196f3 100%);
+}
+
+.explain-btn:hover {
+  background: linear-gradient(135deg, #6dd5f9 0%, #42a5f5 100%);
+}
+
+.refactor-btn {
+  background: linear-gradient(135deg, #66bb6a 0%, #4caf50 100%);
+}
+
+.refactor-btn:hover {
+  background: linear-gradient(135deg, #81c784 0%, #66bb6a 100%);
+}
+
+.optimize-btn {
+  background: linear-gradient(135deg, #ffb74d 0%, #ff9800 100%);
+}
+
+.optimize-btn:hover {
+  background: linear-gradient(135deg, #ffca64 0%, #ffa726 100%);
 }
 
 /* Estilos para mejor visualización de errores y warnings */

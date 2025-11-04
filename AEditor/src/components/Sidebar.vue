@@ -36,6 +36,9 @@
       <button @click="emit('toggle-env-manager')" class="action-btn env-manager">
         🔐 Variables ENV
       </button>
+      <button @click="emit('toggle-gemini-settings')" class="action-btn gemini">
+        ✨ Gemini IA
+      </button>
       <button @click="emit('refresh')" class="action-btn secondary">
         🔄 Refrescar
       </button>
@@ -187,6 +190,7 @@ const emit = defineEmits<{
   'toggle-dev-ultra': [];
   'toggle-database': [];
   'toggle-env-manager': [];
+  'toggle-gemini-settings': [];
   'notify': [message: string, type: 'success' | 'error' | 'info'];
 }>();
 
@@ -353,6 +357,19 @@ function truncatePath(path: string): string {
 .action-btn.env-manager:hover {
   background-color: #5fd4bf;
   transform: translateY(-1px);
+}
+
+.action-btn.gemini {
+  background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc04 75%, #ea4335 100%);
+  color: white;
+  font-weight: 600;
+  box-shadow: 0 2px 8px rgba(66, 133, 244, 0.3);
+}
+
+.action-btn.gemini:hover {
+  background: linear-gradient(135deg, #5a9dff 0%, #46ba65 50%, #ffc825 75%, #f55a4e 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.5);
 }
 
 .files-section {

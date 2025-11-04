@@ -8,6 +8,29 @@ use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 // Cliente Discord RPC global
 static DISCORD_CLIENT: Mutex<Option<DiscordIpcClient>> = Mutex::new(None);
 
+// Structs para Codeium API
+#[derive(Debug, Serialize, Deserialize)]
+struct CodeiumCompletionRequest {
+    text: String,
+    cursor_position: usize,
+    language: String,
+    file_path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CodeiumCompletion {
+    text: String,
+    range: CodeiumRange,
+}
+
+#[derive(Debug, Serialize, Deserialize)]
+struct CodeiumRange {
+    start_line: usize,
+    start_column: usize,
+    end_line: usize,
+    end_column: usize,
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 struct FileInfo {
@@ -749,6 +772,397 @@ fn get_package_scripts(project_root: String) -> Result<Vec<(String, String)>, St
     Ok(scripts)
 }
 
+// ============================================
+// GEMINI API INTEGRATION (Code Completion)
+// ============================================
+
+#[derive(serde::Serialize)]
+struct GeminiRequest {
+    contents: Vec<GeminiContent>,
+    #[serde(rename = "generationConfig")]
+    generation_config: GeminiGenerationConfig,
+}
+
+#[derive(serde::Serialize)]
+struct GeminiContent {
+    parts: Vec<GeminiPart>,
+}
+
+#[derive(serde::Serialize)]
+struct GeminiPart {
+    text: String,
+}
+
+#[derive(serde::Serialize)]
+struct GeminiGenerationConfig {
+    temperature: f32,
+    #[serde(rename = "maxOutputTokens")]
+    max_output_tokens: i32,
+    #[serde(rename = "candidateCount")]
+    candidate_count: i32,
+    #[serde(rename = "thinkingConfig", skip_serializing_if = "Option::is_none")]
+    thinking_config: Option<GeminiThinkingConfig>,
+}
+
+#[derive(serde::Serialize)]
+struct GeminiThinkingConfig {
+    #[serde(rename = "thinkingBudget")]
+    thinking_budget: i32,
+    #[serde(rename = "includeThoughts")]
+    include_thoughts: bool,
+}
+
+#[derive(serde::Deserialize)]
+struct GeminiResponse {
+    candidates: Option<Vec<GeminiCandidate>>,
+}
+
+#[derive(serde::Deserialize)]
+struct GeminiCandidate {
+    content: GeminiResponseContent,
+}
+
+#[derive(serde::Deserialize)]
+struct GeminiResponseContent {
+    parts: Vec<GeminiResponsePart>,
+}
+
+#[derive(serde::Deserialize)]
+struct GeminiResponsePart {
+    text: String,
+}
+
+#[tauri::command]
+async fn get_gemini_completion(
+    text: String,
+    cursor_position: usize,
+    language: String,
+    file_path: String,
+    api_key: String,
+    model: String,
+    agent_mode: Option<bool>,
+) -> Result<Vec<String>, String> {
+    use reqwest::Client;
+    
+    if api_key.is_empty() {
+        return Ok(vec![]);
+    }
+    
+    // Extraer contexto antes y después del cursor
+    let before = text.chars().take(cursor_position).collect::<String>();
+    let after = text.chars().skip(cursor_position).take(200).collect::<String>();
+    
+    // Tomar últimas 15 líneas de contexto
+    let context_lines: Vec<&str> = before.lines().rev().take(15).collect();
+    let context = context_lines.into_iter().rev().collect::<Vec<&str>>().join("\n");
+    
+    // Crear prompt optimizado para autocompletado
+    let prompt = format!(
+        "You are a code completion AI. Complete the {} code at the cursor position.
+
+File: {}
+Code:
+```{}
+{}[CURSOR]{}
+```
+
+Complete ONLY what comes immediately after [CURSOR]. Output raw code only, no markdown, no explanations:",
+        language, file_path, language, context, after
+    );
+
+    // Configurar thinking mode basado en agent_mode
+    let (thinking_config, max_tokens) = if agent_mode.unwrap_or(false) {
+        println!("🤖 Modo Agent activado con thinking dinámico");
+        (
+            Some(GeminiThinkingConfig {
+                thinking_budget: -1, // Dinámico: el modelo decide cuánto "pensar"
+                include_thoughts: true, // Incluir resumen de pensamientos
+            }),
+            512 // Más tokens cuando thinking está activado
+        )
+    } else {
+        println!("⚡ Modo rápido: thinking desactivado");
+        (
+            Some(GeminiThinkingConfig {
+                thinking_budget: 0, // Sin thinking para completions rápidos
+                include_thoughts: false,
+            }),
+            120 // Tokens normales para autocompletado rápido
+        )
+    };
+
+    let request_body = GeminiRequest {
+        contents: vec![GeminiContent {
+            parts: vec![GeminiPart { text: prompt }],
+        }],
+        generation_config: GeminiGenerationConfig {
+            temperature: 0.2,
+            max_output_tokens: max_tokens,
+            candidate_count: 1,
+            thinking_config,
+        },
+    };
+
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
+    );
+    
+    println!("🚀 Llamando a Gemini API...");
+    println!("   Modelo: {}", model);
+    println!("   URL: {}", url.split("?key=").next().unwrap_or(""));
+    
+    let client = Client::new();
+    
+    match client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&request_body)
+        .timeout(std::time::Duration::from_secs(8))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            println!("📡 Status: {}", status);
+            
+            if response.status().is_success() {
+                // Primero obtener el texto para debuggear
+                let response_text = response.text().await.map_err(|e| e.to_string())?;
+                println!("📦 Respuesta completa: {}", response_text);
+                
+                // Intentar parsear manualmente
+                match serde_json::from_str::<serde_json::Value>(&response_text) {
+                    Ok(json) => {
+                        println!("✅ JSON parseado correctamente");
+                        let mut suggestions = Vec::new();
+                        
+                        // Navegar por la estructura real de Gemini
+                        if let Some(candidates) = json["candidates"].as_array() {
+                            println!("✅ Candidatos encontrados: {}", candidates.len());
+                            for (i, candidate) in candidates.iter().enumerate() {
+                                println!("   📋 Procesando candidato #{}", i + 1);
+                                
+                                // Ver el finishReason
+                                if let Some(finish_reason) = candidate["finishReason"].as_str() {
+                                    println!("   🏁 Finish reason: {}", finish_reason);
+                                }
+                                
+                                // Intentar extraer el texto de diferentes formas
+                                if let Some(content) = candidate.get("content") {
+                                    if let Some(parts) = content["parts"].as_array() {
+                                        println!("   ✅ Parts encontrados: {}", parts.len());
+                                        for part in parts {
+                                            // Detectar si es un "thought" (pensamiento del modelo)
+                                            let is_thought = part["thought"].as_bool().unwrap_or(false);
+                                            
+                                            if let Some(text) = part["text"].as_str() {
+                                                if is_thought {
+                                                    println!("   💭 Pensamiento del modelo: {}", text);
+                                                    // Los pensamientos NO se agregan como sugerencias
+                                                    continue;
+                                                }
+                                                
+                                                let cleaned = text.trim()
+                                                    .trim_start_matches("```")
+                                                    .trim_start_matches(&language)
+                                                    .trim_end_matches("```")
+                                                    .trim();
+                                                
+                                                if !cleaned.is_empty() {
+                                                    println!("   ✨ Sugerencia: {}", cleaned);
+                                                    suggestions.push(cleaned.to_string());
+                                                }
+                                            }
+                                        }
+                                    } else {
+                                        println!("   ⚠️ No hay 'parts' en content");
+                                    }
+                                } else {
+                                    println!("   ⚠️ No hay 'content' en candidate");
+                                }
+                            }
+                        }
+                        
+                        if suggestions.is_empty() {
+                            println!("⚠️ No se pudieron extraer sugerencias del JSON");
+                        }
+                        
+                        Ok(suggestions)
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Error parsing JSON: {:?}", e);
+                        Ok(vec![])
+                    }
+                }
+            } else {
+                let error_text = response.text().await.unwrap_or_default();
+                eprintln!("❌ Gemini API error {}: {}", status, error_text);
+                Ok(vec![])
+            }
+        }
+        Err(e) => {
+            eprintln!("❌ Error calling Gemini: {:?}", e);
+            Ok(vec![])
+        }
+    }
+}
+
+// Nueva función para procesar prompts directos (Fix, Explain, etc.)
+#[tauri::command]
+async fn ask_gemini(
+    prompt: String,
+    api_key: String,
+    model: String,
+    use_thinking: bool,
+) -> Result<String, String> {
+    use reqwest::Client;
+    
+    if api_key.is_empty() {
+        return Err("No API key provided".to_string());
+    }
+
+    // Configurar thinking mode
+    let (thinking_config, max_tokens) = if use_thinking {
+        println!("🤖 ask_gemini con thinking activado");
+        (
+            Some(GeminiThinkingConfig {
+                thinking_budget: -1,
+                include_thoughts: true,
+            }),
+            2048 // Más tokens para respuestas completas
+        )
+    } else {
+        println!("⚡ ask_gemini modo rápido");
+        (
+            Some(GeminiThinkingConfig {
+                thinking_budget: 0,
+                include_thoughts: false,
+            }),
+            1024
+        )
+    };
+
+    let request_body = GeminiRequest {
+        contents: vec![GeminiContent {
+            parts: vec![GeminiPart { text: prompt }],
+        }],
+        generation_config: GeminiGenerationConfig {
+            temperature: 0.3,
+            max_output_tokens: max_tokens,
+            candidate_count: 1,
+            thinking_config,
+        },
+    };
+
+    let url = format!(
+        "https://generativelanguage.googleapis.com/v1beta/models/{}:generateContent?key={}",
+        model, api_key
+    );
+    
+    println!("🚀 ask_gemini llamando a Gemini API...");
+    println!("   Modelo: {}", model);
+    
+    let client = Client::new();
+    
+    match client
+        .post(&url)
+        .header("Content-Type", "application/json")
+        .json(&request_body)
+        .timeout(std::time::Duration::from_secs(15))
+        .send()
+        .await
+    {
+        Ok(response) => {
+            let status = response.status();
+            println!("📡 Status: {}", status);
+            
+            if response.status().is_success() {
+                let response_text = response.text().await.map_err(|e| e.to_string())?;
+                
+                match serde_json::from_str::<serde_json::Value>(&response_text) {
+                    Ok(json) => {
+                        if let Some(candidates) = json["candidates"].as_array() {
+                            if let Some(candidate) = candidates.first() {
+                                if let Some(content) = candidate.get("content") {
+                                    if let Some(parts) = content["parts"].as_array() {
+                                        // Concatenar todas las partes de texto (ignorando thoughts)
+                                        let mut result = String::new();
+                                        for part in parts {
+                                            let is_thought = part["thought"].as_bool().unwrap_or(false);
+                                            if !is_thought {
+                                                if let Some(text) = part["text"].as_str() {
+                                                    result.push_str(text);
+                                                }
+                                            }
+                                        }
+                                        
+                                        if !result.is_empty() {
+                                            println!("✅ Respuesta obtenida: {} caracteres", result.len());
+                                            return Ok(result);
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        Err("No se encontró contenido en la respuesta".to_string())
+                    }
+                    Err(e) => {
+                        eprintln!("❌ Error parsing JSON: {:?}", e);
+                        Err(format!("Error parsing response: {}", e))
+                    }
+                }
+            } else {
+                let error_text = response.text().await.unwrap_or_default();
+                eprintln!("❌ Gemini API error {}: {}", status, error_text);
+                Err(format!("API error: {}", error_text))
+            }
+        }
+        Err(e) => {
+            eprintln!("❌ Error calling Gemini: {:?}", e);
+            Err(format!("Network error: {}", e))
+        }
+    }
+}
+
+// Guardar configuración de Gemini
+#[tauri::command]
+fn save_gemini_config(api_key: String, model: String, app_data_dir: String, agent_mode: Option<bool>, inline_suggestions_enabled: Option<bool>) -> Result<(), String> {
+    // Crear el directorio si no existe
+    let dir_path = Path::new(&app_data_dir);
+    if !dir_path.exists() {
+        fs::create_dir_all(dir_path).map_err(|e| format!("Error creando directorio: {}", e))?;
+    }
+    
+    let config_path = dir_path.join("gemini_config.json");
+    
+    let config = serde_json::json!({
+        "api_key": api_key,
+        "model": model,
+        "enabled": true,
+        "agent_mode": agent_mode.unwrap_or(false),
+        "inline_suggestions_enabled": inline_suggestions_enabled.unwrap_or(false)
+    });
+    
+    fs::write(&config_path, serde_json::to_string_pretty(&config).unwrap())
+        .map_err(|e| format!("Error guardando archivo: {}", e))?;
+    
+    Ok(())
+}
+
+// Leer configuración de Gemini
+#[tauri::command]
+fn load_gemini_config(app_data_dir: String) -> Result<String, String> {
+    let config_path = Path::new(&app_data_dir).join("gemini_config.json");
+    
+    if !config_path.exists() {
+        return Err("No hay API key configurada".to_string());
+    }
+    
+    let content = fs::read_to_string(&config_path).map_err(|e| e.to_string())?;
+    Ok(content)
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -778,7 +1192,11 @@ pub fn run() {
             write_env_file,
             scan_env_variables,
             scan_env_variables_with_locations,
-            get_package_scripts
+            get_package_scripts,
+            get_gemini_completion,
+            ask_gemini,
+            save_gemini_config,
+            load_gemini_config
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

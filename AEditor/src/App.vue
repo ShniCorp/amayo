@@ -10,6 +10,7 @@ import CommandPalette from "./components/CommandPalette.vue";
 import SkeletonLoader from "./components/SkeletonLoader.vue";
 import DatabaseViewer from "./components/DatabaseViewer.vue";
 import EnvManager from "./components/EnvManager.vue";
+import GeminiSettings from "./components/GeminiSettings.vue";
 import type { ProjectStats, FileInfo, Command, Event } from "./types/bot";
 
 // Estado de la aplicación
@@ -31,7 +32,7 @@ const events = ref<FileInfo[]>([]);
 const allFiles = ref<FileInfo[]>([]);
 const selectedFile = ref<FileInfo | null>(null);
 const fileContent = ref<string>("");
-const currentView = ref<"editor" | "command-creator" | "event-creator" | "database" | "env-manager">("editor");
+const currentView = ref<"editor" | "command-creator" | "event-creator" | "database" | "env-manager" | "gemini-settings">("editor");
 const loading = ref(false);
 const errorMsg = ref<string>("");
 const schemaContent = ref<string>("");
@@ -340,6 +341,17 @@ function toggleEnvManager() {
   }
 }
 
+// Toggle Gemini Settings
+function toggleGeminiSettings() {
+  if (currentView.value === 'gemini-settings') {
+    currentView.value = 'editor';
+    updateDiscordRPC("Navegando proyecto", "En el editor");
+  } else {
+    currentView.value = 'gemini-settings';
+    updateDiscordRPC("Configurando Gemini AI", "Google Gemini Assistant");
+  }
+}
+
 // Guardar schema de base de datos
 async function saveSchema(content: string) {
   try {
@@ -423,6 +435,7 @@ function handlePaletteCommand(commandId: string) {
         @toggle-dev-ultra="toggleDevUltra"
         @toggle-database="toggleDatabase"
         @toggle-env-manager="toggleEnvManager"
+        @toggle-gemini-settings="toggleGeminiSettings"
         @notify="showNotification"
       />
       
@@ -472,6 +485,11 @@ function handlePaletteCommand(commandId: string) {
           :projectRoot="projectRoot"
           @close="() => currentView = 'editor'"
           @notify="showNotification"
+        />
+        
+        <!-- Gemini Settings -->
+        <GeminiSettings 
+          v-if="currentView === 'gemini-settings'"
         />
         
         <!-- Welcome Screen -->
@@ -717,6 +735,141 @@ body {
   to {
     transform: translateX(0);
     opacity: 1;
+  }
+}
+
+/* ============================================
+   RESPONSIVE DESIGN - Media Queries
+   ============================================ */
+
+/* Pantallas grandes (1920px+) */
+@media (min-width: 1920px) {
+  .welcome-content h1 {
+    font-size: 64px;
+  }
+  
+  .welcome-content > p {
+    font-size: 22px;
+  }
+  
+  .stat-number {
+    font-size: 56px;
+  }
+  
+  .stat-label {
+    font-size: 16px;
+  }
+}
+
+/* Pantallas medianas-grandes (1366px - 1919px) */
+@media (min-width: 1366px) and (max-width: 1919px) {
+  .welcome-content h1 {
+    font-size: 52px;
+  }
+  
+  .welcome-stats {
+    gap: 32px;
+  }
+}
+
+/* Tabletas y pantallas pequeñas (768px - 1365px) */
+@media (max-width: 1365px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .welcome-content h1 {
+    font-size: 40px;
+  }
+  
+  .welcome-content > p {
+    font-size: 16px;
+  }
+  
+  .welcome-stats {
+    flex-direction: column;
+    gap: 20px;
+  }
+  
+  .stat-number {
+    font-size: 40px;
+  }
+}
+
+/* Móviles y pantallas muy pequeñas (< 768px) */
+@media (max-width: 767px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .welcome-content {
+    padding: 20px;
+  }
+  
+  .welcome-content h1 {
+    font-size: 32px;
+  }
+  
+  .welcome-content > p {
+    font-size: 14px;
+    margin-bottom: 24px;
+  }
+  
+  .stat-number {
+    font-size: 32px;
+  }
+  
+  .stat-label {
+    font-size: 12px;
+  }
+  
+  .notification {
+    top: 10px;
+    right: 10px;
+    left: 10px;
+    font-size: 13px;
+    padding: 10px 16px;
+  }
+  
+  .error-banner {
+    font-size: 12px;
+    padding: 10px 16px;
+  }
+}
+
+/* Ajustes para pantallas ultra-wide (2560px+) */
+@media (min-width: 2560px) {
+  .welcome-content {
+    max-width: 800px;
+  }
+  
+  .welcome-content h1 {
+    font-size: 72px;
+  }
+  
+  .welcome-content > p {
+    font-size: 24px;
+  }
+}
+
+/* Ajustes de altura para pantallas cortas */
+@media (max-height: 700px) {
+  .welcome-content {
+    padding: 20px;
+  }
+  
+  .welcome-content h1 {
+    font-size: 36px;
+    margin-bottom: 12px;
+  }
+  
+  .welcome-content > p {
+    font-size: 16px;
+    margin-bottom: 24px;
+  }
+  
+  .welcome-stats {
+    margin-bottom: 24px;
   }
 }
 </style>
