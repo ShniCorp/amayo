@@ -167,11 +167,60 @@ function showMessage(msg: string, type: 'success' | 'error' | 'info') {
 </script>
 
 <style scoped>
-.gemini-settings { padding: 30px; max-width: 700px; margin: 0 auto; color: #e0e0e0; background: #1e1e1e; min-height: 100vh; }
-.settings-header { margin-bottom: 30px; border-bottom: 2px solid rgba(66, 133, 244, 0.3); padding-bottom: 15px; }
-.settings-header h3 { margin: 0 0 8px 0; font-size: 28px; color: #fff; font-weight: 600; background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc04 75%, #ea4335 100%); -webkit-background-clip: text; background-clip: text; -webkit-text-fill-color: transparent; }
+.gemini-settings {
+  padding: 30px;
+  max-width: 700px;
+  margin: 0 auto;
+  color: #e0e0e0;
+  background: linear-gradient(135deg, #1e1e1e 0%, #252526 50%, #1e1e1e 100%);
+  min-height: 100vh;
+}
+
+.settings-header {
+  margin-bottom: 30px;
+  border-bottom: 2px solid transparent;
+  background: linear-gradient(90deg, rgba(66, 133, 244, 0.3), rgba(52, 168, 83, 0.3)) bottom / 100% 2px no-repeat;
+  padding-bottom: 20px;
+  animation: border-glow 3s ease-in-out infinite;
+}
+
+@keyframes border-glow {
+  0%, 100% {
+    background-position: 0% 100%;
+  }
+  50% {
+    background-position: 100% 100%;
+  }
+}
+
+.settings-header h3 {
+  margin: 0 0 8px 0;
+  font-size: 32px;
+  color: #fff;
+  font-weight: 700;
+  background: linear-gradient(135deg, #4285f4 0%, #34a853 50%, #fbbc04 75%, #ea4335 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.5px;
+  text-shadow: 0 2px 10px rgba(66, 133, 244, 0.3);
+}
 .subtitle { margin: 0 0 15px 0; color: #b0b0b0; font-size: 15px; }
-.info-box { background: rgba(66, 133, 244, 0.1); border: 2px solid rgba(66, 133, 244, 0.3); border-radius: 8px; padding: 16px; margin-top: 15px; }
+.info-box {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.15) 0%, rgba(52, 168, 83, 0.1) 100%);
+  border: 2px solid rgba(66, 133, 244, 0.4);
+  border-radius: 12px;
+  padding: 20px;
+  margin-top: 15px;
+  box-shadow: 0 4px 12px rgba(66, 133, 244, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.info-box:hover {
+  border-color: rgba(66, 133, 244, 0.6);
+  box-shadow: 0 6px 20px rgba(66, 133, 244, 0.3);
+  transform: translateY(-2px);
+}
 .info-box p { margin: 0 0 10px 0; color: #fff; font-size: 14px; }
 .info-box ul { margin: 0; padding-left: 20px; list-style: none; }
 .info-box li { margin: 8px 0; color: #e0e0e0; font-size: 13px; line-height: 1.6; position: relative; padding-left: 8px; }
@@ -206,8 +255,36 @@ function showMessage(msg: string, type: 'success' | 'error' | 'info') {
 .actions { display: flex; gap: 12px; margin-top: 10px; }
 .btn { padding: 12px 24px; border: none; border-radius: 6px; cursor: pointer; font-size: 14px; font-weight: 600; transition: all 0.2s; box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); }
 .btn:disabled { opacity: 0.5; cursor: not-allowed; }
-.btn-primary { background: linear-gradient(135deg, #4285f4 0%, #34a853 100%); color: white; }
-.btn-primary:hover:not(:disabled) { background: linear-gradient(135deg, #5a9dff 0%, #46ba65 100%); transform: translateY(-2px); box-shadow: 0 4px 12px rgba(66, 133, 244, 0.4); }
+.btn-primary {
+  background: linear-gradient(135deg, #4285f4 0%, #34a853 100%);
+  color: white;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.btn-primary:hover::before {
+  width: 300px;
+  height: 300px;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #5a9dff 0%, #46ba65 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(66, 133, 244, 0.5);
+}
 .btn-test { background: #2d2d30; color: #e0e0e0; border: 2px solid #4285f4; }
 .btn-test:hover:not(:disabled) { background: #3e3e42; transform: translateY(-2px); }
 .message { padding: 14px 18px; border-radius: 8px; font-size: 14px; font-weight: 500; border: 2px solid; animation: slideIn 0.3s ease; }

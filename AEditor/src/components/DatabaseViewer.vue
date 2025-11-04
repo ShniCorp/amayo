@@ -94,6 +94,107 @@ watch(() => props.schemaContent, (newContent) => {
   parseSchema();
 });
 
+// Registrar lenguaje Prisma personalizado
+function registerPrismaLanguage() {
+  // Registrar el lenguaje
+  monaco.languages.register({ id: 'prisma' });
+
+  // Definir tokens para syntax highlighting
+  monaco.languages.setMonarchTokensProvider('prisma', {
+    keywords: [
+      'datasource', 'generator', 'model', 'enum', 'type',
+      'client', 'db', 'provider', 'url', 'shadowDatabaseUrl',
+      'relationMode', 'output', 'binaryTargets', 'previewFeatures'
+    ],
+    typeKeywords: [
+      'String', 'Boolean', 'Int', 'BigInt', 'Float', 'Decimal',
+      'DateTime', 'Json', 'Bytes', 'Unsupported'
+    ],
+    attributes: [
+      '@id', '@unique', '@default', '@relation', '@map', '@updatedAt',
+      '@db', '@@map', '@@unique', '@@index', '@@id', '@@ignore',
+      '@ignore', '@@schema', '@allow', '@deny'
+    ],
+    operators: ['=', '?', '!', '[', ']', '(', ')', '{', '}', '@', '@@'],
+    symbols: /[=><!~?:&|+\-*\/\^%]+/,
+    escapes: /\\(?:[abfnrtv\\"']|x[0-9A-Fa-f]{1,4}|u[0-9A-Fa-f]{4}|U[0-9A-Fa-f]{8})/,
+
+    tokenizer: {
+      root: [
+        // Identificadores y keywords
+        [/[a-zA-Z_]\w*/, {
+          cases: {
+            '@keywords': 'keyword',
+            '@typeKeywords': 'type',
+            '@default': 'identifier'
+          }
+        }],
+
+        // Atributos de Prisma
+        [/@+[a-zA-Z_]\w*/, 'annotation'],
+
+        // Espacios en blanco
+        { include: '@whitespace' },
+
+        // Delimitadores y operadores
+        [/[{}()\[\]]/, '@brackets'],
+        [/@symbols/, {
+          cases: {
+            '@operators': 'operator',
+            '@default': ''
+          }
+        }],
+
+        // Números
+        [/\d*\.\d+([eE][\-+]?\d+)?/, 'number.float'],
+        [/0[xX][0-9a-fA-F]+/, 'number.hex'],
+        [/\d+/, 'number'],
+
+        // Strings
+        [/"([^"\\]|\\.)*$/, 'string.invalid'],
+        [/"/, { token: 'string.quote', bracket: '@open', next: '@string' }],
+      ],
+
+      string: [
+        [/[^\\"]+/, 'string'],
+        [/@escapes/, 'string.escape'],
+        [/\\./, 'string.escape.invalid'],
+        [/"/, { token: 'string.quote', bracket: '@close', next: '@pop' }]
+      ],
+
+      whitespace: [
+        [/[ \t\r\n]+/, 'white'],
+        [/\/\*/, 'comment', '@comment'],
+        [/\/\/.*$/, 'comment'],
+      ],
+
+      comment: [
+        [/[^\/*]+/, 'comment'],
+        [/\/\*/, 'comment', '@push'],
+        ["\\*/", 'comment', '@pop'],
+        [/[\/*]/, 'comment']
+      ],
+    },
+  });
+
+  // Definir tema personalizado para Prisma
+  monaco.editor.defineTheme('prisma-dark', {
+    base: 'vs-dark',
+    inherit: true,
+    rules: [
+      { token: 'keyword', foreground: 'C586C0', fontStyle: 'bold' },
+      { token: 'type', foreground: '4EC9B0', fontStyle: 'bold' },
+      { token: 'annotation', foreground: 'DCDCAA' },
+      { token: 'string', foreground: 'CE9178' },
+      { token: 'number', foreground: 'B5CEA8' },
+      { token: 'comment', foreground: '6A9955', fontStyle: 'italic' },
+      { token: 'identifier', foreground: '9CDCFE' },
+      { token: 'operator', foreground: 'D4D4D4' },
+    ],
+    colors: {}
+  });
+}
+
 // Parsear el schema de Prisma para extraer tablas
 function parseSchema() {
   const modelRegex = /model\s+(\w+)\s*\{([^}]+)\}/g;
@@ -148,17 +249,28 @@ function parseSchema() {
 }
 
 onMounted(() => {
+  // Registrar lenguaje Prisma personalizado
+  registerPrismaLanguage();
+  
   // Crear editor Monaco para el schema
   if (schemaEditorContainer.value) {
     schemaEditor = monaco.editor.create(schemaEditorContainer.value, {
       value: props.schemaContent,
       language: 'prisma',
-      theme: 'vs-dark',
+      theme: 'prisma-dark',
       automaticLayout: true,
       minimap: { enabled: true },
-      fontSize: 13,
+      fontSize: 14,
       lineNumbers: 'on',
       readOnly: false,
+      glyphMargin: false,
+      lineDecorationsWidth: 0,
+      lineNumbersMinChars: 3,
+      scrollBeyondLastLine: false,
+      renderLineHighlight: 'all',
+      matchBrackets: 'always',
+      folding: true,
+      foldingStrategy: 'indentation',
     });
 
     // Guardar con Ctrl+S

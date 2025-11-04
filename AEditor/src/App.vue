@@ -36,6 +36,12 @@ const currentView = ref<"editor" | "command-creator" | "event-creator" | "databa
 const loading = ref(false);
 const errorMsg = ref<string>("");
 const schemaContent = ref<string>("");
+const sidebarCollapsed = ref(false);
+
+// Toggle sidebar
+function toggleSidebar() {
+  sidebarCollapsed.value = !sidebarCollapsed.value;
+}
 
 // Deshabilitar F12 y habilitar Ctrl+Q
 const handleF12 = (e: KeyboardEvent) => {
@@ -420,6 +426,7 @@ function handlePaletteCommand(commandId: string) {
 
     <template v-if="!showProjectSelector && !initialLoading">
       <Sidebar 
+        v-show="!sidebarCollapsed"
         :stats="stats"
         :commands="commands"
         :events="events"
@@ -439,7 +446,7 @@ function handlePaletteCommand(commandId: string) {
         @notify="showNotification"
       />
       
-      <div class="main-content">
+      <div class="main-content" :class="{ 'sidebar-collapsed': sidebarCollapsed }">
         <div v-if="loading" class="loading-overlay">
           <div class="loading-spinner">⏳ Cargando proyecto...</div>
         </div>
@@ -507,19 +514,55 @@ function handlePaletteCommand(commandId: string) {
                 <div class="stat-label">Eventos Totales</div>
               </div>
             </div>
-            <div class="welcome-actions">
-              <button @click="showCommandCreator" class="welcome-btn primary">
-                ➕ Crear Comando
-              </button>
-              <button @click="showEventCreator" class="welcome-btn primary">
-                ➕ Crear Evento
-              </button>
-            </div>
             <p class="welcome-hint">
               💡 <strong>Tip:</strong> Selecciona un archivo del panel izquierdo para editarlo
             </p>
           </div>
         </div>
+      </div>
+
+      <!-- Panel de Acciones Rápidas (Derecha) -->
+      <div class="quick-actions-panel">
+        <button @click="toggleSidebar" class="quick-btn toggle-sidebar" :title="sidebarCollapsed ? 'Mostrar Sidebar' : 'Ocultar Sidebar'">
+          <span class="btn-icon">{{ sidebarCollapsed ? '📂' : '📁' }}</span>
+          <span class="btn-label">{{ sidebarCollapsed ? 'Mostrar' : 'Ocultar' }}</span>
+        </button>
+
+        <div class="divider"></div>
+
+        <button @click="showCommandCreator" class="quick-btn create-command" title="Crear Comando">
+          <span class="btn-icon">➕</span>
+          <span class="btn-label">Crear Comando</span>
+        </button>
+        
+        <button @click="showEventCreator" class="quick-btn create-event" title="Crear Evento">
+          <span class="btn-icon">➕</span>
+          <span class="btn-label">Crear Evento</span>
+        </button>
+
+        <div class="divider"></div>
+
+        <button @click="toggleEnvManager" class="quick-btn env" title="Variables ENV">
+          <span class="btn-icon">🔐</span>
+          <span class="btn-label">Variables ENV</span>
+        </button>
+
+        <button @click="toggleGeminiSettings" class="quick-btn gemini" title="Gemini IA">
+          <span class="btn-icon">✨</span>
+          <span class="btn-label">Gemini IA</span>
+        </button>
+
+        <button @click="toggleDatabase" class="quick-btn database" title="Base de Datos">
+          <span class="btn-icon">🗄️</span>
+          <span class="btn-label">Base de Datos</span>
+        </button>
+
+        <div class="divider"></div>
+
+        <button @click="loadProjectData" class="quick-btn refresh" title="Refrescar">
+          <span class="btn-icon">🔄</span>
+          <span class="btn-label">Refrescar</span>
+        </button>
       </div>
     </template>
   </div>
@@ -531,6 +574,7 @@ function handlePaletteCommand(commandId: string) {
   height: 100vh;
   overflow: hidden;
   background-color: #1e1e1e;
+  position: relative;
 }
 
 .main-content {
@@ -539,6 +583,11 @@ function handlePaletteCommand(commandId: string) {
   flex-direction: column;
   position: relative;
   overflow: hidden;
+  transition: margin-left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.main-content.sidebar-collapsed {
+  margin-left: 0;
 }
 
 .loading-overlay {
@@ -591,91 +640,362 @@ function handlePaletteCommand(commandId: string) {
   display: flex;
   align-items: center;
   justify-content: center;
-  background-color: #1e1e1e;
+  background: linear-gradient(135deg, #1e1e1e 0%, #252526 50%, #1e1e1e 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-screen::before {
+  content: '';
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(78, 201, 176, 0.05) 0%, transparent 70%);
+  animation: pulse-gradient 8s ease-in-out infinite;
+}
+
+@keyframes pulse-gradient {
+  0%, 100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 0.5;
+  }
+  50% {
+    transform: scale(1.1) rotate(180deg);
+    opacity: 0.8;
+  }
 }
 
 .welcome-content {
   text-align: center;
-  max-width: 600px;
-  padding: 40px;
+  max-width: 700px;
+  padding: 50px;
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(135deg, rgba(37, 37, 38, 0.8) 0%, rgba(30, 30, 30, 0.9) 100%);
+  border-radius: 16px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(78, 201, 176, 0.1);
+  backdrop-filter: blur(10px);
 }
 
 .welcome-content h1 {
-  color: #ffffff;
-  font-size: 48px;
-  margin: 0 0 16px 0;
-  font-weight: 700;
+  background: linear-gradient(135deg, #4ec9b0 0%, #0e639c 50%, #4ec9b0 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-size: 52px;
+  margin: 0 0 20px 0;
+  font-weight: 800;
+  letter-spacing: -1px;
+  animation: gradient-shift 6s ease infinite;
+  background-size: 200% 200%;
+}
+
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
 }
 
 .welcome-content > p {
-  color: #cccccc;
+  color: #e0e0e0;
   font-size: 18px;
-  margin: 0 0 40px 0;
+  margin: 0 0 50px 0;
+  line-height: 1.6;
+  font-weight: 400;
 }
 
 .welcome-stats {
   display: flex;
-  gap: 40px;
+  gap: 50px;
   justify-content: center;
-  margin-bottom: 40px;
+  margin-bottom: 50px;
 }
 
 .welcome-stat {
   text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, rgba(78, 201, 176, 0.1) 0%, rgba(14, 99, 156, 0.1) 100%);
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border: 1px solid rgba(78, 201, 176, 0.2);
+}
+
+.welcome-stat:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(78, 201, 176, 0.3);
+  border-color: rgba(78, 201, 176, 0.4);
 }
 
 .stat-number {
-  font-size: 48px;
-  font-weight: 700;
-  color: #4ec9b0;
-  margin-bottom: 8px;
+  font-size: 56px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #4ec9b0 0%, #5fd4bf 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+  text-shadow: 0 0 20px rgba(78, 201, 176, 0.3);
 }
 
 .stat-label {
   font-size: 14px;
   color: #cccccc;
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 .welcome-actions {
   display: flex;
-  gap: 16px;
+  gap: 20px;
   justify-content: center;
-  margin-bottom: 40px;
+  margin-bottom: 50px;
 }
 
 .welcome-btn {
-  padding: 12px 24px;
+  padding: 14px 32px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   cursor: pointer;
-  font-size: 15px;
-  font-weight: 600;
-  transition: all 0.2s;
+  font-size: 16px;
+  font-weight: 700;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  position: relative;
+  overflow: hidden;
+}
+
+.welcome-btn::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.2);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.welcome-btn:hover::before {
+  width: 300px;
+  height: 300px;
 }
 
 .welcome-btn.primary {
-  background-color: #0e639c;
+  background: linear-gradient(135deg, #0e639c 0%, #1177bb 100%);
   color: #ffffff;
+  position: relative;
+  z-index: 1;
 }
 
 .welcome-btn.primary:hover {
-  background-color: #1177bb;
-  transform: translateY(-2px);
+  background: linear-gradient(135deg, #1177bb 0%, #1a8dd4 100%);
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(14, 99, 156, 0.5);
 }
 
 .welcome-hint {
-  color: #858585;
+  color: #a0a0a0;
   font-size: 14px;
-  margin: 0;
-  padding: 16px;
-  background-color: #252526;
-  border-radius: 6px;
-  border-left: 3px solid #0e639c;
+  font-style: italic;
+  padding: 16px 24px;
+  background: linear-gradient(90deg, transparent 0%, rgba(78, 201, 176, 0.05) 50%, transparent 100%);
+  border-radius: 8px;
+  border-left: 3px solid #4ec9b0;
+  margin-top: 10px;
 }
 
 .welcome-hint strong {
   color: #4ec9b0;
+}
+
+/* ============================================
+   PANEL DE ACCIONES RÁPIDAS (DERECHA)
+   ============================================ */
+.quick-actions-panel {
+  width: 80px;
+  min-width: 80px;
+  background: linear-gradient(180deg, #2d2d30 0%, #252526 100%);
+  border-left: 1px solid #3e3e42;
+  box-shadow: -2px 0 10px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 12px 0;
+  gap: 6px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  flex-shrink: 0;
+}
+
+.quick-actions-panel::-webkit-scrollbar {
+  width: 6px;
+}
+
+.quick-actions-panel::-webkit-scrollbar-track {
+  background: #1e1e1e;
+  border-radius: 3px;
+}
+
+.quick-actions-panel::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4ec9b0 0%, #3a9b88 100%);
+  border-radius: 3px;
+}
+
+.quick-actions-panel::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5fd4bf 0%, #4ec9b0 100%);
+}
+
+.quick-btn {
+  width: 64px;
+  height: 64px;
+  background: linear-gradient(135deg, rgba(78, 201, 176, 0.05) 0%, rgba(14, 99, 156, 0.05) 100%);
+  border: 1px solid rgba(78, 201, 176, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  padding: 8px;
+  position: relative;
+  flex-shrink: 0;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.quick-btn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: 10px;
+  padding: 1px;
+  background: linear-gradient(135deg, #4ec9b0, #0e639c);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: exclude;
+  opacity: 0;
+  transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quick-btn:hover::before {
+  opacity: 1;
+}
+
+.quick-btn .btn-icon {
+  font-size: 26px;
+  line-height: 1;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quick-btn .btn-label {
+  font-size: 9px;
+  font-weight: 600;
+  color: #cccccc;
+  text-align: center;
+  line-height: 1.2;
+  max-width: 100%;
+  word-wrap: break-word;
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.quick-btn:hover {
+  background: linear-gradient(135deg, rgba(78, 201, 176, 0.15) 0%, rgba(14, 99, 156, 0.15) 100%);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 4px 12px rgba(78, 201, 176, 0.3);
+  border-color: rgba(78, 201, 176, 0.3);
+}
+
+.quick-btn:hover .btn-icon {
+  transform: scale(1.1);
+}
+
+.quick-btn:hover .btn-label {
+  color: #ffffff;
+}
+
+.quick-btn.toggle-sidebar {
+  border: 2px solid rgba(255, 152, 0, 0.4);
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.1) 0%, rgba(255, 152, 0, 0.05) 100%);
+}
+
+.quick-btn.toggle-sidebar:hover {
+  background: linear-gradient(135deg, rgba(255, 152, 0, 0.25) 0%, rgba(255, 152, 0, 0.15) 100%);
+  border-color: #ff9800;
+  box-shadow: 0 4px 12px rgba(255, 152, 0, 0.4);
+}
+
+.quick-btn.create-command {
+  border: 2px solid rgba(14, 99, 156, 0.3);
+}
+
+.quick-btn.create-command:hover {
+  background: linear-gradient(135deg, rgba(14, 99, 156, 0.2) 0%, rgba(14, 99, 156, 0.1) 100%);
+  border-color: #0e639c;
+}
+
+.quick-btn.create-event {
+  border: 2px solid rgba(78, 201, 176, 0.3);
+}
+
+.quick-btn.create-event:hover {
+  background: linear-gradient(135deg, rgba(78, 201, 176, 0.2) 0%, rgba(78, 201, 176, 0.1) 100%);
+  border-color: #4ec9b0;
+}
+
+.quick-btn.env {
+  border: 2px solid rgba(255, 193, 7, 0.3);
+}
+
+.quick-btn.env:hover {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.2) 0%, rgba(255, 193, 7, 0.1) 100%);
+  border-color: #ffc107;
+}
+
+.quick-btn.gemini {
+  border: 2px solid transparent;
+  background: linear-gradient(#252526, #252526) padding-box,
+              linear-gradient(135deg, #4285f4 0%, #34a853 25%, #fbbc04 50%, #ea4335 75%, #4285f4 100%) border-box;
+}
+
+.quick-btn.gemini:hover {
+  background: linear-gradient(135deg, rgba(66, 133, 244, 0.2) 0%, rgba(234, 67, 53, 0.2) 100%) padding-box,
+              linear-gradient(135deg, #4285f4 0%, #34a853 25%, #fbbc04 50%, #ea4335 75%, #4285f4 100%) border-box;
+}
+
+.quick-btn.database {
+  border: 2px solid rgba(156, 39, 176, 0.3);
+}
+
+.quick-btn.database:hover {
+  background: linear-gradient(135deg, rgba(156, 39, 176, 0.2) 0%, rgba(156, 39, 176, 0.1) 100%);
+  border-color: #9c27b0;
+}
+
+.quick-btn.refresh {
+  border: 2px solid rgba(96, 125, 139, 0.3);
+}
+
+.quick-btn.refresh:hover {
+  background: linear-gradient(135deg, rgba(96, 125, 139, 0.2) 0%, rgba(96, 125, 139, 0.1) 100%);
+  border-color: #607d8b;
+}
+
+.quick-actions-panel .divider {
+  width: 48px;
+  height: 1px;
+  background-color: #3e3e42;
+  margin: 8px 0;
 }
 </style>
 
@@ -742,6 +1062,26 @@ body {
    RESPONSIVE DESIGN - Media Queries
    ============================================ */
 
+/* Pantallas Ultra Grandes (2560px+) */
+@media (min-width: 2560px) {
+  .quick-actions-panel {
+    width: 100px;
+  }
+  
+  .quick-btn {
+    width: 80px;
+    height: 80px;
+  }
+  
+  .quick-btn .btn-icon {
+    font-size: 28px;
+  }
+  
+  .quick-btn .btn-label {
+    font-size: 11px;
+  }
+}
+
 /* Pantallas grandes (1920px+) */
 @media (min-width: 1920px) {
   .welcome-content h1 {
@@ -774,10 +1114,6 @@ body {
 
 /* Tabletas y pantallas pequeñas (768px - 1365px) */
 @media (max-width: 1365px) {
-  .app-container {
-    flex-direction: column;
-  }
-  
   .welcome-content h1 {
     font-size: 40px;
   }
@@ -789,6 +1125,68 @@ body {
   .welcome-stats {
     flex-direction: column;
     gap: 20px;
+  }
+}
+
+/* Modo compacto para ventanas pequeñas (< 1200px) */
+@media (max-width: 1199px) {
+  .quick-actions-panel {
+    width: 64px;
+    min-width: 64px;
+    padding: 8px 0;
+  }
+  
+  .quick-btn {
+    width: 52px;
+    height: 52px;
+  }
+  
+  .quick-btn .btn-icon {
+    font-size: 20px;
+  }
+  
+  .quick-btn .btn-label {
+    font-size: 8px;
+  }
+}
+
+/* Móviles y ventanas muy pequeñas (< 768px) */
+@media (max-width: 767px) {
+  .app-container {
+    flex-direction: column;
+  }
+  
+  .quick-actions-panel {
+    width: 100%;
+    height: 60px;
+    min-width: unset;
+    flex-direction: row;
+    border-left: none;
+    border-top: 1px solid #3e3e42;
+    padding: 0 12px;
+    justify-content: space-around;
+    overflow-x: auto;
+    overflow-y: hidden;
+  }
+  
+  .quick-btn {
+    width: 56px;
+    height: 56px;
+    min-width: 56px;
+  }
+  
+  .quick-btn .btn-label {
+    font-size: 8px;
+  }
+  
+  .quick-actions-panel .divider {
+    width: 1px;
+    height: 40px;
+    margin: 0;
+  }
+  
+  .welcome-content h1 {
+    font-size: 32px;
   }
   
   .stat-number {

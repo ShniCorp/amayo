@@ -26,24 +26,6 @@
       <span class="path-value">{{ truncatePath(projectRoot) }}</span>
     </div>
 
-    <div class="actions-section">
-      <button @click="emit('new-command')" class="action-btn primary">
-        ➕ Nuevo Comando
-      </button>
-      <button @click="emit('new-event')" class="action-btn primary">
-        ➕ Nuevo Evento
-      </button>
-      <button @click="emit('toggle-env-manager')" class="action-btn env-manager">
-        🔐 Variables ENV
-      </button>
-      <button @click="emit('toggle-gemini-settings')" class="action-btn gemini">
-        ✨ Gemini IA
-      </button>
-      <button @click="emit('refresh')" class="action-btn secondary">
-        🔄 Refrescar
-      </button>
-    </div>
-
     <div class="files-section">
       <!-- Sección de Comandos -->
       <div class="section-group">
@@ -229,47 +211,73 @@ function truncatePath(path: string): string {
 <style scoped>
 .sidebar {
   width: 300px;
-  background-color: #252526;
+  background: linear-gradient(180deg, #252526 0%, #1e1e1e 100%);
   color: #cccccc;
   height: 100vh;
   overflow-y: auto;
   display: flex;
   flex-direction: column;
   border-right: 1px solid #3e3e42;
+  box-shadow: 2px 0 10px rgba(0, 0, 0, 0.3);
+}
+
+.sidebar::-webkit-scrollbar {
+  width: 8px;
+}
+
+.sidebar::-webkit-scrollbar-track {
+  background: #1e1e1e;
+}
+
+.sidebar::-webkit-scrollbar-thumb {
+  background: #424242;
+  border-radius: 4px;
+}
+
+.sidebar::-webkit-scrollbar-thumb:hover {
+  background: #4e4e4e;
 }
 
 .sidebar-header {
-  padding: 12px 16px;
-  background-color: #2d2d30;
+  padding: 16px;
+  background: linear-gradient(135deg, #2d2d30 0%, #252526 100%);
   border-bottom: 1px solid #3e3e42;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .header-title h2 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 600;
+  margin: 0 0 12px 0;
+  font-size: 18px;
+  font-weight: 700;
   color: #ffffff;
+  letter-spacing: 0.5px;
+  background: linear-gradient(135deg, #4ec9b0 0%, #0e639c 100%);
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
 
 .header-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
 }
 
 .icon-btn {
-  background: #3c3c3c;
+  background: linear-gradient(135deg, #3c3c3c 0%, #2d2d30 100%);
   border: 1px solid #3e3e42;
   font-size: 16px;
   cursor: pointer;
-  padding: 8px 12px;
-  border-radius: 4px;
-  transition: all 0.2s;
+  padding: 10px 14px;
+  border-radius: 6px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   flex: 1;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .icon-btn:hover {
-  background-color: #4e4e52;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #4e4e52 0%, #3c3c3c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3);
 }
 
 .dev-ultra-btn {
@@ -277,24 +285,24 @@ function truncatePath(path: string): string {
 }
 
 .dev-ultra-btn.active {
-  background-color: #0e639c;
+  background: linear-gradient(135deg, #0e639c 0%, #1177bb 100%);
   border-color: #1177bb;
-  box-shadow: 0 0 10px rgba(14, 99, 156, 0.5);
+  box-shadow: 0 0 15px rgba(14, 99, 156, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3);
   animation: pulse 2s infinite;
 }
 
 @keyframes pulse {
   0%, 100% {
-    box-shadow: 0 0 10px rgba(14, 99, 156, 0.5);
+    box-shadow: 0 0 15px rgba(14, 99, 156, 0.6), 0 4px 8px rgba(0, 0, 0, 0.3);
   }
   50% {
-    box-shadow: 0 0 20px rgba(14, 99, 156, 0.8);
+    box-shadow: 0 0 25px rgba(14, 99, 156, 0.9), 0 6px 12px rgba(0, 0, 0, 0.4);
   }
 }
 
 .project-path {
-  padding: 8px 16px;
-  background-color: #1e1e1e;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, #1e1e1e 0%, #252526 100%);
   border-bottom: 1px solid #3e3e42;
   font-size: 11px;
 }
@@ -311,8 +319,9 @@ function truncatePath(path: string): string {
 
 .actions-section {
   padding: 12px;
-  background-color: #1e1e1e;
+  background: linear-gradient(180deg, #252526 0%, #1e1e1e 100%);
   border-bottom: 1px solid #3e3e42;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -321,42 +330,48 @@ function truncatePath(path: string): string {
 .action-btn {
   padding: 10px 14px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   cursor: pointer;
   font-size: 13px;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   text-align: left;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .action-btn.primary {
-  background-color: #0e639c;
+  background: linear-gradient(135deg, #0e639c 0%, #1177bb 100%);
   color: #ffffff;
 }
 
 .action-btn.primary:hover {
-  background-color: #1177bb;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #1177bb 0%, #1a8dd4 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(14, 99, 156, 0.4);
 }
 
 .action-btn.secondary {
-  background-color: #3c3c3c;
+  background: linear-gradient(135deg, #3c3c3c 0%, #2d2d30 100%);
   color: #cccccc;
   border: 1px solid #3e3e42;
 }
 
 .action-btn.secondary:hover {
-  background-color: #4e4e52;
+  background: linear-gradient(135deg, #4e4e52 0%, #3c3c3c 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(60, 60, 60, 0.4);
 }
 
 .action-btn.env-manager {
-  background-color: #4ec9b0;
+  background: linear-gradient(135deg, #4ec9b0 0%, #5fd4bf 100%);
   color: #1e1e1e;
+  font-weight: 600;
 }
 
 .action-btn.env-manager:hover {
-  background-color: #5fd4bf;
-  transform: translateY(-1px);
+  background: linear-gradient(135deg, #5fd4bf 0%, #70dfc9 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(78, 201, 176, 0.4);
 }
 
 .action-btn.gemini {
@@ -368,7 +383,7 @@ function truncatePath(path: string): string {
 
 .action-btn.gemini:hover {
   background: linear-gradient(135deg, #5a9dff 0%, #46ba65 50%, #ffc825 75%, #f55a4e 100%);
-  transform: translateY(-1px);
+  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(66, 133, 244, 0.5);
 }
 
@@ -378,22 +393,46 @@ function truncatePath(path: string): string {
   padding: 8px 0;
 }
 
+.files-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.files-section::-webkit-scrollbar-track {
+  background: #1e1e1e;
+  border-radius: 4px;
+}
+
+.files-section::-webkit-scrollbar-thumb {
+  background: linear-gradient(180deg, #4ec9b0 0%, #3a9b88 100%);
+  border-radius: 4px;
+}
+
+.files-section::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(180deg, #5fd4bf 0%, #4ec9b0 100%);
+}
+
 .section-group {
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
 
 .section-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
+  gap: 10px;
+  padding: 12px 16px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(78, 201, 176, 0.05) 100%);
+  border-left: 3px solid transparent;
+  border-radius: 4px 0 0 4px;
 }
 
 .section-header:hover {
-  background-color: #2d2d30;
+  background: linear-gradient(90deg, rgba(78, 201, 176, 0.1) 0%, rgba(78, 201, 176, 0.15) 100%);
+  border-left-color: #4ec9b0;
+  padding-left: 13px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .section-icon {
@@ -409,12 +448,14 @@ function truncatePath(path: string): string {
 }
 
 .section-count {
-  background-color: #3c3c3c;
-  color: #cccccc;
-  padding: 2px 8px;
-  border-radius: 10px;
+  background: linear-gradient(135deg, #4ec9b0 0%, #3a9b88 100%);
+  color: #1e1e1e;
+  padding: 3px 10px;
+  border-radius: 12px;
   font-size: 11px;
-  font-weight: 600;
+  font-weight: 700;
+  box-shadow: 0 2px 4px rgba(78, 201, 176, 0.3);
+  letter-spacing: 0.3px;
 }
 
 .section-content {
@@ -428,19 +469,31 @@ function truncatePath(path: string): string {
 .subsection-header {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 8px 16px;
+  gap: 10px;
+  padding: 10px 16px 10px 20px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   user-select: none;
+  background: linear-gradient(90deg, transparent 0%, rgba(14, 99, 156, 0.05) 100%);
+  border-left: 2px solid transparent;
+  border-radius: 4px 0 0 4px;
 }
 
 .subsection-header:hover {
-  background-color: #2d2d30;
+  background: linear-gradient(90deg, rgba(14, 99, 156, 0.1) 0%, rgba(14, 99, 156, 0.15) 100%);
+  border-left-color: #1177bb;
+  padding-left: 18px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
 }
 
 .subsection-icon {
   font-size: 14px;
+  color: #858585;
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.subsection-header:hover .subsection-icon {
+  color: #1177bb;
 }
 
 .subsection-title {
@@ -451,12 +504,13 @@ function truncatePath(path: string): string {
 }
 
 .subsection-count {
-  background-color: #3c3c3c;
-  color: #858585;
-  padding: 2px 6px;
-  border-radius: 8px;
+  background: linear-gradient(135deg, #3c3c3c 0%, #2d2d30 100%);
+  color: #cccccc;
+  padding: 2px 8px;
+  border-radius: 10px;
   font-size: 10px;
   font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
 }
 
 .file-list {
@@ -466,25 +520,61 @@ function truncatePath(path: string): string {
 .file-item {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 6px 16px;
+  gap: 10px;
+  padding: 8px 16px 8px 24px;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   border-left: 2px solid transparent;
+  border-radius: 4px 0 0 4px;
+  position: relative;
+}
+
+.file-item::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 0;
+  background: linear-gradient(90deg, rgba(78, 201, 176, 0.2) 0%, transparent 100%);
+  transition: width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .file-item:hover {
-  background-color: #2d2d30;
+  background: linear-gradient(90deg, rgba(45, 45, 48, 0.5) 0%, rgba(30, 30, 30, 0.3) 100%);
+  padding-left: 22px;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
+}
+
+.file-item:hover::before {
+  width: 3px;
 }
 
 .file-item.active {
-  background-color: #3e3e42;
+  background: linear-gradient(90deg, rgba(14, 99, 156, 0.2) 0%, rgba(14, 99, 156, 0.1) 100%);
   border-left-color: #0e639c;
+  box-shadow: 0 2px 6px rgba(14, 99, 156, 0.3);
+}
+
+.file-item.active::before {
+  width: 3px;
+  background: linear-gradient(90deg, rgba(14, 99, 156, 0.5) 0%, transparent 100%);
 }
 
 .file-icon {
-  font-size: 13px;
+  font-size: 14px;
   opacity: 0.8;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-item:hover .file-icon {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+.file-item.active .file-icon {
+  color: #4ec9b0;
+  opacity: 1;
 }
 
 .file-name {
@@ -495,6 +585,17 @@ function truncatePath(path: string): string {
   overflow: hidden;
   text-overflow: ellipsis;
   flex: 1;
+  font-weight: 500;
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-item:hover .file-name {
+  color: #ffffff;
+}
+
+.file-item.active .file-name {
+  color: #4ec9b0;
+  font-weight: 600;
 }
 
 .file-path {
@@ -503,6 +604,11 @@ function truncatePath(path: string): string {
   font-family: 'Consolas', 'Monaco', monospace;
   margin-left: auto;
   padding-left: 8px;
+  transition: color 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.file-item:hover .file-path {
+  color: #a0a0a0;
 }
 
 .ultra-mode {
