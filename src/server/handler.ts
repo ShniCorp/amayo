@@ -460,6 +460,135 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       return res.end(JSON.stringify({ conexion: "establecida" }));
     }
 
+    // API endpoint for bot stats: GET /api/bot/stats
+    if (url.pathname === "/api/bot/stats") {
+      try {
+        let botInstance: any = null;
+        try {
+          const maybe = require("../main");
+          botInstance = maybe && maybe.bot ? maybe.bot : null;
+        } catch (e) {
+          botInstance = null;
+        }
+
+        if (!botInstance || !botInstance.isReady || !botInstance.isReady()) {
+          res.writeHead(
+            503,
+            applySecurityHeadersForRequest(req, {
+              "Content-Type": "application/json; charset=utf-8",
+            })
+          );
+          return res.end(
+            JSON.stringify({
+              error: "Bot is not connected",
+              servers: 0,
+              users: 0,
+              commands: 0,
+            })
+          );
+        }
+
+        // Get server count
+        const serverCount = botInstance.guilds?.cache?.size || 0;
+
+        // Get total user count
+        let totalUsers = 0;
+        if (botInstance.guilds?.cache) {
+          botInstance.guilds.cache.forEach((guild: any) => {
+            totalUsers += guild.memberCount || 0;
+          });
+        }
+
+        // Get command count
+        const commandCount =
+          botInstance.application?.commands?.cache?.size || 0;
+
+        res.writeHead(
+          200,
+          applySecurityHeadersForRequest(req, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "public, max-age=60", // Cache for 1 minute
+          })
+        );
+        return res.end(
+          JSON.stringify({
+            servers: serverCount,
+            users: totalUsers,
+            commands: commandCount,
+            timestamp: new Date().toISOString(),
+          })
+        );
+      } catch (err: any) {
+        console.error("Error getting bot stats:", err);
+        res.writeHead(
+          500,
+          applySecurityHeadersForRequest(req, {
+            "Content-Type": "application/json; charset=utf-8",
+          })
+        );
+        return res.end(
+          JSON.stringify({
+            error: "Failed to fetch bot stats",
+            servers: 0,
+            users: 0,
+            commands: 0,
+          })
+        );
+      }
+    }
+
+    // API endpoint for bot info: GET /api/bot/info
+    if (url.pathname === "/api/bot/info") {
+      try {
+        let botInstance: any = null;
+        try {
+          const maybe = require("../main");
+          botInstance = maybe && maybe.bot ? maybe.bot : null;
+        } catch (e) {
+          botInstance = null;
+        }
+
+        if (!botInstance || !botInstance.user) {
+          res.writeHead(
+            503,
+            applySecurityHeadersForRequest(req, {
+              "Content-Type": "application/json; charset=utf-8",
+            })
+          );
+          return res.end(JSON.stringify({ error: "Bot is not connected" }));
+        }
+
+        res.writeHead(
+          200,
+          applySecurityHeadersForRequest(req, {
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "public, max-age=300", // Cache for 5 minutes
+          })
+        );
+        return res.end(
+          JSON.stringify({
+            name: botInstance.user.username,
+            id: botInstance.user.id,
+            avatar: botInstance.user.displayAvatarURL({ size: 256 }),
+            discriminator: botInstance.user.discriminator,
+            tag: botInstance.user.tag,
+            createdAt: botInstance.user.createdAt,
+            uptime: process.uptime(),
+            ping: botInstance.ws?.ping || 0,
+          })
+        );
+      } catch (err: any) {
+        console.error("Error getting bot info:", err);
+        res.writeHead(
+          500,
+          applySecurityHeadersForRequest(req, {
+            "Content-Type": "application/json; charset=utf-8",
+          })
+        );
+        return res.end(JSON.stringify({ error: "Failed to fetch bot info" }));
+      }
+    }
+
     // API proxy for dashboard roles: GET /api/dashboard/:id/roles
     if (
       url.pathname.startsWith("/api/dashboard/") &&
