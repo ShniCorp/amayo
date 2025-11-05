@@ -125,11 +125,11 @@ onUnmounted(() => {
 <style scoped>
 .island-navbar {
   position: fixed;
-  top: 20px;
-  left: 50%;
+  top: 25px;
+  left: 38%;
   transform: translateX(-50%);
   z-index: 1000;
-  width: 95%;
+  width: 75%;
   max-width: 1200px;
 }
 

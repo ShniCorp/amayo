@@ -487,18 +487,18 @@ const inviteBot = () => {
   }
 
   .card-1 {
-    top: 20px;
-    right: -80px;
+    top: 24px;
+    right: 254px;
   }
 
   .card-2 {
-    top: 130px;
-    right: -150px;
+    top: 20px;
+    right: 130px;
   }
 
   .card-3 {
-    bottom: 50px;
-    right: -90px;
+    bottom: 159px;
+    right: 7px;
   }
 
   .card-icon {
@@ -513,6 +513,7 @@ const inviteBot = () => {
     flex-direction: row;
     flex-wrap: wrap;
     gap: 16px;
+    text-align: center;
   }
 
   .stat-item {

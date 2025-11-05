@@ -13,7 +13,7 @@ export default {
       commands: 'Comandos',
       feature1: 'Alianzas',
       feature2: 'Tickets',
-      feature3: 'Comandos Custom',
+      feature3: 'AutoMod',
     },
     login: {
       title: 'Iniciar Sesión',
@@ -43,7 +43,7 @@ export default {
       commands: 'Commands',
       feature1: 'Alliances',
       feature2: 'Tickets',
-      feature3: 'Custom Commands',
+      feature3: 'AutoMod',
     },
     login: {
       title: 'Sign In',
