@@ -126,10 +126,10 @@ onUnmounted(() => {
 .island-navbar {
   position: absolute;
   top: 25px;
-  left: 50%;
+  left: 98%;
   transform: translateX(-50%);
   z-index: 1000;
-  width: 90%;
+  width: 150%;
   max-width: 1200px;
 }
 
