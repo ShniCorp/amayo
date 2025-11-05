@@ -4,7 +4,7 @@
       <!-- Logo Section -->
       <div class="logo-section">
         <div class="bot-avatar">
-          <img :src="botLogo" alt="Amayo Bot" />
+          <img :src="favicon" alt="Amayo Bot" />
         </div>
         <span class="bot-name">{{ botName }}</span>
       </div>
@@ -58,7 +58,7 @@ import { useI18n } from 'vue-i18n'
 
 const { t, locale } = useI18n()
 
-const botLogo = ref('https://cdn.discordapp.com/avatars/1234567890/avatar.png') // Reemplaza con el avatar real del bot
+const favicon = ref('https://docs.amayo.dev/favicon.ico') // Reemplaza con el avatar real del bot
 const botName = ref('Amayo')
 
 const currentTheme = ref('red')
