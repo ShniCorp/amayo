@@ -328,4 +328,16 @@ onUnmounted(() => {
     font-size: 0.85rem;
   }
 }
+
+@media (max-width: 640px) {
+  .island-navbar {
+    position: absolute;
+    top: 25px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 1000;
+    width: 85%;
+    max-width: 1200px;
+  }
+}
 </style>

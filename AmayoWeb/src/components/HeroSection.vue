@@ -163,7 +163,7 @@ const scrollToFeatures = () => {
 }
 
 const inviteBot = () => {
-  window.open('https://discord.com/api/oauth2/authorize?client_id=YOUR_CLIENT_ID&permissions=8&scope=bot%20applications.commands', '_blank')
+  window.open('https://discord.com/oauth2/authorize?client_id=991062751633883136&permissions=2416176272&integration_type=0&scope=bot', '_blank')
 }
 </script>
 
