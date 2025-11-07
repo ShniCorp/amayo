@@ -26,9 +26,46 @@ import {
   BLOCKED_PATTERNS,
   applySecurityHeadersForRequest,
 } from "./lib/security";
+import {
+  validateCloudflareRequest,
+  getCloudflareClientIP,
+} from "./lib/cloudflare";
+import { checkRateLimit } from "./lib/rateLimit";
+import { getCORSHeaders, handlePreflight } from "./lib/cors";
+import {
+  validateSecurityHeaders,
+  addServerToken,
+  validateUserAgent,
+} from "./lib/requestValidation";
 
 export const handler = async (req: IncomingMessage, res: ServerResponse) => {
   try {
+    // ========== SEGURIDAD: Validar Cloudflare en producción ==========
+    if (process.env.NODE_ENV === "production") {
+      const cfValidation = validateCloudflareRequest(req);
+      if (!cfValidation.valid) {
+        console.warn(
+          `[Security] Blocked non-Cloudflare request: ${cfValidation.reason}`
+        );
+        res.writeHead(
+          403,
+          applySecurityHeadersForRequest(req, {
+            "Content-Type": "text/plain; charset=utf-8",
+          })
+        );
+        return res.end("Direct access forbidden");
+      }
+    }
+
+    // ========== CORS: Manejar preflight OPTIONS requests ==========
+    const origin = req.headers.origin as string | undefined;
+    if (req.method === "OPTIONS") {
+      const preflightResponse = handlePreflight(req, origin);
+      res.writeHead(preflightResponse.statusCode, preflightResponse.headers);
+      return res.end();
+    }
+
+    // ========== HTTPS Redirect (mantener lógica existente) ==========
     if (process.env.NODE_ENV === "production") {
       const proto = req.headers["x-forwarded-proto"];
       if (proto && proto !== "https") {
@@ -107,6 +144,19 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
 
     // --- Auth routes ---
     if (url.pathname === "/auth/discord") {
+      // ========== RATE LIMITING: Auth endpoints ==========
+      const rateCheck = checkRateLimit(req, "auth");
+      if (!rateCheck.allowed) {
+        res.writeHead(
+          429,
+          applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            "Content-Type": "text/plain; charset=utf-8",
+          })
+        );
+        return res.end("Too many login attempts. Please try again later.");
+      }
+
       const clientId = process.env.DISCORD_CLIENT_ID || "";
       if (!clientId) {
         res.writeHead(500, applySecurityHeadersForRequest(req));
@@ -132,6 +182,21 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
     }
 
     if (url.pathname === "/auth/callback") {
+      // ========== RATE LIMITING: Auth callback ==========
+      const rateCheck = checkRateLimit(req, "auth");
+      if (!rateCheck.allowed) {
+        res.writeHead(
+          429,
+          applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            "Content-Type": "text/plain; charset=utf-8",
+          })
+        );
+        return res.end(
+          "Too many authentication attempts. Please try again later."
+        );
+      }
+
       const qs = Object.fromEntries(url.searchParams.entries());
       const { code, state } = qs as any;
       if (!state) {
@@ -338,106 +403,6 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       return;
     }
 
-    // Dashboard labs route (specific)
-    if (url.pathname === "/dashboard/labs") {
-      const cookies = parseCookies(req);
-      const signed = cookies["amayo_sid"];
-      const sid = unsignSid(signed);
-      const session = sid ? SESSIONS.get(sid) : null;
-      if (!session) {
-        res.writeHead(
-          302,
-          applySecurityHeadersForRequest(req, { Location: "/login" })
-        );
-        return res.end();
-      }
-      await refreshAccessTokenIfNeeded(session).catch(() => {});
-      if (sid) touchSession(sid);
-
-      // Determine bot presence similar to dashboard route
-      let botInstance: any = null;
-      try {
-        const maybe = require("../main");
-        botInstance = maybe && maybe.bot ? maybe.bot : null;
-      } catch (e) {
-        botInstance = null;
-      }
-      let botAvailable = false;
-      let botGuildIds = new Set<string>();
-      try {
-        if (botInstance && botInstance.guilds && botInstance.guilds.cache) {
-          botAvailable = true;
-          for (const [id] of botInstance.guilds.cache) {
-            botGuildIds.add(String(id));
-          }
-        }
-      } catch (e) {
-        botAvailable = false;
-      }
-
-      const sessionGuilds = session?.guilds || [];
-      const visibleGuilds = botAvailable
-        ? sessionGuilds.filter((g: any) => botGuildIds.has(String(g.id)))
-        : sessionGuilds;
-
-      const gid = String(url.searchParams.get("guild") || "");
-      let selectedGuild = null;
-      if (gid) {
-        selectedGuild =
-          visibleGuilds.find((g: any) => String(g.id) === gid) ||
-          sessionGuilds.find((g: any) => String(g.id) === gid) ||
-          null;
-      }
-
-      // If no guild selected, redirect back to dashboard list
-      if (!selectedGuild) {
-        res.writeHead(
-          302,
-          applySecurityHeadersForRequest(req, { Location: "/dashboard" })
-        );
-        return res.end();
-      }
-
-      await renderTemplate(req, res, "labs", {
-        appName: pkg.name ?? "Amayo Bot",
-        version: pkg.version ?? "2.0.0",
-        djsVersion: pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
-        // enable dashboard nav for labs since a guild is selected
-        useDashboardNav: true,
-        selectedGuild,
-        selectedGuildId: String(selectedGuild.id),
-        selectedGuildName: selectedGuild.name,
-        session,
-        user: session?.user ?? null,
-        guilds: visibleGuilds || [],
-        botAvailable,
-      });
-      return;
-    }
-
-    if (url.pathname === "/select_guild") {
-      const cookies = parseCookies(req);
-      const signed = cookies["amayo_sid"];
-      const sid = unsignSid(signed);
-      const session = sid ? SESSIONS.get(sid) : null;
-      if (!session) {
-        res.writeHead(
-          302,
-          applySecurityHeadersForRequest(req, { Location: "/login" })
-        );
-        return res.end();
-      }
-      await refreshAccessTokenIfNeeded(session).catch(() => {});
-      if (sid) touchSession(sid);
-      await renderTemplate(req, res, "select_guild", {
-        appName: pkg.name ?? "Amayo Bot",
-        session,
-        user: session?.user ?? null,
-        guilds: session.guilds || [],
-      });
-      return;
-    }
-
     if (url.pathname === "/favicon.ico") {
       // redirect favicon requests to a known image in public assets
       res.writeHead(
@@ -451,9 +416,28 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
 
     // API endpoint for entity test: GET /api/entity.json
     if (url.pathname === "/api/entity.json") {
+      // ========== SEGURIDAD API: Rate limiting y CORS ==========
+      const rateCheck = checkRateLimit(req, "api");
+      const corsHeaders = getCORSHeaders(origin);
+
+      if (!rateCheck.allowed) {
+        res.writeHead(
+          429,
+          applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            ...corsHeaders,
+            "Content-Type": "application/json; charset=utf-8",
+          })
+        );
+        return res.end(JSON.stringify({ error: "Too many requests" }));
+      }
+
+      addServerToken(res);
       res.writeHead(
         200,
         applySecurityHeadersForRequest(req, {
+          ...rateCheck.headers,
+          ...corsHeaders,
           "Content-Type": "application/json; charset=utf-8",
         })
       );
@@ -462,6 +446,21 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
 
     // API endpoint for bot stats: GET /api/bot/stats
     if (url.pathname === "/api/bot/stats") {
+      // ========== SEGURIDAD API: Rate limiting y CORS ==========
+      const rateCheck = checkRateLimit(req, "stats");
+      const corsHeaders = getCORSHeaders(origin);
+
+      if (!rateCheck.allowed) {
+        res.writeHead(
+          429,
+          applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            ...corsHeaders,
+            "Content-Type": "application/json; charset=utf-8",
+          })
+        );
+        return res.end(JSON.stringify({ error: "Too many requests" }));
+      }
       try {
         let botInstance: any = null;
         try {
@@ -472,9 +471,12 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         }
 
         if (!botInstance || !botInstance.isReady || !botInstance.isReady()) {
+          addServerToken(res);
           res.writeHead(
             503,
             applySecurityHeadersForRequest(req, {
+              ...rateCheck.headers,
+              ...corsHeaders,
               "Content-Type": "application/json; charset=utf-8",
             })
           );
@@ -503,9 +505,12 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         const commandCount =
           botInstance.application?.commands?.cache?.size || 0;
 
+        addServerToken(res);
         res.writeHead(
           200,
           applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            ...corsHeaders,
             "Content-Type": "application/json; charset=utf-8",
             "Cache-Control": "public, max-age=60", // Cache for 1 minute
           })
@@ -520,9 +525,12 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         );
       } catch (err: any) {
         console.error("Error getting bot stats:", err);
+        addServerToken(res);
         res.writeHead(
           500,
           applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            ...corsHeaders,
             "Content-Type": "application/json; charset=utf-8",
           })
         );
@@ -539,6 +547,21 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
 
     // API endpoint for bot info: GET /api/bot/info
     if (url.pathname === "/api/bot/info") {
+      // ========== SEGURIDAD API: Rate limiting y CORS ==========
+      const rateCheck = checkRateLimit(req, "stats");
+      const corsHeaders = getCORSHeaders(origin);
+
+      if (!rateCheck.allowed) {
+        res.writeHead(
+          429,
+          applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            ...corsHeaders,
+            "Content-Type": "application/json; charset=utf-8",
+          })
+        );
+        return res.end(JSON.stringify({ error: "Too many requests" }));
+      }
       try {
         let botInstance: any = null;
         try {
@@ -549,18 +572,24 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         }
 
         if (!botInstance || !botInstance.user) {
+          addServerToken(res);
           res.writeHead(
             503,
             applySecurityHeadersForRequest(req, {
+              ...rateCheck.headers,
+              ...corsHeaders,
               "Content-Type": "application/json; charset=utf-8",
             })
           );
           return res.end(JSON.stringify({ error: "Bot is not connected" }));
         }
 
+        addServerToken(res);
         res.writeHead(
           200,
           applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            ...corsHeaders,
             "Content-Type": "application/json; charset=utf-8",
             "Cache-Control": "public, max-age=300", // Cache for 5 minutes
           })
@@ -579,13 +608,47 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
         );
       } catch (err: any) {
         console.error("Error getting bot info:", err);
+        addServerToken(res);
         res.writeHead(
           500,
           applySecurityHeadersForRequest(req, {
+            ...rateCheck.headers,
+            ...corsHeaders,
             "Content-Type": "application/json; charset=utf-8",
           })
         );
         return res.end(JSON.stringify({ error: "Failed to fetch bot info" }));
+      }
+    }
+
+    // Servir /.well-known/api-config.json
+    if (url.pathname === "/.well-known/api-config.json") {
+      const corsHeaders = getCORSHeaders(origin);
+      const configPath = path.join(publicDir, ".well-known", "api-config.json");
+
+      try {
+        const fs = await import("node:fs/promises");
+        const content = await fs.readFile(configPath, "utf-8");
+
+        res.writeHead(
+          200,
+          applySecurityHeadersForRequest(req, {
+            ...corsHeaders,
+            "Content-Type": "application/json; charset=utf-8",
+            "Cache-Control": "public, max-age=3600", // 1 hora
+          })
+        );
+        return res.end(content);
+      } catch (error) {
+        console.error("Error serving api-config.json:", error);
+        res.writeHead(
+          404,
+          applySecurityHeadersForRequest(req, {
+            ...corsHeaders,
+            "Content-Type": "text/plain; charset=utf-8",
+          })
+        );
+        return res.end("Configuration not found");
       }
     }
 

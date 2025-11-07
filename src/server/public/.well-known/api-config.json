@@ -1,0 +1,16 @@
+{
+  "endpoint": "https://api.amayo.dev/api",
+  "version": "1.0.0",
+  "features": {
+    "rateLimit": true,
+    "cors": true,
+    "csrf": true
+  },
+  "security": {
+    "requiresToken": true,
+    "allowedOrigins": [
+      "https://docs.amayo.dev",
+      "https://amayo.dev"
+    ]
+  }
+}
