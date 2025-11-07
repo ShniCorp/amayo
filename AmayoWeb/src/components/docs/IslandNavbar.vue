@@ -41,10 +41,7 @@
         </button>
 
         <!-- Navigation Buttons -->
-        <a href="/docs" class="nav-btn primary">
-          {{ t('navbar.getStarted') }}
-        </a>
-        <a href="/dashboard" class="nav-btn secondary">
+        <a href="/dashboard" class="nav-btn primary">
           {{ t('navbar.dashboard') }}
         </a>
       </div>
@@ -124,12 +121,12 @@ onUnmounted(() => {
 
 <style scoped>
 .island-navbar {
-  position: absolute;
+  position: fixed;
   top: 25px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 1000;
-  width: 150%;
+  width: 90%;
   max-width: 1200px;
 }
 

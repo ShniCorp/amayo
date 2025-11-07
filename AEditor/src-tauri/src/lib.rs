@@ -5,8 +5,20 @@ use std::time::{SystemTime, UNIX_EPOCH};
 use serde::{Deserialize, Serialize};
 use discord_rich_presence::{activity, DiscordIpc, DiscordIpcClient};
 
+// Módulos nuevos
+mod activity_log;
+mod backup;
+mod diagnostics;
+
+use activity_log::{ActivityLog, LogEntry};
+use backup::{Backup, BackupManager};
+use diagnostics::{DiagnosticsManager, DiagnosticError};
+
 // Cliente Discord RPC global
 static DISCORD_CLIENT: Mutex<Option<DiscordIpcClient>> = Mutex::new(None);
+static ACTIVITY_LOG: Mutex<Option<ActivityLog>> = Mutex::new(None);
+static BACKUP_MANAGER: Mutex<Option<BackupManager>> = Mutex::new(None);
+static DIAGNOSTICS: Mutex<Option<DiagnosticsManager>> = Mutex::new(None);
 
 // Structs para Codeium API
 #[derive(Debug, Serialize, Deserialize)]
@@ -1163,6 +1175,173 @@ fn load_gemini_config(app_data_dir: String) -> Result<String, String> {
     Ok(content)
 }
 
+// ============================================
+// ACTIVITY LOG COMMANDS
+// ============================================
+
+#[tauri::command]
+fn save_activity_log(entry: LogEntry) -> Result<(), String> {
+    let mut log_lock = ACTIVITY_LOG.lock().unwrap();
+    
+    if let Some(log) = log_lock.as_mut() {
+        log.add_entry(entry)?;
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+fn get_activity_logs() -> Result<Vec<LogEntry>, String> {
+    let log_lock = ACTIVITY_LOG.lock().unwrap();
+    
+    if let Some(log) = log_lock.as_ref() {
+        Ok(log.get_entries().clone())
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+#[tauri::command]
+fn clear_activity_log() -> Result<(), String> {
+    let mut log_lock = ACTIVITY_LOG.lock().unwrap();
+    
+    if let Some(log) = log_lock.as_mut() {
+        log.clear()?;
+    }
+    
+    Ok(())
+}
+
+// ============================================
+// BACKUP COMMANDS
+// ============================================
+
+#[tauri::command]
+fn create_backup(
+    name: Option<String>,
+    description: Option<String>,
+    backup_type: String,
+) -> Result<Backup, String> {
+    let mut manager_lock = BACKUP_MANAGER.lock().unwrap();
+    
+    if let Some(manager) = manager_lock.as_mut() {
+        // Obtener el proyecto actual (esto debería venir de un estado global)
+        let current_dir = std::env::current_dir().map_err(|e| e.to_string())?;
+        manager.create_backup(&current_dir, name, description, &backup_type)
+    } else {
+        Err("Backup manager no inicializado".to_string())
+    }
+}
+
+#[tauri::command]
+fn get_backups() -> Result<Vec<Backup>, String> {
+    let manager_lock = BACKUP_MANAGER.lock().unwrap();
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        Ok(manager.get_backups())
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+#[tauri::command]
+fn restore_backup(backup_id: String) -> Result<(), String> {
+    let manager_lock = BACKUP_MANAGER.lock().unwrap();
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        manager.restore_backup(&backup_id)
+    } else {
+        Err("Backup manager no inicializado".to_string())
+    }
+}
+
+#[tauri::command]
+fn delete_backup(backup_id: String) -> Result<(), String> {
+    let mut manager_lock = BACKUP_MANAGER.lock().unwrap();
+    
+    if let Some(manager) = manager_lock.as_mut() {
+        manager.delete_backup(&backup_id)
+    } else {
+        Err("Backup manager no inicializado".to_string())
+    }
+}
+
+#[tauri::command]
+fn compare_backup(backup_id: String) -> Result<(String, String), String> {
+    let manager_lock = BACKUP_MANAGER.lock().unwrap();
+    
+    if let Some(manager) = manager_lock.as_ref() {
+        let current_dir = std::env::current_dir().map_err(|e| e.to_string())?;
+        manager.compare_backup(&backup_id, &current_dir)
+    } else {
+        Err("Backup manager no inicializado".to_string())
+    }
+}
+
+// ============================================
+// DIAGNOSTICS COMMANDS
+// ============================================
+
+#[tauri::command]
+fn get_diagnostics() -> Result<Vec<DiagnosticError>, String> {
+    let diagnostics_lock = DIAGNOSTICS.lock().unwrap();
+    
+    if let Some(diagnostics) = diagnostics_lock.as_ref() {
+        Ok(diagnostics.get_errors().clone())
+    } else {
+        Ok(Vec::new())
+    }
+}
+
+#[tauri::command]
+fn analyze_file_diagnostics(file_path: String, content: String) -> Result<(), String> {
+    let mut diagnostics_lock = DIAGNOSTICS.lock().unwrap();
+    
+    if let Some(diagnostics) = diagnostics_lock.as_mut() {
+        diagnostics.analyze_file(&file_path, &content);
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+fn clear_file_diagnostics(file_path: String) -> Result<(), String> {
+    let mut diagnostics_lock = DIAGNOSTICS.lock().unwrap();
+    
+    if let Some(diagnostics) = diagnostics_lock.as_mut() {
+        diagnostics.clear_file_errors(&file_path);
+    }
+    
+    Ok(())
+}
+
+#[tauri::command]
+fn apply_quick_fix(error: DiagnosticError) -> Result<(), String> {
+    // Implementar lógica de quick fixes
+    println!("Aplicando fix para error: {:?}", error);
+    Ok(())
+}
+
+// Inicializar managers al inicio
+#[tauri::command]
+fn init_managers(app_data_dir: String) -> Result<(), String> {
+    let app_dir = Path::new(&app_data_dir);
+    
+    // Inicializar Activity Log
+    let activity_log = ActivityLog::new(app_dir)?;
+    *ACTIVITY_LOG.lock().unwrap() = Some(activity_log);
+    
+    // Inicializar Backup Manager
+    let backup_manager = BackupManager::new(app_dir)?;
+    *BACKUP_MANAGER.lock().unwrap() = Some(backup_manager);
+    
+    // Inicializar Diagnostics
+    let diagnostics = DiagnosticsManager::new();
+    *DIAGNOSTICS.lock().unwrap() = Some(diagnostics);
+    
+    Ok(())
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     tauri::Builder::default()
@@ -1196,7 +1375,21 @@ pub fn run() {
             get_gemini_completion,
             ask_gemini,
             save_gemini_config,
-            load_gemini_config
+            load_gemini_config,
+            // Nuevos comandos
+            init_managers,
+            save_activity_log,
+            get_activity_logs,
+            clear_activity_log,
+            create_backup,
+            get_backups,
+            restore_backup,
+            delete_backup,
+            compare_backup,
+            get_diagnostics,
+            analyze_file_diagnostics,
+            clear_file_diagnostics,
+            apply_quick_fix
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

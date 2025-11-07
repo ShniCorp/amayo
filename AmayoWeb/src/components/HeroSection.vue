@@ -59,8 +59,8 @@ import { botService } from '@/services/bot'
 const { t, locale } = useI18n()
 
 const texts = {
-  es: 'Un bot con mucha personalidad',
-  en: 'A bot beyond comparison'
+  es: 'El Mejor Bot de Discord',
+  en: 'The Best Discord Bot'
 }
 
 const displayText = ref('')
@@ -202,7 +202,7 @@ const inviteBot = () => {
 }
 
 .hero-title::before {
-  content: 'Un bot con mucha personalidad';
+  content: 'El Mejor Bot de Discord';
   font-size: 4rem;
   font-weight: 800;
   visibility: hidden;
@@ -349,19 +349,19 @@ const inviteBot = () => {
 
 .card-1 {
   top: 30px;
-  right: -538px;
+  right: 405px;
   animation: float 6s ease-in-out infinite;
 }
 
 .card-2 {
   top: 190px;
-  right: -772px;
+  right: 185px;
   animation: float 6s ease-in-out infinite 2s;
 }
 
 .card-3 {
-  bottom: 50px;
-  right: -540px;
+  bottom: -2px;
+  right: -32px;;
   animation: float 6s ease-in-out infinite 4s;
 }
 

@@ -1,17 +1,11 @@
 <template>
   <div id="app">
-    <AnimatedBackground />
-    <IslandNavbar />
-    <HeroSection />
     <router-view />
   </div>
 </template>
 
 <script setup>
 import { onMounted } from 'vue'
-import AnimatedBackground from './components/AnimatedBackground.vue'
-import IslandNavbar from './components/IslandNavbar.vue'
-import HeroSection from './components/HeroSection.vue'
 import { useTheme } from './composables/useTheme'
 
 const { initTheme } = useTheme()
@@ -35,18 +29,28 @@ onMounted(() => {
   box-sizing: border-box;
 }
 
+html {
+  overflow-x: hidden;
+  width: 100%;
+}
+
 body {
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
   background: #0a0a0a;
   color: white;
   overflow-x: hidden;
+  width: 100%;
+  margin: 0;
+  padding: 0;
 }
 
 #app {
   position: relative;
   min-height: 100vh;
-  max-width: 100%;
+  width: 100%;
+  max-width: 100vw;
   margin: 0;
   padding: 0;
+  overflow-x: hidden;
 }
 </style>

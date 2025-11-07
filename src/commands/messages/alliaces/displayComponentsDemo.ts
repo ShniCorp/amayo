@@ -17,6 +17,7 @@ interface ActionRowBuilder {
     components: any[]; // Discord.js API components
 }
 
+
 export const command: CommandMessage = {
     name: "displaydemo",
     type: "message",
