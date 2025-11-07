@@ -332,77 +332,6 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
       return res.end();
     }
 
-    // Dashboard routes (require session) — exclude labs which has its own handler
-    if (
-      url.pathname === "/dashboard" ||
-      (url.pathname.startsWith("/dashboard/") &&
-        !url.pathname.startsWith("/dashboard/labs"))
-    ) {
-      const cookies = parseCookies(req);
-      const signed = cookies["amayo_sid"];
-      const sid = unsignSid(signed);
-      const session = sid ? SESSIONS.get(sid) : null;
-      if (!session) {
-        // not authenticated -> redirect to login
-        res.writeHead(
-          302,
-          applySecurityHeadersForRequest(req, { Location: "/login" })
-        );
-        return res.end();
-      }
-      // refresh token if needed and mark session active
-      await refreshAccessTokenIfNeeded(session).catch(() => {});
-      if (sid) touchSession(sid);
-
-      // Try to get the running bot instance to know where the bot is present.
-      let botInstance: any = null;
-      try {
-        // use require to avoid circular import issues at TS compile time
-        const maybe = require("../main");
-        botInstance = maybe && maybe.bot ? maybe.bot : null;
-      } catch (e) {
-        botInstance = null;
-      }
-
-      let botAvailable = false;
-      let botGuildIds = new Set<string>();
-      try {
-        if (botInstance && botInstance.guilds && botInstance.guilds.cache) {
-          botAvailable = true;
-          for (const [id] of botInstance.guilds.cache) {
-            botGuildIds.add(String(id));
-          }
-        }
-      } catch (e) {
-        botAvailable = false;
-      }
-
-      // session.guilds contains the guilds the user is admin of (from OAuth)
-      const sessionGuilds = session?.guilds || [];
-      // If we have bot guild IDs, show only the intersection (where bot exists too).
-      const visibleGuilds = botAvailable
-        ? sessionGuilds.filter((g: any) => botGuildIds.has(String(g.id)))
-        : sessionGuilds;
-
-      await renderTemplate(req, res, "dashboard", {
-        appName: pkg.name ?? "Amayo Bot",
-        version: pkg.version ?? "2.0.0",
-        djsVersion: pkg?.dependencies?.["discord.js"] ?? "15.0.0-dev",
-        // dashboard should not render the site's navbar
-        hideNavbar: true,
-        selectedGuild: visibleGuilds?.[0] ?? session?.guilds?.[0] ?? null,
-        selectedGuildId:
-          visibleGuilds?.[0]?.id ?? session?.guilds?.[0]?.id ?? null,
-        session,
-        user: session?.user ?? null,
-        guilds: visibleGuilds || [],
-        botAvailable,
-        selectedGuildName:
-          visibleGuilds?.[0]?.name ?? session?.guilds?.[0]?.name ?? null,
-      });
-      return;
-    }
-
     if (url.pathname === "/favicon.ico") {
       // redirect favicon requests to a known image in public assets
       res.writeHead(
@@ -649,39 +578,6 @@ export const handler = async (req: IncomingMessage, res: ServerResponse) => {
           })
         );
         return res.end("Configuration not found");
-      }
-    }
-
-    // API proxy for dashboard roles: GET /api/dashboard/:id/roles
-    if (
-      url.pathname.startsWith("/api/dashboard/") &&
-      url.pathname.endsWith("/roles")
-    ) {
-      const parts = url.pathname.split("/").filter(Boolean); // ['api','dashboard','<id>','roles']
-      const gid = parts[2];
-      if (!gid) {
-        res.writeHead(400, applySecurityHeadersForRequest(req));
-        return res.end("Missing guild id");
-      }
-      try {
-        const { getGuildRoles } = await import("../core/api/discordAPI.js");
-        const roles = await getGuildRoles(gid);
-        res.writeHead(
-          200,
-          applySecurityHeadersForRequest(req, {
-            "Content-Type": "application/json; charset=utf-8",
-          })
-        );
-        return res.end(JSON.stringify(roles));
-      } catch (err: any) {
-        console.warn("Failed proxy roles", err);
-        res.writeHead(
-          500,
-          applySecurityHeadersForRequest(req, {
-            "Content-Type": "application/json; charset=utf-8",
-          })
-        );
-        return res.end(JSON.stringify({ error: String(err?.message || err) }));
       }
     }
 
