@@ -85,6 +85,387 @@ function isAPIError(error: unknown): error is { message: string; code?: string }
 
 const sleep = (ms: number): Promise<void> => new Promise(resolve => setTimeout(resolve, ms));
 
+// Configuración de seguridad para imágenes
+interface ImageSecurityConfig {
+    allowedHosts: string[];
+    maxFileSize: number;
+    downloadTimeout: number;
+    allowedMimeTypes: string[];
+    blockedPatterns: RegExp[];
+}
+
+const IMAGE_SECURITY_CONFIG: ImageSecurityConfig = {
+    allowedHosts: [
+        'cdn.discordapp.com',
+        'media.discordapp.net',
+        'discordapp.com',
+        'discord.com',
+        'i.imgur.com',
+        'imgur.com',
+        'i.redd.it',
+        'reddit.com',
+        'preview.redd.it',
+        'external-preview.redd.it',
+        'pbs.twimg.com',
+        'twimg.com',
+        'instagram.com',
+        'fbcdn.net',
+        'googleusercontent.com',
+        'gstatic.com',
+        'githubusercontent.com',
+        'gitlab.com',
+        'steamusercontent.com',
+        'steamcommunity.com',
+        'artstation.com',
+        'deviantart.com',
+        'pixiv.net'
+    ],
+    maxFileSize: 10 * 1024 * 1024, // 10MB máximo
+    downloadTimeout: 15000, // 15 segundos
+    allowedMimeTypes: [
+        'image/jpeg',
+        'image/png',
+        'image/gif',
+        'image/webp',
+        'image/bmp',
+        'image/tiff'
+    ],
+    blockedPatterns: [
+        /\.exe$/i,
+        /\.js$/i,
+        /\.vbs$/i,
+        /\.scr$/i,
+        /\.bat$/i,
+        /\.cmd$/i,
+        /\.com$/i,
+        /\.pif$/i,
+        /\.jar$/i,
+        /\.zip$/i,
+        /\.rar$/i,
+        /\.7z$/i,
+        /\.php$/i,
+        /\.asp$/i,
+        /\.jsp$/i,
+        /<script/i,
+        /javascript:/i,
+        /data:text\/html/i,
+        /data:application/i
+    ]
+};
+
+/**
+ * Clase de error personalizada para violaciones de seguridad
+ */
+class ImageSecurityError extends Error {
+    constructor(message: string, public code: string) {
+        super(message);
+        this.name = 'ImageSecurityError';
+    }
+}
+
+/**
+ * Validador de seguridad para imágenes
+ */
+class ImageSecurityValidator {
+    private config: ImageSecurityConfig;
+
+    constructor(config: ImageSecurityConfig) {
+        this.config = config;
+    }
+
+    /**
+     * Valida si una URL de imagen es segura para descargar
+     */
+    validateImageUrl(url: string): void {
+        if (!url || typeof url !== 'string') {
+            throw new ImageSecurityError('URL de imagen inválida', 'INVALID_URL');
+        }
+
+        let parsedUrl: URL;
+        try {
+            parsedUrl = new URL(url);
+        } catch {
+            throw new ImageSecurityError('URL de imagen malformada', 'MALFORMED_URL');
+        }
+
+        // Verificar protocolo
+        if (!['https:', 'http:'].includes(parsedUrl.protocol)) {
+            throw new ImageSecurityError('Protocolo de URL no permitido', 'INVALID_PROTOCOL');
+        }
+
+        // Verificar host permitido
+        const hostname = parsedUrl.hostname.toLowerCase();
+        const isAllowed = this.config.allowedHosts.some(allowedHost => {
+            return hostname === allowedHost.toLowerCase() || 
+                   hostname.endsWith('.' + allowedHost.toLowerCase());
+        });
+
+        if (!isAllowed) {
+            throw new ImageSecurityError(
+                `Host no permitido: ${hostname}. Solo se permiten imágenes de hosts confiables.`,
+                'BLOCKED_HOST'
+            );
+        }
+
+        // Verificar patrones bloqueados en la URL
+        const urlString = url.toLowerCase();
+        const blockedPattern = this.config.blockedPatterns.find(pattern => pattern.test(urlString));
+        if (blockedPattern) {
+            throw new ImageSecurityError(
+                `URL contiene patrones sospechosos: ${blockedPattern.source}`,
+                'SUSPICIOUS_PATTERN'
+            );
+        }
+
+        // Verificar parámetros sospechosos
+        const params = parsedUrl.searchParams;
+        for (const [key, value] of params) {
+            const paramStr = `${key}=${value}`.toLowerCase();
+            const suspiciousParam = this.config.blockedPatterns.find(pattern => pattern.test(paramStr));
+            if (suspiciousParam) {
+                throw new ImageSecurityError(
+                    `Parámetros de URL sospechosos detectados`,
+                    'SUSPICIOUS_PARAMS'
+                );
+            }
+        }
+    }
+
+    /**
+     * Valida el tipo MIME de una imagen
+     */
+    validateMimeType(mimeType: string): void {
+        if (!mimeType || typeof mimeType !== 'string') {
+            throw new ImageSecurityError('Tipo MIME inválido', 'INVALID_MIME');
+        }
+
+        const normalizedMimeType = mimeType.toLowerCase().trim();
+        if (!this.config.allowedMimeTypes.includes(normalizedMimeType)) {
+            throw new ImageSecurityError(
+                `Tipo de imagen no permitido: ${mimeType}. Tipos permitidos: ${this.config.allowedMimeTypes.join(', ')}`,
+                'BLOCKED_MIME_TYPE'
+            );
+        }
+    }
+
+    /**
+     * Valida el tamaño del archivo
+     */
+    validateFileSize(size: number): void {
+        if (typeof size !== 'number' || size < 0) {
+            throw new ImageSecurityError('Tamaño de archivo inválido', 'INVALID_SIZE');
+        }
+
+        if (size > this.config.maxFileSize) {
+            throw new ImageSecurityError(
+                `Archivo demasiado grande: ${(size / 1024 / 1024).toFixed(2)}MB. Máximo permitido: ${(this.config.maxFileSize / 1024 / 1024).toFixed(2)}MB`,
+                'FILE_TOO_LARGE'
+            );
+        }
+    }
+}
+
+/**
+ * Descargador seguro de imágenes con validación integrada
+ */
+class SecureImageDownloader {
+    private validator: ImageSecurityValidator;
+
+    constructor(validator: ImageSecurityValidator) {
+        this.validator = validator;
+    }
+
+    /**
+     * Descarga una imagen de forma segura con validaciones completas
+     */
+    async downloadImage(url: string, timeoutMs: number = IMAGE_SECURITY_CONFIG.downloadTimeout): Promise<{
+        buffer: Buffer;
+        mimeType: string;
+        size: number;
+    }> {
+        // Validar URL antes de descargar
+        this.validator.validateImageUrl(url);
+
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+        try {
+            logger.info({ url, timeout: timeoutMs }, 'Descargando imagen con validación de seguridad');
+
+            const response = await fetch(url, {
+                signal: controller.signal,
+                headers: {
+                    'User-Agent': 'Mozilla/5.0 (compatible; DiscordBot/1.0)',
+                    'Accept': 'image/*,*/*;q=0.8',
+                    'Accept-Language': 'en-US,en;q=0.5',
+                    'Accept-Encoding': 'gzip, deflate',
+                    'DNT': '1',
+                    'Connection': 'keep-alive',
+                    'Upgrade-Insecure-Requests': '1',
+                },
+                // Limitar redirecciones para evitar ataques de redirección
+                redirect: 'follow',
+                // Verificar tamaño del contenido antes de descargar
+                size: IMAGE_SECURITY_CONFIG.maxFileSize + 1024 // Un poco más que el límite para permitir headers
+            });
+
+            clearTimeout(timeoutId);
+
+            if (!response.ok) {
+                throw new ImageSecurityError(
+                    `Error HTTP al descargar imagen: ${response.status} ${response.statusText}`,
+                    'DOWNLOAD_FAILED'
+                );
+            }
+
+            // Validar tipo MIME del response
+            const contentType = response.headers.get('content-type');
+            if (contentType) {
+                const mimeType = contentType.split(';')[0].trim();
+                this.validator.validateMimeType(mimeType);
+            }
+
+            // Validar tamaño del contenido
+            const contentLength = response.headers.get('content-length');
+            if (contentLength) {
+                const size = parseInt(contentLength, 10);
+                if (!isNaN(size)) {
+                    this.validator.validateFileSize(size);
+                }
+            }
+
+            // Descargar el contenido en chunks para validar el tamaño real
+            const chunks: Buffer[] = [];
+            let totalSize = 0;
+
+            const reader = response.body?.getReader();
+            if (!reader) {
+                throw new ImageSecurityError('No se pudo obtener el contenido de la imagen', 'DOWNLOAD_FAILED');
+            }
+
+            try {
+                while (true) {
+                    const { done, value } = await reader.read();
+                    if (done) break;
+
+                    totalSize += value.length;
+                    
+                    // Validar tamaño acumulado
+                    if (totalSize > IMAGE_SECURITY_CONFIG.maxFileSize) {
+                        throw new ImageSecurityError(
+                            `Tamaño de imagen excedido durante la descarga: ${(totalSize / 1024 / 1024).toFixed(2)}MB`,
+                            'FILE_TOO_LARGE'
+                        );
+                    }
+
+                    chunks.push(value);
+                }
+            } finally {
+                reader.releaseLock();
+            }
+
+            const buffer = Buffer.concat(chunks);
+            
+            // Validar el tamaño final
+            this.validator.validateFileSize(buffer.length);
+
+            // Detectar tipo MIME final si no se obtuvo del header
+            let finalMimeType = contentType?.split(';')[0].trim() || 'application/octet-stream';
+            
+            // Si el tipo MIME es genérico, intentar detectarlo del buffer
+            if (finalMimeType === 'application/octet-stream') {
+                finalMimeType = this.detectMimeTypeFromBuffer(buffer);
+            }
+
+            // Validar el tipo MIME final
+            this.validator.validateMimeType(finalMimeType);
+
+            logger.info({
+                url: url,
+                size: buffer.length,
+                mimeType: finalMimeType,
+                validation: 'passed'
+            }, 'Imagen descargada y validada exitosamente');
+
+            return {
+                buffer,
+                mimeType: finalMimeType,
+                size: buffer.length
+            };
+
+        } catch (error) {
+            clearTimeout(timeoutId);
+            
+            if (error instanceof ImageSecurityError) {
+                throw error;
+            }
+            
+            if (error instanceof Error && error.name === 'AbortError') {
+                throw new ImageSecurityError(
+                    `Timeout al descargar imagen: se excedió el tiempo de ${timeoutMs}ms`,
+                    'DOWNLOAD_TIMEOUT'
+                );
+            }
+
+            // Error de fetch o red
+            if (error instanceof Error) {
+                throw new ImageSecurityError(
+                    `Error de red al descargar imagen: ${error.message}`,
+                    'NETWORK_ERROR'
+                );
+            }
+
+            throw new ImageSecurityError(
+                'Error desconocido al descargar imagen',
+                'UNKNOWN_ERROR'
+            );
+        }
+    }
+
+    /**
+     * Detecta el tipo MIME desde el buffer de la imagen
+     */
+    private detectMimeTypeFromBuffer(buffer: Buffer): string {
+        if (buffer.length < 4) return 'application/octet-stream';
+
+        // Magic numbers para tipos de imagen comunes
+        const header = buffer.slice(0, 12);
+
+        // JPEG
+        if (header[0] === 0xFF && header[1] === 0xD8 && header[2] === 0xFF) {
+            return 'image/jpeg';
+        }
+
+        // PNG
+        if (header[0] === 0x89 && header[1] === 0x50 && header[2] === 0x4E && header[3] === 0x47) {
+            return 'image/png';
+        }
+
+        // GIF
+        if (header[0] === 0x47 && header[1] === 0x49 && header[2] === 0x46) {
+            return 'image/gif';
+        }
+
+        // WebP
+        if (header[8] === 0x57 && header[9] === 0x45 && header[10] === 0x42 && header[11] === 0x50) {
+            return 'image/webp';
+        }
+
+        // BMP
+        if (header[0] === 0x42 && header[1] === 0x4D) {
+            return 'image/bmp';
+        }
+
+        // TIFF
+        if ((header[0] === 0x49 && header[1] === 0x49 && header[2] === 0x2A && header[3] === 0x00) ||
+            (header[0] === 0x4D && header[1] === 0x4D && header[2] === 0x00 && header[3] === 0x2A)) {
+            return 'image/tiff';
+        }
+
+        return 'application/octet-stream';
+    }
+}
+
 function isServiceUnavailableError(error: unknown): boolean {
     if (!error) {
         return false;
@@ -135,6 +516,9 @@ export class AIService {
     private rateLimitTracker = new Collection<string, { count: number; resetTime: number }>();
     // Cache de configuración por guild
     private guildPromptCache = new Collection<string, { prompt: string | null; fetchedAt: number }>();
+    // Validador de seguridad para imágenes
+    private imageSecurityValidator: ImageSecurityValidator;
+    private secureImageDownloader: SecureImageDownloader;
 
     // Configuración mejorada y escalable
     private readonly config = {
@@ -175,6 +559,11 @@ export class AIService {
             this.imageModelName = envImageModel.trim();
             logger.info({ model: this.imageModelName }, 'Modelo de imágenes fijado por GENAI_IMAGE_MODEL');
         }
+
+        // Inicializar componentes de seguridad para imágenes
+        this.imageSecurityValidator = new ImageSecurityValidator(IMAGE_SECURITY_CONFIG);
+        this.secureImageDownloader = new SecureImageDownloader(this.imageSecurityValidator);
+        logger.info('Sistema de seguridad de imágenes inicializado');
 
         this.startQueueProcessor();
         this.startCleanupService();
@@ -659,47 +1048,24 @@ export class AIService {
     }
 
     /**
-     * Procesar imágenes adjuntas para análisis con Gemini Vision
+     * Procesar imágenes adjuntas para análisis con Gemini Vision - Versión segura
      */
     private async processImageAttachments(attachments: any[]): Promise<any[]> {
         const imageAttachments: Array<{ inlineData: { data: string; mimeType: string } }> = [];
+        let processedCount = 0;
+        let securityBlockedCount = 0;
 
         for (const attachment of attachments) {
             if (this.hasImageAttachments([attachment])) {
                 try {
-                    // Descargar la imagen
-                    const response = await fetch(attachment.url);
-                    if (!response.ok) {
-                        logger.warn(`Error descargando imagen: ${response.statusText}`);
-                        continue;
-                    }
-
-                    const arrayBuffer = await response.arrayBuffer();
-                    const base64Data = Buffer.from(arrayBuffer).toString('base64');
-
-                    // Determinar el tipo MIME
-                    let mimeType = attachment.contentType || 'image/png';
-                    if (!mimeType.startsWith('image/')) {
-                        // Inferir del nombre del archivo
-                        const ext = attachment.name?.toLowerCase().split('.').pop();
-                        switch (ext) {
-                            case 'jpg':
-                            case 'jpeg':
-                                mimeType = 'image/jpeg';
-                                break;
-                            case 'png':
-                                mimeType = 'image/png';
-                                break;
-                            case 'gif':
-                                mimeType = 'image/gif';
-                                break;
-                            case 'webp':
-                                mimeType = 'image/webp';
-                                break;
-                            default:
-                                mimeType = 'image/png';
-                        }
-                    }
+                    // Validar URL de imagen antes de descargar
+                    this.imageSecurityValidator.validateImageUrl(attachment.url);
+                    
+                    // Descargar imagen de forma segura con timeout y validaciones
+                    const { buffer, mimeType, size } = await this.secureImageDownloader.downloadImage(attachment.url);
+                    
+                    // Convertir a base64 para Gemini Vision
+                    const base64Data = buffer.toString('base64');
 
                     imageAttachments.push({
                         inlineData: {
@@ -708,12 +1074,40 @@ export class AIService {
                         }
                     });
 
-                    logger.info(`Imagen procesada: ${attachment.name} (${mimeType})`);
+                    processedCount++;
+                    logger.info({
+                        name: attachment.name,
+                        mimeType: mimeType,
+                        size: `${(size / 1024).toFixed(2)}KB`,
+                        security: 'validated'
+                    }, 'Imagen procesada exitosamente con validación de seguridad');
 
                 } catch (error) {
-                    logger.error(`Error procesando imagen ${attachment.name}: ${getErrorMessage(error)}`);
+                    if (error instanceof ImageSecurityError) {
+                        securityBlockedCount++;
+                        logger.warn({
+                            name: attachment.name,
+                            url: attachment.url,
+                            error: error.message,
+                            code: error.code
+                        }, 'Imagen bloqueada por violación de seguridad');
+                    } else {
+                        logger.error({
+                            name: attachment.name,
+                            url: attachment.url,
+                            error: getErrorMessage(error)
+                        }, 'Error procesando imagen');
+                    }
                 }
             }
+        }
+
+        if (securityBlockedCount > 0) {
+            logger.warn({
+                total: attachments.length,
+                processed: processedCount,
+                blocked: securityBlockedCount
+            }, `Procesamiento de imágenes completado con ${securityBlockedCount} imágenes bloqueadas por seguridad`);
         }
 
         return imageAttachments;
@@ -1068,6 +1462,46 @@ Responde de forma directa y útil:`;
             totalRequests: this.userCooldowns.size,
             averageResponseTime: 0
         };
+    }
+
+    /**
+     * Obtener configuración de seguridad de imágenes
+     */
+    getImageSecurityConfig(): {
+        allowedHosts: string[];
+        maxFileSize: number;
+        downloadTimeout: number;
+        allowedMimeTypes: string[];
+    } {
+        return {
+            allowedHosts: IMAGE_SECURITY_CONFIG.allowedHosts,
+            maxFileSize: IMAGE_SECURITY_CONFIG.maxFileSize,
+            downloadTimeout: IMAGE_SECURITY_CONFIG.downloadTimeout,
+            allowedMimeTypes: IMAGE_SECURITY_CONFIG.allowedMimeTypes
+        };
+    }
+
+    /**
+     * Validar una URL de imagen manualmente (útil para pruebas)
+     */
+    validateImageUrl(url: string): { valid: boolean; error?: string; code?: string } {
+        try {
+            this.imageSecurityValidator.validateImageUrl(url);
+            return { valid: true };
+        } catch (error) {
+            if (error instanceof ImageSecurityError) {
+                return { 
+                    valid: false, 
+                    error: error.message, 
+                    code: error.code 
+                };
+            }
+            return { 
+                valid: false, 
+                error: 'Error desconocido al validar URL', 
+                code: 'UNKNOWN' 
+            };
+        }
     }
 
     /**
