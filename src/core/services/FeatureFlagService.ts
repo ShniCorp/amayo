@@ -7,7 +7,7 @@
  * - Whitelisting/blacklisting de usuarios/guilds
  * - A/B testing
  * - Caché en memoria para performance
- * - Persistencia en Prisma + AppWrite
+ * - Persistencia en Prisma
  * - Sistema de evaluación con contexto
  */
 
@@ -21,7 +21,9 @@ import {
   FeatureFlagStats,
   FeatureFlagStatus,
   RolloutStrategy,
+  RolloutConfigSchema,
 } from "../types/featureFlags";
+import { featureFlagEvaluator } from "./FeatureFlagEvaluator";
 
 class FeatureFlagService {
   // Caché en memoria para flags (evitar golpear DB constantemente)
@@ -74,7 +76,7 @@ class FeatureFlagService {
           code: error?.code,
         },
       });
-      throw error;
+      // No lanzamos error para permitir que el bot arranque en modo fail-safe
     }
   }
 
@@ -83,44 +85,54 @@ class FeatureFlagService {
    */
   async refreshCache(): Promise<void> {
     try {
-      // Defensive check: ensure prisma delegate exists
-      if (
-        !(prisma as any).featureFlag ||
-        typeof (prisma as any).featureFlag.findMany !== "function"
-      ) {
-        const keys = Object.keys(prisma as any).slice(0, 20);
-        logger.error({
-          msg: "[FeatureFlags] Prisma featureFlag delegate missing before refreshCache",
-          keys,
-          typeofPrisma: typeof prisma,
-        });
-        throw new Error(
-          "Prisma.featureFlag delegate missing or findMany not available"
-        );
-      }
-
-      // Capturar referencia local al delegado
-      const featureFlagDelegate = (prisma as any).featureFlag;
-
-      const flags = await featureFlagDelegate.findMany();
+      const flags = await prisma.featureFlag.findMany();
 
       this.flagsCache.clear();
 
       for (const flag of flags) {
+        // Parsear y validar rolloutConfig
+        let rolloutConfig = undefined;
+        if (flag.rolloutConfig) {
+          try {
+            const parsed = JSON.parse(flag.rolloutConfig);
+            const validation = RolloutConfigSchema.safeParse(parsed);
+            if (validation.success) {
+              rolloutConfig = validation.data;
+            } else {
+              logger.warn(
+                `[FeatureFlags] Configuración de rollout inválida para "${flag.name}":`,
+                validation.error
+              );
+            }
+          } catch (e) {
+            logger.warn(
+              `[FeatureFlags] Error al parsear rolloutConfig para "${flag.name}"`
+            );
+          }
+        }
+
+        // Parsear metadata
+        let metadata = undefined;
+        if (flag.metadata) {
+          try {
+            metadata = JSON.parse(flag.metadata);
+          } catch (e) {
+            logger.warn(
+              `[FeatureFlags] Error al parsear metadata para "${flag.name}"`
+            );
+          }
+        }
+
         const config: FeatureFlagConfig = {
           name: flag.name,
           description: flag.description || undefined,
           status: flag.status as FeatureFlagStatus,
           target: flag.target as any,
-          rolloutStrategy: flag.rolloutStrategy as RolloutStrategy | undefined,
-          rolloutConfig: flag.rolloutConfig
-            ? JSON.parse(flag.rolloutConfig as string)
-            : undefined,
+          rolloutStrategy: (flag.rolloutStrategy as RolloutStrategy) || undefined,
+          rolloutConfig,
           startDate: flag.startDate || undefined,
           endDate: flag.endDate || undefined,
-          metadata: flag.metadata
-            ? JSON.parse(flag.metadata as string)
-            : undefined,
+          metadata,
           createdAt: flag.createdAt,
           updatedAt: flag.updatedAt,
         };
@@ -129,6 +141,9 @@ class FeatureFlagService {
       }
 
       this.lastCacheUpdate = Date.now();
+      // Limpiar caché de evaluaciones al refrescar flags
+      this.evaluationCache.clear();
+
       logger.debug(
         `[FeatureFlags] Caché actualizado: ${this.flagsCache.size} flags`
       );
@@ -144,6 +159,13 @@ class FeatureFlagService {
       });
       throw error;
     }
+  }
+
+  /**
+   * Fuerza el refresco de un flag específico (útil para webhooks o comandos de admin)
+   */
+  async forceRefresh(flagName?: string): Promise<void> {
+    await this.refreshCache();
   }
 
   /**
@@ -170,7 +192,8 @@ class FeatureFlagService {
 
       // Si el flag no existe, asumimos deshabilitado
       if (!flag) {
-        logger.warn(
+        // Solo loguear en debug para no saturar logs si se consulta mucho un flag inexistente
+        logger.debug(
           `[FeatureFlags] Flag "${flagName}" no encontrado, retornando false`
         );
         return false;
@@ -186,8 +209,8 @@ class FeatureFlagService {
         }
       }
 
-      // Evaluar el flag
-      const evaluation = await this.evaluate(flag, context);
+      // Evaluar el flag usando el Evaluator separado
+      const evaluation = featureFlagEvaluator.evaluate(flag, context);
 
       // Cachear resultado
       this.cacheEvaluation(cacheKey, flagName, evaluation.enabled);
@@ -201,310 +224,9 @@ class FeatureFlagService {
 
       return evaluation.enabled;
     } catch (error) {
-      //@ts-ignore
-      logger.error(`[FeatureFlags] Error al evaluar "${flagName}":`, error);
+      logger.error({ err: error }, `[FeatureFlags] Error al evaluar "${flagName}"`);
       return false; // Fail-safe: si hay error, deshabilitamos
     }
-  }
-
-  /**
-   * Evalúa un flag según su configuración
-   */
-  private async evaluate(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext
-  ): Promise<FeatureFlagEvaluation> {
-    const now = Date.now();
-
-    // Verificar fechas de inicio/fin
-    if (flag.startDate && now < flag.startDate.getTime()) {
-      return {
-        flagName: flag.name,
-        enabled: false,
-        reason: "Flag aún no iniciado",
-        timestamp: now,
-      };
-    }
-
-    if (flag.endDate && now > flag.endDate.getTime()) {
-      return {
-        flagName: flag.name,
-        enabled: false,
-        reason: "Flag expirado",
-        timestamp: now,
-      };
-    }
-
-    // Evaluar según status
-    switch (flag.status) {
-      case "enabled":
-        return {
-          flagName: flag.name,
-          enabled: true,
-          reason: "Flag habilitado globalmente",
-          timestamp: now,
-        };
-
-      case "disabled":
-        return {
-          flagName: flag.name,
-          enabled: false,
-          reason: "Flag deshabilitado",
-          timestamp: now,
-        };
-
-      case "maintenance":
-        return {
-          flagName: flag.name,
-          enabled: false,
-          reason: "Flag en mantenimiento",
-          timestamp: now,
-        };
-
-      case "rollout":
-        return this.evaluateRollout(flag, context, now);
-
-      default:
-        return {
-          flagName: flag.name,
-          enabled: false,
-          reason: "Status desconocido",
-          timestamp: now,
-        };
-    }
-  }
-
-  /**
-   * Evalúa una estrategia de rollout
-   */
-  private evaluateRollout(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext,
-    timestamp: number
-  ): FeatureFlagEvaluation {
-    const strategy = flag.rolloutStrategy;
-    const config = flag.rolloutConfig;
-
-    if (!strategy || !config) {
-      return {
-        flagName: flag.name,
-        enabled: false,
-        reason: "Rollout sin configuración",
-        strategy,
-        timestamp,
-      };
-    }
-
-    switch (strategy) {
-      case "whitelist":
-        return this.evaluateWhitelist(flag, context, timestamp);
-
-      case "blacklist":
-        return this.evaluateBlacklist(flag, context, timestamp);
-
-      case "percentage":
-        return this.evaluatePercentage(flag, context, timestamp);
-
-      case "gradual":
-        return this.evaluateGradual(flag, context, timestamp);
-
-      case "random":
-        return this.evaluateRandom(flag, context, timestamp);
-
-      default:
-        return {
-          flagName: flag.name,
-          enabled: false,
-          reason: "Estrategia desconocida",
-          strategy,
-          timestamp,
-        };
-    }
-  }
-
-  /**
-   * Evalúa estrategia de whitelist
-   */
-  private evaluateWhitelist(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext,
-    timestamp: number
-  ): FeatureFlagEvaluation {
-    const targetIds = flag.rolloutConfig?.targetIds || [];
-    const contextId = this.getContextId(flag, context);
-
-    const enabled = targetIds.includes(contextId);
-
-    return {
-      flagName: flag.name,
-      enabled,
-      reason: enabled ? "ID en whitelist" : "ID no en whitelist",
-      strategy: "whitelist",
-      timestamp,
-    };
-  }
-
-  /**
-   * Evalúa estrategia de blacklist
-   */
-  private evaluateBlacklist(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext,
-    timestamp: number
-  ): FeatureFlagEvaluation {
-    const targetIds = flag.rolloutConfig?.targetIds || [];
-    const contextId = this.getContextId(flag, context);
-
-    const enabled = !targetIds.includes(contextId);
-
-    return {
-      flagName: flag.name,
-      enabled,
-      reason: enabled ? "ID no en blacklist" : "ID en blacklist",
-      strategy: "blacklist",
-      timestamp,
-    };
-  }
-
-  /**
-   * Evalúa estrategia de porcentaje
-   */
-  private evaluatePercentage(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext,
-    timestamp: number
-  ): FeatureFlagEvaluation {
-    const percentage = flag.rolloutConfig?.percentage || 0;
-    const contextId = this.getContextId(flag, context);
-
-    // Hash determinista basado en el ID
-    const hash = this.hashString(contextId + flag.name);
-    const userPercentage = (hash % 100) + 1;
-
-    const enabled = userPercentage <= percentage;
-
-    return {
-      flagName: flag.name,
-      enabled,
-      reason: `Porcentaje: ${userPercentage}% <= ${percentage}%`,
-      strategy: "percentage",
-      timestamp,
-    };
-  }
-
-  /**
-   * Evalúa estrategia de rollout gradual
-   */
-  private evaluateGradual(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext,
-    timestamp: number
-  ): FeatureFlagEvaluation {
-    const gradual = flag.rolloutConfig?.gradual;
-
-    if (!gradual || !flag.startDate) {
-      return {
-        flagName: flag.name,
-        enabled: false,
-        reason: "Gradual sin configuración válida",
-        strategy: "gradual",
-        timestamp,
-      };
-    }
-
-    const startTime = flag.startDate.getTime();
-    const durationMs = gradual.durationDays * 24 * 60 * 60 * 1000;
-    const elapsed = timestamp - startTime;
-
-    if (elapsed < 0) {
-      return {
-        flagName: flag.name,
-        enabled: false,
-        reason: "Rollout gradual no iniciado",
-        strategy: "gradual",
-        timestamp,
-      };
-    }
-
-    // Calcular porcentaje actual del rollout
-    const progress = Math.min(1, elapsed / durationMs);
-    const currentPercentage =
-      gradual.startPercentage +
-      (gradual.targetPercentage - gradual.startPercentage) * progress;
-
-    // Evaluar con el porcentaje actual
-    const contextId = this.getContextId(flag, context);
-    const hash = this.hashString(contextId + flag.name);
-    const userPercentage = (hash % 100) + 1;
-
-    const enabled = userPercentage <= currentPercentage;
-
-    return {
-      flagName: flag.name,
-      enabled,
-      reason: `Gradual: ${currentPercentage.toFixed(1)}% (día ${Math.floor(
-        elapsed / (24 * 60 * 60 * 1000)
-      )}/${gradual.durationDays})`,
-      strategy: "gradual",
-      timestamp,
-    };
-  }
-
-  /**
-   * Evalúa estrategia aleatoria
-   */
-  private evaluateRandom(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext,
-    timestamp: number
-  ): FeatureFlagEvaluation {
-    const seed = flag.rolloutConfig?.randomSeed || 0;
-    const contextId = this.getContextId(flag, context);
-
-    // Pseudo-random determinista basado en seed y context
-    const hash = this.hashString(contextId + flag.name + seed);
-    const enabled = hash % 2 === 0;
-
-    return {
-      flagName: flag.name,
-      enabled,
-      reason: enabled ? "Random: true" : "Random: false",
-      strategy: "random",
-      timestamp,
-    };
-  }
-
-  /**
-   * Obtiene el ID relevante del contexto según el target del flag
-   */
-  private getContextId(
-    flag: FeatureFlagConfig,
-    context: FeatureFlagContext
-  ): string {
-    switch (flag.target) {
-      case "user":
-        return context.userId || "unknown";
-      case "guild":
-        return context.guildId || "unknown";
-      case "channel":
-        return context.channelId || "unknown";
-      case "global":
-      default:
-        return "global";
-    }
-  }
-
-  /**
-   * Genera un hash simple de un string (para distribución consistente)
-   */
-  private hashString(str: string): number {
-    let hash = 0;
-    for (let i = 0; i < str.length; i++) {
-      const char = str.charCodeAt(i);
-      hash = (hash << 5) - hash + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return Math.abs(hash);
   }
 
   /**
@@ -514,9 +236,8 @@ class FeatureFlagService {
     flagName: string,
     context: FeatureFlagContext
   ): string {
-    return `${flagName}:${context.userId || "none"}:${
-      context.guildId || "none"
-    }:${context.channelId || "none"}`;
+    return `${flagName}:${context.userId || "none"}:${context.guildId || "none"
+      }:${context.channelId || "none"}`;
   }
 
   /**
@@ -564,53 +285,6 @@ class FeatureFlagService {
    */
   async setFlag(config: FeatureFlagConfig): Promise<void> {
     try {
-      // Diagnóstico defensivo: comprobar que prisma y el delegado del modelo existen
-      try {
-        if (typeof prisma === "undefined" || prisma === null) {
-          logger.error({
-            msg: "[FeatureFlags] Prisma client is undefined before upsert",
-          });
-          throw new Error("Prisma client is undefined");
-        }
-      } catch (diagErr) {
-        // Si falla el acceso a prisma, logueamos detalles adicionales y re-lanzamos
-        logger.error({
-          msg: "[FeatureFlags] Diagnóstico prisma fallido",
-          diagErr: String(diagErr),
-        });
-        throw diagErr;
-      }
-
-      // Comprobar que el delegado del modelo existe y tiene upsert
-      if (
-        !(prisma as any).featureFlag ||
-        typeof (prisma as any).featureFlag.upsert !== "function"
-      ) {
-        const keys = Object.keys(prisma as any).slice(0, 20);
-        logger.error({
-          msg: "[FeatureFlags] Prisma featureFlag delegate missing or invalid",
-          keys,
-          typeofPrisma: typeof prisma,
-        });
-        throw new Error(
-          "Prisma.featureFlag delegate missing or upsert not available"
-        );
-      }
-
-      // Capturar referencia local al delegado para evitar race conditions
-      const featureFlagDelegate = (prisma as any).featureFlag;
-
-      if (
-        !featureFlagDelegate ||
-        typeof featureFlagDelegate.upsert !== "function"
-      ) {
-        logger.error({
-          msg: "[FeatureFlags] FeatureFlag delegate lost between validation and use",
-          typeofDelegate: typeof featureFlagDelegate,
-        });
-        throw new Error("FeatureFlag delegate became undefined");
-      }
-
       const data = {
         name: config.name,
         description: config.description || null,
@@ -625,14 +299,16 @@ class FeatureFlagService {
         metadata: config.metadata ? JSON.stringify(config.metadata) : null,
       };
 
-      await featureFlagDelegate.upsert({
+      await prisma.featureFlag.upsert({
         where: { name: config.name },
         create: data,
         update: data,
       });
 
-      // Actualizar caché
+      // Actualizar caché local inmediatamente
       this.flagsCache.set(config.name, config);
+      // Limpiar caché de evaluaciones para este flag
+      this.clearEvaluationCache();
 
       logger.info(`[FeatureFlags] Flag "${config.name}" actualizado`);
     } catch (error: any) {
@@ -654,28 +330,13 @@ class FeatureFlagService {
    */
   async removeFlag(flagName: string): Promise<void> {
     try {
-      // Defensive check and capture delegate reference
-      if (
-        !(prisma as any).featureFlag ||
-        typeof (prisma as any).featureFlag.delete !== "function"
-      ) {
-        logger.error({
-          msg: "[FeatureFlags] Prisma featureFlag delegate missing before delete",
-          typeofPrisma: typeof prisma,
-        });
-        throw new Error(
-          "Prisma.featureFlag delegate missing or delete not available"
-        );
-      }
-
-      const featureFlagDelegate = (prisma as any).featureFlag;
-
-      await featureFlagDelegate.delete({
+      await prisma.featureFlag.delete({
         where: { name: flagName },
       });
 
       this.flagsCache.delete(flagName);
       this.stats.delete(flagName);
+      this.clearEvaluationCache();
 
       logger.info(`[FeatureFlags] Flag "${flagName}" eliminado`);
     } catch (error: any) {

@@ -4,14 +4,14 @@
  */
 
 import { ChatInputCommandInteraction, Message } from "discord.js";
-import { CommandSlash, CommandMessage } from "../../types/commands";
+import { CommandSlash, CommandMessage } from "../../src/core/types/commands";
 import {
   withFeatureFlag,
   checkFeatureFlag,
   guardFeatureFlag,
   abTestCommand,
-} from "../lib/featureFlagCommandWrapper";
-import type Amayo from "../client";
+} from "../../src/core/lib/featureFlagCommandWrapper";
+import type Amayo from "../../src/core/client";
 
 // ============================================================================
 // PATRÓN 1: Usando withFeatureFlag (wrapper) - RECOMENDADO
@@ -121,13 +121,11 @@ export const inventorySlashCommand: CommandSlash = {
       // Nueva UI
       await interaction.reply({
         content: "📦 **Inventario v2**\n- Item 1\n- Item 2",
-        ephemeral: true,
       });
     } else {
       // UI antigua
       await interaction.reply({
         content: "📦 Inventario: Item 1, Item 2",
-        ephemeral: true,
       });
     }
   },

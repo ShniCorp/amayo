@@ -3,93 +3,119 @@
  * Sistema de control de features para rollouts progresivos, A/B testing y toggles
  */
 
-export type FeatureFlagStatus =
-  | "enabled"
-  | "disabled"
-  | "rollout"
-  | "maintenance";
+import { z } from "zod";
 
-export type FeatureFlagTarget = "global" | "guild" | "user" | "channel";
+// --- Enums & Literals ---
 
-export type RolloutStrategy =
-  | "percentage" // Basado en % de usuarios
-  | "whitelist" // Lista específica de IDs
-  | "blacklist" // Todos excepto lista
-  | "gradual" // Rollout gradual basado en tiempo
-  | "random"; // Aleatorio por sesión
+export const FeatureFlagStatusSchema = z.enum([
+  "enabled",
+  "disabled",
+  "rollout",
+  "maintenance",
+]);
 
-export interface FeatureFlagConfig {
-  /** Nombre único del flag */
-  name: string;
+export const FeatureFlagTargetSchema = z.enum([
+  "global",
+  "guild",
+  "user",
+  "channel",
+]);
 
-  /** Descripción del flag */
-  description?: string;
+export const RolloutStrategySchema = z.enum([
+  "percentage", // Basado en % de usuarios
+  "whitelist", // Lista específica de IDs
+  "blacklist", // Todos excepto lista
+  "gradual", // Rollout gradual basado en tiempo
+  "random", // Aleatorio por sesión
+]);
 
-  /** Estado del flag */
-  status: FeatureFlagStatus;
+// --- Schemas ---
 
-  /** Nivel de aplicación del flag */
-  target: FeatureFlagTarget;
-
-  /** Estrategia de rollout (si status es 'rollout') */
-  rolloutStrategy?: RolloutStrategy;
-
-  /** Configuración específica de la estrategia */
-  rolloutConfig?: RolloutConfig;
-
-  /** Fecha de inicio del flag */
-  startDate?: Date;
-
-  /** Fecha de fin del flag (auto-deshabilitar) */
-  endDate?: Date;
-
-  /** Metadata adicional */
-  metadata?: Record<string, any>;
-
-  /** Timestamp de creación */
-  createdAt?: Date;
-
-  /** Timestamp de última actualización */
-  updatedAt?: Date;
-}
-
-export interface RolloutConfig {
+export const RolloutConfigSchema = z.object({
   /** Porcentaje de usuarios (0-100) para estrategia 'percentage' */
-  percentage?: number;
+  percentage: z.number().min(0).max(100).optional(),
 
   /** Lista de IDs (guild/user/channel) para whitelist/blacklist */
-  targetIds?: string[];
+  targetIds: z.array(z.string()).optional(),
 
   /** Configuración de rollout gradual */
-  gradual?: {
-    /** Porcentaje inicial */
-    startPercentage: number;
-    /** Porcentaje objetivo */
-    targetPercentage: number;
-    /** Duración del rollout en días */
-    durationDays: number;
-  };
+  gradual: z
+    .object({
+      /** Porcentaje inicial */
+      startPercentage: z.number().min(0).max(100),
+      /** Porcentaje objetivo */
+      targetPercentage: z.number().min(0).max(100),
+      /** Duración del rollout en días */
+      durationDays: z.number().min(1),
+    })
+    .optional(),
 
   /** Seed para aleatorización consistente */
-  randomSeed?: number;
-}
+  randomSeed: z.number().optional(),
+});
 
-export interface FeatureFlagContext {
+export const FeatureFlagConfigSchema = z.object({
+  /** Nombre único del flag */
+  name: z.string(),
+
+  /** Descripción del flag */
+  description: z.string().optional(),
+
+  /** Estado del flag */
+  status: FeatureFlagStatusSchema,
+
+  /** Nivel de aplicación del flag */
+  target: FeatureFlagTargetSchema,
+
+  /** Estrategia de rollout (si status es 'rollout') */
+  rolloutStrategy: RolloutStrategySchema.optional(),
+
+  /** Configuración específica de la estrategia */
+  rolloutConfig: RolloutConfigSchema.optional(),
+
+  /** Fecha de inicio del flag */
+  startDate: z.date().optional(),
+
+  /** Fecha de fin del flag (auto-deshabilitar) */
+  endDate: z.date().optional(),
+
+  /** Metadata adicional */
+  metadata: z.record(z.any()).optional(),
+
+  /** Timestamp de creación */
+  createdAt: z.date().optional(),
+
+  /** Timestamp de última actualización */
+  updatedAt: z.date().optional(),
+});
+
+export const FeatureFlagContextSchema = z.object({
   /** ID del usuario */
-  userId?: string;
+  userId: z.string().optional(),
 
   /** ID del guild */
-  guildId?: string;
+  guildId: z.string().optional(),
 
   /** ID del canal */
-  channelId?: string;
+  channelId: z.string().optional(),
 
   /** Timestamp de la evaluación */
-  timestamp?: number;
+  timestamp: z.number().optional(),
 
   /** Metadata adicional del contexto */
-  metadata?: Record<string, any>;
-}
+  metadata: z.record(z.any()).optional(),
+});
+
+// --- Types Inferred from Zod ---
+
+export type FeatureFlagStatus = z.infer<typeof FeatureFlagStatusSchema>;
+export type FeatureFlagTarget = z.infer<typeof FeatureFlagTargetSchema>;
+export type RolloutStrategy = z.infer<typeof RolloutStrategySchema>;
+export type RolloutConfig = z.infer<typeof RolloutConfigSchema>;
+export type FeatureFlagConfig = z.infer<typeof FeatureFlagConfigSchema>;
+export type FeatureFlagContext = z.infer<typeof FeatureFlagContextSchema>;
+
+// --- Other Interfaces (Not Zod validated at runtime usually, but kept for types) ---
 
 export interface FeatureFlagEvaluation {
   /** Nombre del flag evaluado */

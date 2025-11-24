@@ -1,5 +1,12 @@
 import { CommandMessage } from "../../../core/types/commands";
-import { MessageFlags } from "discord.js";
+import {
+  MessageFlags,
+  ModalSubmitInteraction,
+  TextChannel,
+  ModalBuilder,
+  ActionRowBuilder,
+  TextInputBuilder,
+} from "discord.js";
 import {
   ComponentType,
   ButtonStyle,
@@ -17,7 +24,18 @@ import {
   ensureDescriptionTextComponent,
   normalizeDisplayContent,
   syncDescriptionComponent,
+  DisplayComponentUtils,
+  BlockState,
 } from "../../../core/types/displayComponentEditor";
+import { DisplayComponentV2Builder } from "../../../core/lib/displayComponents/builders";
+import {
+  createTitleModal,
+  createDescriptionModal,
+  createColorModal,
+  createTextContentModal,
+  createImageUrlModal,
+  createSingleFieldModal,
+} from "../../../core/lib/displayComponents";
 
 // Botones de edición (máx 5 por fila)
 const btns = (disabled = false) => [
@@ -169,151 +187,6 @@ const btns = (disabled = false) => [
   },
 ];
 
-const isValidUrl = isValidUrlOrVariable;
-
-const validateContent = (content: string | undefined | null): string => {
-  if (!content) return "Sin contenido";
-  const cleaned = content.trim();
-  if (!cleaned) return "Sin contenido";
-  if (cleaned.length > 4000) return cleaned.slice(0, 3997) + "...";
-  return cleaned;
-};
-
-const parseEmojiInput = (input?: string): any | null => {
-  if (!input) return null;
-  const trimmed = input.trim();
-  if (!trimmed) return null;
-  const match = trimmed.match(/^<(a?):(\w+):(\d+)>$/);
-  if (match)
-    return { id: match[3], name: match[2], animated: match[1] === "a" };
-  return { name: trimmed };
-};
-
-const buildLinkAccessory = async (link: any, member: any, guild: any) => {
-  if (!link || !link.url) return null;
-  // @ts-ignore
-  const processedUrl = await replaceVars(link.url, member, guild);
-  if (!isValidUrl(processedUrl)) return null;
-  const accessory: any = {
-    type: 2,
-    style: ButtonStyle.Link,
-    url: processedUrl,
-  };
-  if (link.label && typeof link.label === "string" && link.label.trim())
-    accessory.label = link.label.trim().slice(0, 80);
-  if (link.emoji && typeof link.emoji === "string") {
-    const parsed = parseEmojiInput(link.emoji);
-    if (parsed) accessory.emoji = parsed;
-  }
-  if (!accessory.label && !accessory.emoji) return null;
-  return accessory;
-};
-
-const renderPreview = async (blockState: any, member: any, guild: any) => {
-  const previewComponents: any[] = [];
-
-  if (blockState.coverImage && isValidUrl(blockState.coverImage)) {
-    // @ts-ignore
-    const processedCoverUrl = await replaceVars(
-      blockState.coverImage,
-      member,
-      guild
-    );
-    if (isValidUrl(processedCoverUrl))
-      previewComponents.push({
-        type: 12,
-        items: [{ media: { url: processedCoverUrl } }],
-      });
-  }
-
-  // @ts-ignore
-  const processedTitle = await replaceVars(
-    blockState.title ?? "Sin título",
-    member,
-    guild
-  );
-  previewComponents.push({
-    type: 10,
-    content: validateContent(processedTitle),
-  });
-
-  const rawDescription =
-    typeof blockState.description === "string"
-      ? blockState.description.trim()
-      : "";
-  if (rawDescription.length > 0) {
-    // @ts-ignore
-    const processedDescription = await replaceVars(
-      rawDescription,
-      member,
-      guild
-    );
-    const validatedDescription = validateContent(processedDescription);
-    const firstTextComponent = Array.isArray(blockState.components)
-      ? blockState.components.find(
-          (c: any) => c?.type === 10 && typeof c.content === "string"
-        )
-      : null;
-    const duplicatesWithFirstText = Boolean(
-      firstTextComponent &&
-        typeof firstTextComponent.content === "string" &&
-        firstTextComponent.content.trim() === rawDescription
-    );
-
-    if (!duplicatesWithFirstText) {
-      previewComponents.push({ type: 10, content: validatedDescription });
-    }
-  }
-
-  for (const c of blockState.components) {
-    if (c.type === 10) {
-      // @ts-ignore
-      const processedThumbnail = c.thumbnail
-        ? await replaceVars(c.thumbnail, member, guild)
-        : null;
-      // @ts-ignore
-      const processedContent = await replaceVars(
-        c.content || "Sin contenido",
-        member,
-        guild
-      );
-      const validatedContent = validateContent(processedContent);
-      let accessory: any = null;
-      if (c.linkButton)
-        accessory = await buildLinkAccessory(c.linkButton, member, guild);
-      if (!accessory && processedThumbnail && isValidUrl(processedThumbnail))
-        accessory = { type: 11, media: { url: processedThumbnail } };
-      if (accessory)
-        previewComponents.push({
-          type: 9,
-          components: [{ type: 10, content: validatedContent }],
-          accessory,
-        });
-      else previewComponents.push({ type: 10, content: validatedContent });
-    } else if (c.type === 14) {
-      previewComponents.push({
-        type: 14,
-        divider: c.divider ?? true,
-        spacing: c.spacing ?? 1,
-      });
-    } else if (c.type === 12) {
-      // @ts-ignore
-      const processedImageUrl = await replaceVars(c.url, member, guild);
-      if (isValidUrl(processedImageUrl))
-        previewComponents.push({
-          type: 12,
-          items: [{ media: { url: processedImageUrl } }],
-        });
-    }
-  }
-
-  return {
-    type: 17,
-    accent_color: blockState.color ?? null,
-    components: previewComponents,
-  };
-};
-
 // Helper para actualizar el editor combinando Display Container dentro de components
 const updateEditor = async (msg: any, data: any) => {
   const container = data?.display;
@@ -404,10 +277,10 @@ function buildSelectOptionsFromComponents(components: any) {
       c.type === 10
         ? `Texto: ${c.content?.slice(0, 30) || "..."}`
         : c.type === 14
-        ? `Separador ${c.divider ? "(Visible)" : "(Invisible)"}`
-        : c.type === 12
-        ? `Imagen: ${c.url?.slice(-30) || "..."}`
-        : `Componente ${c.type}`,
+          ? `Separador ${c.divider ? "(Visible)" : "(Invisible)"}`
+          : c.type === 12
+            ? `Imagen: ${c.url?.slice(-30) || "..."}`
+            : `Componente ${c.type}`,
     value: String(idx),
     description:
       c.type === 10 && (c.thumbnail || c.linkButton)
@@ -508,7 +381,11 @@ export const command: CommandMessage = {
     await updateEditor(editorMessage, {
       content: null,
       flags: MessageFlags.IsComponentsV2,
-      display: await renderPreview(blockState, message.member, message.guild),
+      display: await DisplayComponentUtils.renderPreview(
+        blockState,
+        message.member!,
+        message.guild!
+      ),
       components: btns(false),
     });
 
@@ -529,7 +406,7 @@ export const command: CommandMessage = {
           case "save_block": {
             try {
               await i.deferUpdate();
-            } catch {}
+            } catch { }
             try {
               stripLegacyDescriptionComponent(blockState);
               await client.prisma.blockV2Config.update({
@@ -545,25 +422,19 @@ export const command: CommandMessage = {
                   flags: MessageFlags.Ephemeral,
                   content: `✅ Cambios de "${blockName}" guardados.`,
                 });
-              } catch {}
+              } catch { }
               // Intentar borrar el editor; si falla, deshabilitar componentes como fallback
               try {
                 await editorMessage.delete();
               } catch {
                 try {
                   await updateEditor(editorMessage, {
-                    display: {
-                      type: 17,
-                      components: [
-                        {
-                          type: 10,
-                          content: "✅ Guardado. Puedes cerrar este mensaje.",
-                        },
-                      ],
-                    },
+                    display: new DisplayComponentV2Builder()
+                      .addText("✅ Guardado. Puedes cerrar este mensaje.")
+                      .toJSON(),
                     components: [],
                   });
-                } catch {}
+                } catch { }
               }
               collector.stop("saved");
             } catch (err) {
@@ -573,37 +444,26 @@ export const command: CommandMessage = {
                   flags: MessageFlags.Ephemeral,
                   content: "❌ Error al guardar el bloque. Inténtalo de nuevo.",
                 });
-              } catch {}
+              } catch { }
             }
             return;
           }
           case "cancel_block": {
             try {
               await i.deferUpdate();
-            } catch {}
+            } catch { }
             try {
               await editorMessage.delete();
-            } catch {}
+            } catch { }
             collector.stop("cancelled");
             return;
           }
           case "edit_title": {
-            const modal = createModal({
-              title: "📝 Editar Título del Block",
+            const modal = createTitleModal({
               customId: "edit_title_modal",
-              fields: [
-                {
-                  customId: "title_input",
-                  style: TextInputStyle.Short,
-                  required: true,
-                  placeholder: "Escribe el nuevo título aquí...",
-                  value: blockState.title || "",
-                  maxLength: 256,
-                  label: "Nuevo Título",
-                },
-              ],
+              currentTitle: blockState.title || "",
             });
-            await i.showModal(modal as any);
+            await i.showModal(modal);
             break;
           }
           case "edit_description": {
@@ -617,25 +477,10 @@ export const command: CommandMessage = {
               );
               if (legacyComp) currentDesc = legacyComp.content;
             }
-            const modal = {
-              title: "📄 Editar Descripción",
+            const modal = createDescriptionModal({
               customId: "edit_description_modal",
-              components: [
-                {
-                  type: ComponentType.Label,
-                  label: "Nueva Descripción",
-                  component: {
-                    type: ComponentType.TextInput,
-                    customId: "description_input",
-                    style: TextInputStyle.Paragraph,
-                    required: true,
-                    placeholder: "Escribe la nueva descripción aquí...",
-                    value: currentDesc || "",
-                    maxLength: 2000,
-                  },
-                },
-              ],
-            } as const;
+              currentDescription: currentDesc || "",
+            });
             await i.showModal(modal);
             break;
           }
@@ -643,66 +488,26 @@ export const command: CommandMessage = {
             const currentColor = blockState.color
               ? `#${blockState.color.toString(16).padStart(6, "0")}`
               : "";
-            const modal = {
-              title: "🎨 Editar Color del Block",
+            const modal = createColorModal({
               customId: "edit_color_modal",
-              components: [
-                {
-                  type: ComponentType.Label,
-                  label: "Color en formato HEX",
-                  component: {
-                    type: ComponentType.TextInput,
-                    customId: "color_input",
-                    style: TextInputStyle.Short,
-                    required: false,
-                    placeholder: "#FF5733 o FF5733",
-                    value: currentColor,
-                    maxLength: 7,
-                  },
-                },
-              ],
-            } as const;
+              currentColor,
+            });
             await i.showModal(modal);
             break;
           }
           case "add_content": {
-            const modal = {
-              title: "➕ Agregar Nuevo Contenido",
+            const modal = createTextContentModal({
               customId: "add_content_modal",
-              components: [
-                {
-                  type: ComponentType.Label,
-                  label: "Contenido del Texto",
-                  component: {
-                    type: ComponentType.TextInput,
-                    customId: "content_input",
-                    style: TextInputStyle.Paragraph,
-                    required: true,
-                    placeholder: "Escribe el contenido aquí...",
-                    maxLength: 2000,
-                  },
-                },
-              ],
-            } as const;
+            });
             await i.showModal(modal);
             break;
           }
           case "add_image": {
-            const modal = createModal({
+            const modal = createImageUrlModal({
               title: "🖼️ Agregar Nueva Imagen",
               customId: "add_image_modal",
-              fields: [
-                {
-                  customId: "image_url_input",
-                  style: TextInputStyle.Short,
-                  required: true,
-                  placeholder: "https://ejemplo.com/imagen.png",
-                  maxLength: 2000,
-                  label: "URL de la Imagen",
-                },
-              ],
             });
-            await i.showModal(modal as any);
+            await i.showModal(modal);
             break;
           }
           case "cover_image": {
@@ -739,25 +544,11 @@ export const command: CommandMessage = {
               });
               coverCollector.on("collect", async (b: any) => {
                 if (b.customId === "edit_cover_modal") {
-                  const modal = {
+                  const modal = createImageUrlModal({
                     title: "🖼️ Editar Imagen de Portada",
                     customId: "edit_cover_modal",
-                    components: [
-                      {
-                        type: ComponentType.Label,
-                        label: "URL de la Imagen de Portada",
-                        component: {
-                          type: ComponentType.TextInput,
-                          customId: "cover_input",
-                          style: TextInputStyle.Short,
-                          required: true,
-                          placeholder: "https://ejemplo.com/portada.png",
-                          value: blockState.coverImage || "",
-                          maxLength: 2000,
-                        },
-                      },
-                    ],
-                  } as const;
+                    currentUrl: blockState.coverImage || "",
+                  });
                   await b.showModal(modal);
                 } else if (b.customId === "delete_cover") {
                   blockState.coverImage = null;
@@ -766,10 +557,10 @@ export const command: CommandMessage = {
                     components: [],
                   });
                   await updateEditor(editorMessage, {
-                    display: await renderPreview(
+                    display: await DisplayComponentUtils.renderPreview(
                       blockState,
-                      message.member,
-                      message.guild
+                      message.member!,
+                      message.guild!
                     ),
                     components: btns(false),
                   });
@@ -777,24 +568,10 @@ export const command: CommandMessage = {
                 coverCollector.stop();
               });
             } else {
-              const modal = {
+              const modal = createImageUrlModal({
                 title: "🖼️ Agregar Imagen de Portada",
                 customId: "add_cover_modal",
-                components: [
-                  {
-                    type: ComponentType.Label,
-                    label: "URL de la Imagen de Portada",
-                    component: {
-                      type: ComponentType.TextInput,
-                      customId: "cover_input",
-                      style: TextInputStyle.Short,
-                      required: true,
-                      placeholder: "https://ejemplo.com/portada.png",
-                      maxLength: 2000,
-                    },
-                  },
-                ],
-              } as const;
+              });
               await i.showModal(modal);
             }
             break;
@@ -888,10 +665,10 @@ export const command: CommandMessage = {
                 }
                 await updateEditor(editorMessage, {
                   // @ts-ignore
-                  display: await renderPreview(
+                  display: await DisplayComponentUtils.renderPreview(
                     blockState,
-                    message.member,
-                    message.guild
+                    message.member!,
+                    message.guild!
                   ),
                   components: btns(false),
                 });
@@ -967,10 +744,10 @@ export const command: CommandMessage = {
               }
               await updateEditor(editorMessage, {
                 // @ts-ignore
-                display: await renderPreview(
+                display: await DisplayComponentUtils.renderPreview(
                   blockState,
-                  message.member,
-                  message.guild
+                  message.member!,
+                  message.guild!
                 ),
                 components: btns(false),
               });
@@ -1014,10 +791,10 @@ export const command: CommandMessage = {
                   c.type === 10
                     ? `Texto: ${c.content?.slice(0, 30) || "..."}`
                     : c.type === 14
-                    ? "Separador"
-                    : c.type === 12
-                    ? `Imagen: ${c.url?.slice(-30) || "..."}`
-                    : `Componente ${c.type}`,
+                      ? "Separador"
+                      : c.type === 12
+                        ? `Imagen: ${c.url?.slice(-30) || "..."}`
+                        : `Componente ${c.type}`,
                 value: String(idx),
                 description:
                   c.type === 10 && (c.thumbnail || c.linkButton)
@@ -1075,10 +852,10 @@ export const command: CommandMessage = {
               });
               await updateEditor(editorMessage, {
                 // @ts-ignore
-                display: await renderPreview(
+                display: await DisplayComponentUtils.renderPreview(
                   blockState,
-                  message.member,
-                  message.guild
+                  message.member!,
+                  message.guild!
                 ),
                 components: btns(false),
               });
@@ -1097,24 +874,16 @@ export const command: CommandMessage = {
             break;
           }
           case "import_json": {
-            const modal = {
+            const modal = createSingleFieldModal({
               title: "📥 Importar JSON",
               customId: "import_json_modal",
-              components: [
-                {
-                  type: ComponentType.Label,
-                  label: "Pega tu configuración JSON aquí",
-                  component: {
-                    type: ComponentType.TextInput,
-                    customId: "json_input",
-                    style: TextInputStyle.Paragraph,
-                    required: true,
-                    placeholder: '{"title": "...", "components": [...]}',
-                    maxLength: 4000,
-                  },
-                },
-              ],
-            } as const;
+              fieldLabel: "Pega tu configuración JSON aquí",
+              fieldId: "json_input",
+              style: "paragraph",
+              placeholder: '{"title": "...", "components": [...]}',
+              maxLength: 4000,
+              required: true,
+            });
             await i.showModal(modal);
             break;
           }
@@ -1132,38 +901,31 @@ export const command: CommandMessage = {
             break;
           }
           case "add_separator": {
-            const modal = {
-              title: "➖ Agregar Separador",
-              customId: "add_separator_modal",
-              components: [
-                {
-                  type: ComponentType.Label,
-                  label: "¿Separador visible? (true/false)",
-                  component: {
-                    type: ComponentType.TextInput,
-                    customId: "separator_visible",
-                    style: TextInputStyle.Short,
-                    placeholder: "true o false",
-                    value: "true",
-                    maxLength: 5,
-                    required: true,
-                  },
-                },
-                {
-                  type: ComponentType.Label,
-                  label: "Espaciado (1-3)",
-                  component: {
-                    type: ComponentType.TextInput,
-                    customId: "separator_spacing",
-                    style: TextInputStyle.Short,
-                    placeholder: "1, 2 o 3",
-                    value: "1",
-                    maxLength: 1,
-                    required: false,
-                  },
-                },
-              ],
-            } as const;
+            const modal = new ModalBuilder()
+              .setTitle("➖ Agregar Separador")
+              .setCustomId("add_separator_modal")
+              .addComponents(
+                new ActionRowBuilder<TextInputBuilder>().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId("separator_visible")
+                    .setLabel("¿Separador visible? (true/false)")
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder("true o false")
+                    .setValue("true")
+                    .setMaxLength(5)
+                    .setRequired(true)
+                ),
+                new ActionRowBuilder<TextInputBuilder>().addComponents(
+                  new TextInputBuilder()
+                    .setCustomId("separator_spacing")
+                    .setLabel("Espaciado (1-3)")
+                    .setStyle(TextInputStyle.Short)
+                    .setPlaceholder("1, 2 o 3")
+                    .setValue("1")
+                    .setMaxLength(1)
+                    .setRequired(false)
+                )
+              );
             await i.showModal(modal);
             break;
           }
@@ -1180,28 +942,28 @@ export const command: CommandMessage = {
               .filter(({ c }: any) => c?.type === 10);
 
             if (textDisplays.length === 0) {
-              await i.deferReply({ flags: 64 }).catch(() => {});
+              await i.deferReply({ flags: 64 }).catch(() => { });
               // @ts-ignore
               await i
                 .editReply({
                   content: "❌ No hay bloques de texto para editar thumbnail.",
                 })
-                .catch(() => {});
+                .catch(() => { });
               break;
             }
 
             const options = textDisplays.map(({ c, idx }: any) => ({
               label:
                 descriptionNormalized &&
-                normalizeDisplayContent(c.content) === descriptionNormalized
+                  normalizeDisplayContent(c.content) === descriptionNormalized
                   ? "Descripción principal"
                   : `Texto #${idx + 1}: ${c.content?.slice(0, 30) || "..."}`,
               value: String(idx),
               description: c.thumbnail
                 ? "Con thumbnail"
                 : c.linkButton
-                ? "Con botón link"
-                : "Sin accesorio",
+                  ? "Con botón link"
+                  : "Sin accesorio",
             }));
 
             // @ts-ignore
@@ -1243,7 +1005,7 @@ export const command: CommandMessage = {
                       flags: 64,
                     });
                   }
-                } catch {}
+                } catch { }
                 return;
               }
 
@@ -1256,30 +1018,20 @@ export const command: CommandMessage = {
                       flags: 64,
                     });
                   }
-                } catch {}
+                } catch { }
                 return;
               }
 
-              const modal = {
+              const modal = createSingleFieldModal({
                 title: "📎 Editar Thumbnail",
                 customId: `edit_thumbnail_modal_${idx}`,
-                components: [
-                  {
-                    type: ComponentType.Label,
-                    label: "URL del Thumbnail",
-                    component: {
-                      type: ComponentType.TextInput,
-                      customId: "thumbnail_input",
-                      style: TextInputStyle.Short,
-                      placeholder:
-                        "https://ejemplo.com/thumbnail.png o dejar vacío para eliminar",
-                      value: textComp?.thumbnail || "",
-                      maxLength: 2000,
-                      required: false,
-                    },
-                  },
-                ],
-              } as const;
+                fieldLabel: "URL del Thumbnail",
+                fieldId: "thumbnail_input",
+                placeholder:
+                  "https://ejemplo.com/thumbnail.png o dejar vacío para eliminar",
+                value: textComp?.thumbnail || "",
+                required: false,
+              });
 
               try {
                 await sel.showModal(modal);
@@ -1295,7 +1047,7 @@ export const command: CommandMessage = {
               try {
                 // @ts-ignore
                 await replyMsg.edit({ components: [] });
-              } catch {}
+              } catch { }
             });
             break;
           }
@@ -1319,8 +1071,8 @@ export const command: CommandMessage = {
               description: c.linkButton
                 ? "Con botón link"
                 : c.thumbnail
-                ? "Con thumbnail"
-                : "Sin accesorio",
+                  ? "Con thumbnail"
+                  : "Sin accesorio",
             }));
             // @ts-ignore
             const reply = await i.reply({
@@ -1365,9 +1117,8 @@ export const command: CommandMessage = {
                 // @ts-ignore
                 const sub = await i.followUp({
                   flags: 64,
-                  content: `Texto #${
-                    idx + 1
-                  }: ya tiene botón link. ¿Qué deseas hacer?`,
+                  content: `Texto #${idx + 1
+                    }: ya tiene botón link. ¿Qué deseas hacer?`,
                   components: [
                     {
                       type: 1,
@@ -1397,52 +1148,43 @@ export const command: CommandMessage = {
                 });
                 btnCollector.on("collect", async (b: any) => {
                   if (b.customId.startsWith("edit_link_button_modal_")) {
-                    const modal = {
-                      title: "🔗 Editar Botón Link",
-                      customId: `edit_link_button_modal_${idx}`,
-                      components: [
-                        {
-                          type: ComponentType.Label,
-                          label: "URL del botón (obligatoria)",
-                          component: {
-                            type: ComponentType.TextInput,
-                            customId: "link_url_input",
-                            style: TextInputStyle.Short,
-                            placeholder: "https://ejemplo.com",
-                            value: textComp.linkButton?.url || "",
-                            maxLength: 2000,
-                            required: true,
-                          },
-                        },
-                        {
-                          type: ComponentType.Label,
-                          label: "Etiqueta (opcional)",
-                          component: {
-                            type: ComponentType.TextInput,
-                            customId: "link_label_input",
-                            style: TextInputStyle.Short,
-                            placeholder:
-                              "Texto del botón o vacío para usar solo emoji",
-                            value: textComp.linkButton?.label || "",
-                            maxLength: 80,
-                            required: false,
-                          },
-                        },
-                        {
-                          type: ComponentType.Label,
-                          label: "Emoji (opcional)",
-                          component: {
-                            type: ComponentType.TextInput,
-                            customId: "link_emoji_input",
-                            style: TextInputStyle.Short,
-                            placeholder: "Ej: 🔗 o <:name:id>",
-                            value: textComp.linkButton?.emoji || "",
-                            maxLength: 64,
-                            required: false,
-                          },
-                        },
-                      ],
-                    } as const;
+                    const modal = new ModalBuilder()
+                      .setTitle("🔗 Editar Botón Link")
+                      .setCustomId(`edit_link_button_modal_${idx}`)
+                      .addComponents(
+                        new ActionRowBuilder<TextInputBuilder>().addComponents(
+                          new TextInputBuilder()
+                            .setCustomId("link_url_input")
+                            .setLabel("URL del botón (obligatoria)")
+                            .setStyle(TextInputStyle.Short)
+                            .setPlaceholder("https://ejemplo.com")
+                            .setValue(textComp.linkButton?.url || "")
+                            .setMaxLength(2000)
+                            .setRequired(true)
+                        ),
+                        new ActionRowBuilder<TextInputBuilder>().addComponents(
+                          new TextInputBuilder()
+                            .setCustomId("link_label_input")
+                            .setLabel("Etiqueta (opcional)")
+                            .setStyle(TextInputStyle.Short)
+                            .setPlaceholder(
+                              "Texto del botón o vacío para usar solo emoji"
+                            )
+                            .setValue(textComp.linkButton?.label || "")
+                            .setMaxLength(80)
+                            .setRequired(false)
+                        ),
+                        new ActionRowBuilder<TextInputBuilder>().addComponents(
+                          new TextInputBuilder()
+                            .setCustomId("link_emoji_input")
+                            .setLabel("Emoji (opcional)")
+                            .setStyle(TextInputStyle.Short)
+                            .setPlaceholder("Ej: 🔗 o <:name:id>")
+                            .setValue(textComp.linkButton?.emoji || "")
+                            .setMaxLength(64)
+                            .setRequired(false)
+                        )
+                      );
                     await b.showModal(modal);
                   } else if (b.customId.startsWith("delete_link_button_")) {
                     delete textComp.linkButton;
@@ -1452,59 +1194,50 @@ export const command: CommandMessage = {
                     });
                     await updateEditor(editorMessage, {
                       // @ts-ignore
-                      display: await renderPreview(
+                      display: await DisplayComponentUtils.renderPreview(
                         blockState,
-                        message.member,
-                        message.guild
+                        message.member!,
+                        message.guild!
                       ),
                       components: btns(false),
                     });
                   }
                 });
               } else {
-                const modal = {
-                  title: "🔗 Crear Botón Link",
-                  customId: `create_link_button_modal_${idx}`,
-                  components: [
-                    {
-                      type: ComponentType.Label,
-                      label: "URL del botón (obligatoria)",
-                      component: {
-                        type: ComponentType.TextInput,
-                        customId: "link_url_input",
-                        style: TextInputStyle.Short,
-                        placeholder: "https://ejemplo.com",
-                        maxLength: 2000,
-                        required: true,
-                      },
-                    },
-                    {
-                      type: ComponentType.Label,
-                      label: "Etiqueta (opcional)",
-                      component: {
-                        type: ComponentType.TextInput,
-                        customId: "link_label_input",
-                        style: TextInputStyle.Short,
-                        placeholder:
-                          "Texto del botón o vacío para usar solo emoji",
-                        maxLength: 80,
-                        required: false,
-                      },
-                    },
-                    {
-                      type: ComponentType.Label,
-                      label: "Emoji (opcional)",
-                      component: {
-                        type: ComponentType.TextInput,
-                        customId: "link_emoji_input",
-                        style: TextInputStyle.Short,
-                        placeholder: "Ej: 🔗 o <:name:id>",
-                        maxLength: 64,
-                        required: false,
-                      },
-                    },
-                  ],
-                } as const;
+                const modal = new ModalBuilder()
+                  .setTitle("🔗 Crear Botón Link")
+                  .setCustomId(`create_link_button_modal_${idx}`)
+                  .addComponents(
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(
+                      new TextInputBuilder()
+                        .setCustomId("link_url_input")
+                        .setLabel("URL del botón (obligatoria)")
+                        .setStyle(TextInputStyle.Short)
+                        .setPlaceholder("https://ejemplo.com")
+                        .setMaxLength(2000)
+                        .setRequired(true)
+                    ),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(
+                      new TextInputBuilder()
+                        .setCustomId("link_label_input")
+                        .setLabel("Etiqueta (opcional)")
+                        .setStyle(TextInputStyle.Short)
+                        .setPlaceholder(
+                          "Texto del botón o vacío para usar solo emoji"
+                        )
+                        .setMaxLength(80)
+                        .setRequired(false)
+                    ),
+                    new ActionRowBuilder<TextInputBuilder>().addComponents(
+                      new TextInputBuilder()
+                        .setCustomId("link_emoji_input")
+                        .setLabel("Emoji (opcional)")
+                        .setStyle(TextInputStyle.Short)
+                        .setPlaceholder("Ej: 🔗 o <:name:id>")
+                        .setMaxLength(64)
+                        .setRequired(false)
+                    )
+                  );
                 await sel.showModal(modal);
               }
             });
@@ -1514,10 +1247,10 @@ export const command: CommandMessage = {
 
         await updateEditor(editorMessage, {
           // @ts-ignore
-          display: await renderPreview(
+          display: await DisplayComponentUtils.renderPreview(
             blockState,
-            message.member,
-            message.guild
+            message.member!,
+            message.guild!
           ),
           components: btns(false),
         });
@@ -1533,13 +1266,19 @@ export const command: CommandMessage = {
       const sendResponse = async (content: string) => {
         try {
           if (!interaction.deferred && !interaction.replied) {
-            await interaction.deferReply({ flags: MessageFlags.Ephemeral });
+            await interaction
+              .deferReply({ flags: MessageFlags.Ephemeral })
+              .catch((err: any) => {
+                if (err.code !== 10062) throw err;
+              });
           }
 
           if (interaction.deferred) {
-            await interaction.editReply({ content });
+            await interaction.editReply({ content }).catch(() => { });
           } else {
-            await interaction.reply({ content, flags: MessageFlags.Ephemeral });
+            await interaction
+              .reply({ content, flags: MessageFlags.Ephemeral })
+              .catch(() => { });
           }
         } catch (err) {
           logger.error(
@@ -1553,7 +1292,7 @@ export const command: CommandMessage = {
         const id = interaction.customId as string;
 
         if (id === "edit_title_modal") {
-          const newTitle = interaction.components
+          const newTitle = interaction.fields
             .getTextInputValue("title_input")
             .trim();
           blockState.title = newTitle.length > 0 ? newTitle : blockState.title;
@@ -1567,17 +1306,33 @@ export const command: CommandMessage = {
           );
           await sendResponse("✅ Título actualizado.");
         } else if (id === "edit_description_modal") {
-          const previousDescription =
-            typeof blockState.description === "string"
-              ? blockState.description
-              : null;
+          const oldDescription = blockState.description;
           const rawDescription =
-            interaction.components.getTextInputValue("description_input");
-          syncDescriptionComponent(blockState, rawDescription, {
-            previousDescription,
-            placeholder: DESCRIPTION_PLACEHOLDER,
+            interaction.fields.getTextInputValue("description_input");
+
+          blockState.description = rawDescription;
+
+          // Manual sync to avoid duplication
+          const normalize = (s: string | undefined | null) => (s || "").trim();
+          const target = normalize(oldDescription);
+          const placeholder = normalize(DESCRIPTION_PLACEHOLDER);
+
+          let comp = blockState.components.find((c: any) => {
+            if (c.type !== 10) return false;
+            const content = normalize(c.content);
+            return content === target || content === placeholder;
           });
-          stripLegacyDescriptionComponent(blockState, previousDescription);
+
+          if (comp && comp.type === 10) {
+            comp.content = rawDescription || DESCRIPTION_PLACEHOLDER;
+          } else {
+            blockState.components.unshift({
+              type: 10,
+              content: rawDescription || DESCRIPTION_PLACEHOLDER,
+              thumbnail: null,
+            });
+          }
+
           logger.info(
             {
               modalId: id,
@@ -1588,7 +1343,7 @@ export const command: CommandMessage = {
           );
           await sendResponse("✅ Descripción actualizada.");
         } else if (id === "edit_color_modal") {
-          const colorInput = interaction.components
+          const colorInput = interaction.fields
             .getTextInputValue("color_input")
             .trim();
           if (colorInput === "") {
@@ -1616,7 +1371,7 @@ export const command: CommandMessage = {
             }
           }
         } else if (id === "add_content_modal") {
-          const newContent = interaction.components
+          const newContent = interaction.fields
             .getTextInputValue("content_input")
             .trim();
           if (!newContent) {
@@ -1638,10 +1393,10 @@ export const command: CommandMessage = {
           );
           await sendResponse("✅ Contenido añadido.");
         } else if (id === "add_image_modal") {
-          const imageUrl = interaction.components
-            .getTextInputValue("image_url_input")
+          const imageUrl = interaction.fields
+            .getTextInputValue("image_input")
             .trim();
-          if (!isValidUrl(imageUrl)) {
+          if (!DisplayComponentUtils.isValidUrl(imageUrl)) {
             await sendResponse("❌ URL de imagen inválida.");
             return;
           }
@@ -1656,10 +1411,10 @@ export const command: CommandMessage = {
           );
           await sendResponse("✅ Imagen añadida.");
         } else if (id === "add_cover_modal" || id === "edit_cover_modal") {
-          const coverUrl = interaction.components
-            .getTextInputValue("cover_input")
+          const coverUrl = interaction.fields
+            .getTextInputValue("image_input")
             .trim();
-          if (!isValidUrl(coverUrl)) {
+          if (!DisplayComponentUtils.isValidUrl(coverUrl)) {
             await sendResponse("❌ URL de portada inválida.");
             return;
           }
@@ -1674,11 +1429,11 @@ export const command: CommandMessage = {
           );
           await sendResponse("✅ Imagen de portada actualizada.");
         } else if (id === "add_separator_modal") {
-          const visibleStr = interaction.components
+          const visibleStr = interaction.fields
             .getTextInputValue("separator_visible")
             .toLowerCase();
           const spacingStr =
-            interaction.components.getTextInputValue("separator_spacing") ||
+            interaction.fields.getTextInputValue("separator_spacing") ||
             "1";
           const divider =
             visibleStr === "true" ||
@@ -1702,13 +1457,13 @@ export const command: CommandMessage = {
           const idx = parseInt(id.replace("edit_thumbnail_modal_", ""));
           const textComp = blockState.components[idx];
           if (!textComp || textComp.type !== 10) return;
-          const thumbnailUrl = interaction.components
+          const thumbnailUrl = interaction.fields
             .getTextInputValue("thumbnail_input")
             .trim();
           if (thumbnailUrl === "") {
             textComp.thumbnail = null;
             await sendResponse("✅ Thumbnail eliminado.");
-          } else if (!isValidUrl(thumbnailUrl)) {
+          } else if (!DisplayComponentUtils.isValidUrl(thumbnailUrl)) {
             await sendResponse("❌ URL de thumbnail inválida.");
             return;
           } else {
@@ -1740,20 +1495,22 @@ export const command: CommandMessage = {
           );
           const textComp = blockState.components[idx];
           if (!textComp || textComp.type !== 10) return;
-          const url = interaction.components
+          const url = interaction.fields
             .getTextInputValue("link_url_input")
             .trim();
           const label = (
-            interaction.components.getTextInputValue("link_label_input") || ""
+            interaction.fields.getTextInputValue("link_label_input") || ""
           ).trim();
           const emojiStr = (
-            interaction.components.getTextInputValue("link_emoji_input") || ""
+            interaction.fields.getTextInputValue("link_emoji_input") || ""
           ).trim();
-          if (!isValidUrl(url)) {
+          if (!DisplayComponentUtils.isValidUrl(url)) {
             await sendResponse("❌ URL inválida para el botón.");
             return;
           }
-          const parsedEmoji = parseEmojiInput(emojiStr || undefined);
+          const parsedEmoji = DisplayComponentUtils.parseEmojiInput(
+            emojiStr || undefined
+          );
           if (!label && !parsedEmoji) {
             await sendResponse(
               "❌ Debes proporcionar al menos una etiqueta o un emoji."
@@ -1791,10 +1548,10 @@ export const command: CommandMessage = {
             if (!exists) return;
             await updateEditor(editorMessage, {
               // @ts-ignore
-              display: await renderPreview(
+              display: await DisplayComponentUtils.renderPreview(
                 blockState,
-                message.member,
-                message.guild
+                message.member!,
+                message.guild!
               ),
               components: btns(false),
             });
@@ -1852,7 +1609,7 @@ export const command: CommandMessage = {
               components: [],
             });
           }
-        } catch {}
+        } catch { }
       }
     });
   },

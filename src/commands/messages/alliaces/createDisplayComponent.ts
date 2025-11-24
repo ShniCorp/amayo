@@ -76,10 +76,10 @@ function buildSelectOptionsFromComponents(components: any[]) {
       c.type === 10
         ? `Texto: ${c.content?.slice(0, 30) || "..."}`
         : c.type === 14
-        ? `Separador ${c.divider ? "(Visible)" : "(Invisible)"}`
-        : c.type === 12
-        ? `Imagen: ${c.url?.slice(-30) || "..."}`
-        : `Componente ${c.type}`,
+          ? `Separador ${c.divider ? "(Visible)" : "(Invisible)"}`
+          : c.type === 12
+            ? `Imagen: ${c.url?.slice(-30) || "..."}`
+            : `Componente ${c.type}`,
     value: String(idx),
     description:
       c.type === 10 && (c.thumbnail || c.linkButton)
@@ -364,28 +364,28 @@ async function handleButtonInteraction(
       if (textDisplays.length === 0) {
         await interaction
           .deferReply({ flags: MessageFlags.Ephemeral })
-          .catch(() => {});
+          .catch(() => { });
         await interaction
           .editReply({
             content:
               "❌ No hay bloques de texto disponibles para añadir thumbnail.",
           })
-          .catch(() => {});
+          .catch(() => { });
         break;
       }
 
       const options = textDisplays.map(({ component, idx }) => ({
         label:
           descriptionNormalized &&
-          normalizeDisplayContent(component.content) === descriptionNormalized
+            normalizeDisplayContent(component.content) === descriptionNormalized
             ? "Descripción principal"
             : `Texto #${idx + 1}: ${component.content?.slice(0, 30) || "..."}`,
         value: String(idx),
         description: component.thumbnail
           ? "Con thumbnail"
           : component.linkButton
-          ? "Con botón link"
-          : "Sin accesorio",
+            ? "Con botón link"
+            : "Sin accesorio",
       }));
 
       try {
@@ -415,7 +415,7 @@ async function handleButtonInteraction(
       let replyMsg: Message | null = null;
       try {
         replyMsg = await interaction.fetchReply();
-      } catch {}
+      } catch { }
 
       if (!replyMsg) break;
 
@@ -438,7 +438,7 @@ async function handleButtonInteraction(
                 flags: MessageFlags.Ephemeral,
               });
             }
-          } catch {}
+          } catch { }
           return;
         }
 
@@ -451,7 +451,7 @@ async function handleButtonInteraction(
                 flags: MessageFlags.Ephemeral,
               });
             }
-          } catch {}
+          } catch { }
           return;
         }
 
@@ -493,11 +493,11 @@ async function handleButtonInteraction(
           textComp.thumbnail = null;
           await modalInteraction
             .editReply({ content: "✅ Thumbnail eliminado." })
-            .catch(() => {});
+            .catch(() => { });
         } else if (!DisplayComponentUtils.isValidUrl(rawInput)) {
           await modalInteraction
             .editReply({ content: "❌ URL de thumbnail inválida." })
-            .catch(() => {});
+            .catch(() => { });
           return;
         } else if (textComp.linkButton) {
           await modalInteraction
@@ -505,13 +505,13 @@ async function handleButtonInteraction(
               content:
                 "❌ Este bloque tiene un botón link. Elimínalo antes de añadir un thumbnail.",
             })
-            .catch(() => {});
+            .catch(() => { });
           return;
         } else {
           textComp.thumbnail = rawInput;
           await modalInteraction
             .editReply({ content: "✅ Thumbnail actualizado." })
-            .catch(() => {});
+            .catch(() => { });
         }
 
         await updateEditor(editorMessage, {
@@ -527,7 +527,7 @@ async function handleButtonInteraction(
       selCollector.on("end", async () => {
         try {
           await replyMsg!.edit({ components: [] });
-        } catch {}
+        } catch { }
       });
 
       break;
@@ -759,13 +759,19 @@ async function awaitModalWithDeferredReply(
   try {
     const modalInteraction = await interaction.awaitModalSubmit(options);
     if (!modalInteraction.deferred && !modalInteraction.replied) {
-      await modalInteraction.deferReply({ flags: MessageFlags.Ephemeral });
+      await modalInteraction
+        .deferReply({ flags: MessageFlags.Ephemeral })
+        .catch((err) => {
+          if (err.code !== 10062) throw err; // Ignore Unknown Interaction
+        });
     }
     return modalInteraction;
   } catch (error) {
     if (
       !(error instanceof Error) ||
-      !error.message.includes("Collector received no interactions")
+      (!error.message.includes("Collector received no interactions") &&
+        //@ts-ignore
+        error.code !== 10062)
     ) {
       logger.error({ err: error }, "Error esperando envío de modal en editor");
     }
@@ -802,7 +808,7 @@ async function handleEditTitle(
     modalInteraction = await awaitModalWithDeferredReply(interaction);
     if (!modalInteraction) return;
 
-    const newTitle = modalInteraction.components
+    const newTitle = modalInteraction.fields
       .getTextInputValue("title_input")
       .trim();
 
@@ -827,7 +833,7 @@ async function handleEditTitle(
         .editReply({
           content: "❌ No se pudo actualizar el título. Inténtalo de nuevo.",
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     if (
       error instanceof Error &&
@@ -873,15 +879,33 @@ async function handleEditDescription(
     if (!modalInteraction) return;
 
     const rawDescription =
-      modalInteraction.components.getTextInputValue("description_input");
-    const previousDescription =
-      typeof blockState.description === "string"
-        ? blockState.description
-        : null;
-    syncDescriptionComponent(blockState, rawDescription, {
-      previousDescription,
-      placeholder: DESCRIPTION_PLACEHOLDER,
+      modalInteraction.fields.getTextInputValue("description_input");
+
+    const oldDescription = blockState.description;
+    blockState.description = rawDescription;
+
+    // Manual sync to avoid duplication
+    const normalize = (s: string | undefined | null) => (s || "").trim();
+    const target = normalize(oldDescription);
+    const placeholder = normalize(DESCRIPTION_PLACEHOLDER);
+
+    let comp = blockState.components.find((c: any) => {
+      if (c.type !== 10) return false;
+      const content = normalize(c.content);
+      return content === target || content === placeholder;
     });
+
+    if (comp && comp.type === 10) {
+      comp.content = rawDescription || DESCRIPTION_PLACEHOLDER;
+      // Ensure thumbnail is cleared if it was a placeholder? No, keep it.
+    } else {
+      // If no matching component found, add a new one at the start
+      blockState.components.unshift({
+        type: 10,
+        content: rawDescription || DESCRIPTION_PLACEHOLDER,
+        thumbnail: null,
+      });
+    }
 
     await updateEditor(editorMessage, {
       display: await DisplayComponentUtils.renderPreview(
@@ -902,7 +926,7 @@ async function handleEditDescription(
           content:
             "❌ No se pudo actualizar la descripción. Inténtalo de nuevo.",
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     if (
       error instanceof Error &&
@@ -949,7 +973,7 @@ async function handleEditColor(
     modalInteraction = await awaitModalWithDeferredReply(interaction);
     if (!modalInteraction) return;
 
-    const colorValue = modalInteraction.components
+    const colorValue = modalInteraction.fields
       .getTextInputValue("color_input")
       .trim();
 
@@ -997,7 +1021,7 @@ async function handleEditColor(
         .editReply({
           content: "❌ No se pudo actualizar el color. Inténtalo de nuevo.",
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     if (
       error instanceof Error &&
@@ -1041,7 +1065,7 @@ async function handleAddContent(
     modalInteraction = await awaitModalWithDeferredReply(interaction);
     if (!modalInteraction) return;
 
-    const content = modalInteraction.components
+    const content = modalInteraction.fields
       .getTextInputValue("content_input")
       .trim();
 
@@ -1071,7 +1095,7 @@ async function handleAddContent(
         .editReply({
           content: "❌ No se pudo añadir el contenido. Inténtalo de nuevo.",
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     if (
       error instanceof Error &&
@@ -1122,11 +1146,11 @@ async function handleAddSeparator(
   } as const;
 
   if (interaction.deferred) {
-    await interaction.editReply({ content: payload.content }).catch(() => {});
+    await interaction.editReply({ content: payload.content }).catch(() => { });
   } else if (interaction.replied) {
-    await interaction.followUp(payload).catch(() => {});
+    await interaction.followUp(payload).catch(() => { });
   } else {
-    await interaction.reply(payload).catch(() => {});
+    await interaction.reply(payload).catch(() => { });
   }
 }
 
@@ -1191,7 +1215,7 @@ async function handleAddImage(
         .editReply({
           content: "❌ No se pudo añadir la imagen. Inténtalo de nuevo.",
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     if (
       error instanceof Error &&
@@ -1267,7 +1291,7 @@ async function handleCoverImage(
           content:
             "❌ No se pudo actualizar la imagen de portada. Inténtalo de nuevo.",
         })
-        .catch(() => {});
+        .catch(() => { });
     }
     if (
       error instanceof Error &&
@@ -1329,7 +1353,7 @@ async function handleSaveBlock(
     // Cerrar el editor eliminando el mensaje del editor
     try {
       await editorMessage.delete();
-    } catch {}
+    } catch { }
   } catch (error) {
     //@ts-ignore
     logger.error("Error saving block:", error);
@@ -1346,7 +1370,7 @@ async function handleCancelBlock(
 ): Promise<void> {
   try {
     await interaction.deferUpdate();
-  } catch {}
+  } catch { }
   await updateEditor(editorMessage, {
     display: {
       type: 17,

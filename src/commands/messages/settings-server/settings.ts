@@ -4,6 +4,7 @@ import { ComponentType, TextInputStyle } from "discord-api-types/v10";
 import { hasManageGuildOrStaff } from "../../../core/lib/permissions";
 import { aiService } from "../../../core/services/AIService";
 import { invalidateGuildCache } from "../../../core/database/guildCache";
+import { DisplayComponentV2Builder } from "../../../core/lib/displayComponents/builders";
 
 function toStringArray(input: unknown): string[] {
   if (!Array.isArray(input)) return [];
@@ -49,63 +50,47 @@ export const command: CommandMessage = {
       : "No configurado";
 
     // Panel de configuración usando DisplayComponents
-    const settingsPanel = {
-      type: 17,
-      accent_color: 6178018, // Color del ejemplo
-      components: [
-        {
-          type: 10,
-          content: "### <:invisible:1418684224441028608> 梅，panel admin，📢\n",
-        },
-        { type: 14, spacing: 1, divider: false },
-        { type: 10, content: "Configuracion del Servidor:" },
-        {
-          type: 9,
-          components: [
-            {
-              type: 10,
-              content: `**Prefix:**<:invisible:1418684224441028608>\`${currentPrefix}\``,
-            },
-          ],
-          accessory: {
-            type: 2,
-            style: 2,
-            emoji: { name: "⚙️" },
-            custom_id: "open_prefix_modal",
-            label: "Cambiar",
+    const settingsPanel = new DisplayComponentV2Builder()
+      .setAccentColor(6178018)
+      .addText("### <:invisible:1418684224441028608> 梅，panel admin，📢\n")
+      .addSeparator(1, false)
+      .addText("Configuracion del Servidor:")
+      .addSection(
+        [
+          {
+            type: 10,
+            content: `**Prefix:**<:invisible:1418684224441028608>\`${currentPrefix}\``,
           },
-        },
-        { type: 14, divider: false },
+        ],
         {
-          type: 9,
-          components: [
-            { type: 10, content: `**Staff (roles):** ${staffDisplay}` },
-          ],
-          accessory: {
-            type: 2,
-            style: 2, // Secondary
-            emoji: { name: "🛡️" },
-            custom_id: "open_staff_modal",
-            label: "Configurar",
-          },
-        },
-        { type: 14, divider: false },
+          type: 2,
+          style: 2,
+          emoji: { name: "⚙️" },
+          custom_id: "open_prefix_modal",
+          label: "Cambiar",
+        }
+      )
+      .addSeparator(1, false)
+      .addSection(
+        [{ type: 10, content: `**Staff (roles):** ${staffDisplay}` }],
         {
-          type: 9,
-          components: [
-            { type: 10, content: `**AI Role Prompt:** ${aiPreview}` },
-          ],
-          accessory: {
-            type: 2,
-            style: 2,
-            emoji: { name: "🧠" },
-            custom_id: "open_ai_role_modal",
-            label: "Configurar",
-          },
-        },
-        { type: 14, divider: false },
-      ],
-    };
+          type: 2,
+          style: 2, // Secondary
+          emoji: { name: "🛡️" },
+          custom_id: "open_staff_modal",
+          label: "Configurar",
+        }
+      )
+      .addSeparator(1, false)
+      .addSection([{ type: 10, content: `**AI Role Prompt:** ${aiPreview}` }], {
+        type: 2,
+        style: 2,
+        emoji: { name: "🧠" },
+        custom_id: "open_ai_role_modal",
+        label: "Configurar",
+      })
+      .addSeparator(1, false)
+      .toJSON();
 
     const panelMessage = await message.reply({
       flags: 32768, // Components v2
@@ -119,39 +104,41 @@ export const command: CommandMessage = {
 
     collector.on("collect", async (interaction: any) => {
       if (interaction.customId === "open_prefix_modal") {
-        // Crear y mostrar modal para cambiar prefix (formato consistente con otros modales)
-        const prefixModal = {
-          title: "⚙️ Configurar Prefix del Servidor",
-          customId: "prefix_settings_modal",
-          components: [
-            {
-              type: ComponentType.Label,
-              label: "Nuevo Prefix",
-              component: {
-                type: ComponentType.TextInput,
-                customId: "new_prefix_input",
-                style: TextInputStyle.Short,
-                placeholder: `Prefix actual: ${currentPrefix}`,
-                required: true,
-                maxLength: 10,
-                minLength: 1,
-                value: currentPrefix,
-              },
-            },
-            {
-              type: ComponentType.Label,
-              label: "Motivo (opcional)",
-              component: {
-                type: ComponentType.TextInput,
-                customId: "prefix_description",
-                style: TextInputStyle.Paragraph,
-                placeholder: "Ej: evitar conflictos con otros bots...",
-                required: false,
-                maxLength: 200,
-              },
-            },
-          ],
-        } as const;
+        // v14 Modal API - Using ModalBuilder with TextInputBuilder
+        const {
+          ModalBuilder,
+          TextInputBuilder,
+          ActionRowBuilder,
+          TextInputStyle: V14TextInputStyle,
+        } = await import("discord.js");
+
+        const prefixInput = new TextInputBuilder()
+          .setCustomId("new_prefix_input")
+          .setLabel("Nuevo Prefix")
+          .setStyle(V14TextInputStyle.Short)
+          .setPlaceholder(`Prefix actual: ${currentPrefix}`)
+          .setRequired(true)
+          .setMaxLength(10)
+          .setMinLength(1)
+          .setValue(currentPrefix);
+
+        const descriptionInput = new TextInputBuilder()
+          .setCustomId("prefix_description")
+          .setLabel("Motivo (opcional)")
+          .setStyle(V14TextInputStyle.Paragraph)
+          .setPlaceholder("Ej: evitar conflictos con otros bots...")
+          .setRequired(false)
+          .setMaxLength(200);
+
+        const prefixModal = new ModalBuilder()
+          .setCustomId("prefix_settings_modal")
+          .setTitle("⚙️ Configurar Prefix del Servidor")
+          .addComponents(
+            //@ts-ignore
+            new ActionRowBuilder().addComponents(prefixInput),
+            //@ts-ignore
+            new ActionRowBuilder().addComponents(descriptionInput)
+          );
 
         try {
           await interaction.showModal(prefixModal);
@@ -174,11 +161,10 @@ export const command: CommandMessage = {
           });
 
           const newPrefix =
-            modalInteraction.components.getTextInputValue("new_prefix_input");
+            modalInteraction.fields.getTextInputValue("new_prefix_input");
           const description =
-            modalInteraction.components.getTextInputValue(
-              "prefix_description"
-            ) || "Sin descripción";
+            modalInteraction.fields.getTextInputValue("prefix_description") ||
+            "Sin descripción";
 
           if (!newPrefix || newPrefix.length > 10) {
             await modalInteraction.reply({
@@ -203,43 +189,34 @@ export const command: CommandMessage = {
             // Invalidar el caché del guild para reflejar el cambio
             await invalidateGuildCache(message.guild!.id);
 
-            const successPanel = {
-              type: 17,
-              accent_color: 3066993,
-              components: [
-                {
-                  type: 10,
-                  content: "### ✅ **Prefix Actualizado Exitosamente**",
-                },
-                { type: 14, spacing: 2, divider: true },
-                {
-                  type: 9,
-                  components: [
-                    {
-                      type: 10,
-                      content: `**Prefix anterior:** \`${currentPrefix}\`\n**Prefix nuevo:** \`${newPrefix}\`\n\n**Motivo:** ${description}`,
-                    },
-                  ],
-                  accessory: {
-                    type: 2,
-                    style: 3,
-                    label: "✓ Listo",
-                    custom_id: "prefix_confirmed",
-                    emoji: { name: "✅" },
+            const successPanel = new DisplayComponentV2Builder()
+              .setAccentColor(3066993)
+              .addText("### ✅ **Prefix Actualizado Exitosamente**")
+              .addSeparator(2, true)
+              .addSection(
+                [
+                  {
+                    type: 10,
+                    content: `**Prefix anterior:** \`${currentPrefix}\`\n**Prefix nuevo:** \`${newPrefix}\`\n\n**Motivo:** ${description}`,
                   },
-                },
-                { type: 14, spacing: 1, divider: false },
+                ],
                 {
-                  type: 10,
-                  content:
-                    "🚀 **¡Listo!** Ahora puedes usar los comandos con el nuevo prefix.\n\n💡 **Ejemplo:** `" +
-                    newPrefix +
-                    "help`, `" +
-                    newPrefix +
-                    "embedlist`",
-                },
-              ],
-            };
+                  type: 2,
+                  style: 3,
+                  label: "✓ Listo",
+                  custom_id: "prefix_confirmed",
+                  emoji: { name: "✅" },
+                }
+              )
+              .addSeparator(1, false)
+              .addText(
+                "🚀 **¡Listo!** Ahora puedes usar los comandos con el nuevo prefix.\n\n💡 **Ejemplo:** `" +
+                  newPrefix +
+                  "help`, `" +
+                  newPrefix +
+                  "embedlist`"
+              )
+              .toJSON();
 
             const backToSettingsRow = {
               type: 1,
@@ -257,18 +234,14 @@ export const command: CommandMessage = {
               components: [successPanel, backToSettingsRow],
             });
           } catch (error) {
-            const errorPanel = {
-              type: 17,
-              accent_color: 15548997,
-              components: [
-                { type: 10, content: "### ❌ **Error al Actualizar Prefix**" },
-                { type: 14, spacing: 2, divider: true },
-                {
-                  type: 10,
-                  content: `**Error:** No se pudo actualizar el prefix a \`${newPrefix}\`\n\n**Posibles causas:**\n• Error de conexión con la base de datos\n• Prefix contiene caracteres no válidos\n• Permisos insuficientes\n\n🔄 **Solución:** Intenta nuevamente con un prefix diferente.`,
-                },
-              ],
-            };
+            const errorPanel = new DisplayComponentV2Builder()
+              .setAccentColor(15548997)
+              .addText("### ❌ **Error al Actualizar Prefix**")
+              .addSeparator(2, true)
+              .addText(
+                `**Error:** No se pudo actualizar el prefix a \`${newPrefix}\`\n\n**Posibles causas:**\n• Error de conexión con la base de datos\n• Prefix contiene caracteres no válidos\n• Permisos insuficientes\n\n🔄 **Solución:** Intenta nuevamente con un prefix diferente.`
+              )
+              .toJSON();
 
             const retryRow = {
               type: 1,
@@ -301,37 +274,53 @@ export const command: CommandMessage = {
       }
 
       if (interaction.customId === "open_staff_modal") {
-        // Modal para seleccionar hasta 3 roles de staff
-        const staffModal = {
-          title: "🛡️ Configurar Roles de Staff",
-          customId: "staff_roles_modal",
-          components: [
-            {
-              type: ComponentType.Label,
-              label: "Selecciona hasta 3 roles de staff",
-              component: {
-                type: ComponentType.RoleSelect,
-                customId: "staff_roles",
-                required: false,
-                minValues: 0,
-                maxValues: 3,
-                placeholder: "Roles de staff...",
-              },
-            },
-          ],
-        } as const;
+        // v14 Modal API - Modals can only contain TextInput, not RoleSelect
+        // Using text input for role IDs (comma-separated)
+        const {
+          ModalBuilder,
+          TextInputBuilder,
+          ActionRowBuilder,
+          TextInputStyle: V14TextInputStyle,
+        } = await import("discord.js");
+
+        const currentStaffIds = staffRoles.join(", ");
+        const rolesInput = new TextInputBuilder()
+          .setCustomId("staff_roles_input")
+          .setLabel("IDs de Roles (separados por comas)")
+          .setStyle(V14TextInputStyle.Paragraph)
+          .setPlaceholder("Ej: 123456789012345678, 987654321098765432")
+          .setRequired(false)
+          .setMaxLength(200)
+          .setValue(currentStaffIds);
+
+        const staffModal = new ModalBuilder()
+          .setCustomId("staff_roles_modal")
+          .setTitle("🛡️ Configurar Roles de Staff (hasta 3)")
+          .addComponents(
+            //@ts-ignore
+            new ActionRowBuilder().addComponents(rolesInput)
+          );
 
         await interaction.showModal(staffModal);
 
         try {
           const modalInteraction = await interaction.awaitModalSubmit({
             time: 300000,
+            filter: (m: any) =>
+              m.customId === "staff_roles_modal" &&
+              m.user.id === message.author.id,
           });
-          const selected =
-            modalInteraction.components.getSelectedRoles("staff_roles");
-          //@ts-ignore
-          const roleIds: string[] = selected
-            ? Array.from(selected.keys()).slice(0, 3)
+
+          // Parse role IDs from comma-separated text input
+          const rolesInput = modalInteraction.fields
+            .getTextInputValue("staff_roles_input")
+            .trim();
+          const roleIds: string[] = rolesInput
+            ? rolesInput
+                .split(",")
+                .map((id) => id.trim())
+                .filter((id) => id.length > 0)
+                .slice(0, 3)
             : [];
 
           await client.prisma.guild.upsert({
@@ -351,18 +340,12 @@ export const command: CommandMessage = {
             ? roleIds.map((id) => `<@&${id}>`).join(", ")
             : "Sin staff configurado";
 
-          const successPanel = {
-            type: 17,
-            accent_color: 3066993,
-            components: [
-              { type: 10, content: "### ✅ **Staff Actualizado**" },
-              { type: 14, spacing: 2, divider: true },
-              {
-                type: 10,
-                content: `**Nuevos roles de staff:** ${updatedDisplay}`,
-              },
-            ],
-          };
+          const successPanel = new DisplayComponentV2Builder()
+            .setAccentColor(3066993)
+            .addText("### ✅ **Staff Actualizado**")
+            .addSeparator(2, true)
+            .addText(`**Nuevos roles de staff:** ${updatedDisplay}`)
+            .toJSON();
 
           const backRow = {
             type: 1,
@@ -388,26 +371,32 @@ export const command: CommandMessage = {
           where: { id: message.guild!.id },
         });
         const currentAiPrompt = currentServer?.aiRolePrompt ?? "";
-        const aiModal = {
-          title: "🧠 Configurar AI Role Prompt",
-          customId: "ai_role_prompt_modal",
-          components: [
-            {
-              type: ComponentType.Label,
-              label: "Prompt de rol (opcional)",
-              component: {
-                type: ComponentType.TextInput,
-                customId: "ai_role_prompt_input",
-                style: TextInputStyle.Paragraph,
-                required: false,
-                placeholder:
-                  "Ej: Eres un asistente amistoso del servidor, responde en español, evita spoilers...",
-                maxLength: 1500,
-                value: currentAiPrompt.slice(0, 1500),
-              },
-            },
-          ],
-        } as const;
+        // v14 Modal API - Using ModalBuilder with TextInputBuilder
+        const {
+          ModalBuilder,
+          TextInputBuilder,
+          ActionRowBuilder,
+          TextInputStyle: V14TextInputStyle,
+        } = await import("discord.js");
+
+        const aiPromptInput = new TextInputBuilder()
+          .setCustomId("ai_role_prompt_input")
+          .setLabel("Prompt de rol (opcional)")
+          .setStyle(V14TextInputStyle.Paragraph)
+          .setRequired(false)
+          .setPlaceholder(
+            "Ej: Eres un asistente amistoso del servidor, responde en español, evita spoilers..."
+          )
+          .setMaxLength(1500)
+          .setValue(currentAiPrompt.slice(0, 1500));
+
+        const aiModal = new ModalBuilder()
+          .setCustomId("ai_role_prompt_modal")
+          .setTitle("🧠 Configurar AI Role Prompt")
+          .addComponents(
+            //@ts-ignore
+            new ActionRowBuilder().addComponents(aiPromptInput)
+          );
 
         try {
           await interaction.showModal(aiModal);
@@ -430,9 +419,8 @@ export const command: CommandMessage = {
           });
 
           const newPromptRaw =
-            modalInteraction.components.getTextInputValue(
-              "ai_role_prompt_input"
-            ) ?? "";
+            modalInteraction.fields.getTextInputValue("ai_role_prompt_input") ??
+            "";
           const newPrompt = newPromptRaw.trim();
           const toSave: string | null = newPrompt.length > 0 ? newPrompt : null;
 
@@ -458,15 +446,12 @@ export const command: CommandMessage = {
               : toSave
             : "Prompt eliminado (sin configuración)";
 
-          const successPanel = {
-            type: 17,
-            accent_color: 3066993,
-            components: [
-              { type: 10, content: "### ✅ **AI Role Prompt Actualizado**" },
-              { type: 14, spacing: 2, divider: true },
-              { type: 10, content: `**Nuevo valor:**\n${preview}` },
-            ],
-          };
+          const successPanel = new DisplayComponentV2Builder()
+            .setAccentColor(3066993)
+            .addText("### ✅ **AI Role Prompt Actualizado**")
+            .addSeparator(2, true)
+            .addText(`**Nuevo valor:**\n${preview}`)
+            .toJSON();
           const backRow = {
             type: 1,
             components: [
@@ -504,61 +489,45 @@ export const command: CommandMessage = {
             : aiRolePrompt2
           : "No configurado";
 
-        const updatedSettingsPanel = {
-          type: 17,
-          accent_color: 6178018,
-          components: [
+        const updatedSettingsPanel = new DisplayComponentV2Builder()
+          .setAccentColor(6178018)
+          .addText("### <:invisible:1418684224441028608> 梅，panel admin，📢\n")
+          .addSeparator(1, false)
+          .addText("Configuracion del Servidor:")
+          .addSection(
+            [{ type: 10, content: `**Prefix:** \`${newCurrentPrefix}\`` }],
             {
-              type: 10,
-              content:
-                "### <:invisible:1418684224441028608> 梅，panel admin，📢\n",
-            },
-            { type: 14, spacing: 1, divider: false },
-            { type: 10, content: "Configuracion del Servidor:" },
+              type: 2,
+              style: 2,
+              emoji: { name: "⚙️" },
+              custom_id: "open_prefix_modal",
+              label: "Cambiar",
+            }
+          )
+          .addSeparator(1, false)
+          .addSection(
+            [{ type: 10, content: `**Staff (roles):** ${staffDisplay2}` }],
             {
-              type: 9,
-              components: [
-                { type: 10, content: `**Prefix:** \`${newCurrentPrefix}\`` },
-              ],
-              accessory: {
-                type: 2,
-                style: 2,
-                emoji: { name: "⚙️" },
-                custom_id: "open_prefix_modal",
-                label: "Cambiar",
-              },
-            },
-            { type: 14, divider: false },
+              type: 2,
+              style: 2,
+              emoji: { name: "🛡️" },
+              custom_id: "open_staff_modal",
+              label: "Configurar",
+            }
+          )
+          .addSeparator(1, false)
+          .addSection(
+            [{ type: 10, content: `**AI Role Prompt:** ${aiPreview2}` }],
             {
-              type: 9,
-              components: [
-                { type: 10, content: `**Staff (roles):** ${staffDisplay2}` },
-              ],
-              accessory: {
-                type: 2,
-                style: 2,
-                emoji: { name: "🛡️" },
-                custom_id: "open_staff_modal",
-                label: "Configurar",
-              },
-            },
-            { type: 14, divider: false },
-            {
-              type: 9,
-              components: [
-                { type: 10, content: `**AI Role Prompt:** ${aiPreview2}` },
-              ],
-              accessory: {
-                type: 2,
-                style: 2,
-                emoji: { name: "🧠" },
-                custom_id: "open_ai_role_modal",
-                label: "Configurar",
-              },
-            },
-            { type: 14, divider: false },
-          ],
-        };
+              type: 2,
+              style: 2,
+              emoji: { name: "🧠" },
+              custom_id: "open_ai_role_modal",
+              label: "Configurar",
+            }
+          )
+          .addSeparator(1, false)
+          .toJSON();
 
         await interaction.update({ components: [updatedSettingsPanel] });
       }
@@ -579,61 +548,45 @@ export const command: CommandMessage = {
             : aiRolePrompt3
           : "No configurado";
 
-        const originalPanel = {
-          type: 17,
-          accent_color: 6178018,
-          components: [
+        const originalPanel = new DisplayComponentV2Builder()
+          .setAccentColor(6178018)
+          .addText("### <:invisible:1418684224441028608> 梅，panel admin，📢\n")
+          .addSeparator(1, false)
+          .addText("Configuracion del Servidor:")
+          .addSection(
+            [{ type: 10, content: `**Prefix:** \`${currentPrefix}\`` }],
             {
-              type: 10,
-              content:
-                "### <:invisible:1418684224441028608> 梅，panel admin，📢\n",
-            },
-            { type: 14, spacing: 1, divider: false },
-            { type: 10, content: "Configuracion del Servidor:" },
+              type: 2,
+              style: 2,
+              emoji: { name: "⚙️" },
+              custom_id: "open_prefix_modal",
+              label: "Cambiar",
+            }
+          )
+          .addSeparator(1, false)
+          .addSection(
+            [{ type: 10, content: `**Staff (roles):** ${staffDisplay3}` }],
             {
-              type: 9,
-              components: [
-                { type: 10, content: `**Prefix:** \`${currentPrefix}\`` },
-              ],
-              accessory: {
-                type: 2,
-                style: 2,
-                emoji: { name: "⚙️" },
-                custom_id: "open_prefix_modal",
-                label: "Cambiar",
-              },
-            },
-            { type: 14, divider: false },
+              type: 2,
+              style: 2,
+              emoji: { name: "🛡️" },
+              custom_id: "open_staff_modal",
+              label: "Configurar",
+            }
+          )
+          .addSeparator(1, false)
+          .addSection(
+            [{ type: 10, content: `**AI Role Prompt:** ${aiPreview3}` }],
             {
-              type: 9,
-              components: [
-                { type: 10, content: `**Staff (roles):** ${staffDisplay3}` },
-              ],
-              accessory: {
-                type: 2,
-                style: 2,
-                emoji: { name: "🛡️" },
-                custom_id: "open_staff_modal",
-                label: "Configurar",
-              },
-            },
-            { type: 14, divider: false },
-            {
-              type: 9,
-              components: [
-                { type: 10, content: `**AI Role Prompt:** ${aiPreview3}` },
-              ],
-              accessory: {
-                type: 2,
-                style: 2,
-                emoji: { name: "🧠" },
-                custom_id: "open_ai_role_modal",
-                label: "Configurar",
-              },
-            },
-            { type: 14, divider: false },
-          ],
-        };
+              type: 2,
+              style: 2,
+              emoji: { name: "🧠" },
+              custom_id: "open_ai_role_modal",
+              label: "Configurar",
+            }
+          )
+          .addSeparator(1, false)
+          .toJSON();
 
         await interaction.update({ components: [originalPanel] });
       }
@@ -641,19 +594,14 @@ export const command: CommandMessage = {
 
     collector.on("end", async (_: any, reason: string) => {
       if (reason === "time") {
-        const timeoutPanel = {
-          type: 17,
-          accent_color: 6178018,
-          components: [
-            { type: 10, content: "### ⏰ **Panel Expirado**" },
-            { type: 14, spacing: 1, divider: true },
-            {
-              type: 10,
-              content:
-                "El panel de configuración ha expirado por inactividad.\n\nUsa `!settings` para abrir un nuevo panel.",
-            },
-          ],
-        };
+        const timeoutPanel = new DisplayComponentV2Builder()
+          .setAccentColor(6178018)
+          .addText("### ⏰ **Panel Expirado**")
+          .addSeparator(1, true)
+          .addText(
+            "El panel de configuración ha expirado por inactividad.\n\nUsa `!settings` para abrir un nuevo panel."
+          )
+          .toJSON();
 
         try {
           await panelMessage.edit({ components: [timeoutPanel] });

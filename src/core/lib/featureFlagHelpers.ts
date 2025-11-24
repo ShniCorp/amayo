@@ -6,13 +6,11 @@
 import {
   CommandInteraction,
   Message,
-  GuildMember,
-  User as DiscordUser,
+  MessageFlags,
 } from "discord.js";
 import { featureFlagService } from "../services/FeatureFlagService";
 import { FeatureFlagContext } from "../types/featureFlags";
 import logger from "./logger";
-import { MessageFlags } from "discord.js";
 
 /**
  * Extrae contexto de un comando o mensaje de Discord
@@ -47,8 +45,7 @@ export async function isFeatureEnabled(
   try {
     return await featureFlagService.isEnabled(flagName, context);
   } catch (error) {
-    //@ts-ignore
-    logger.error(`[FeatureFlags] Error al verificar "${flagName}":`, error);
+    logger.error({ err: error }, `[FeatureFlags] Error al verificar "${flagName}"`);
     return false;
   }
 }

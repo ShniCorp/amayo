@@ -5,13 +5,13 @@
 // Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "debian-openssl-3.0.x"]
 }
 
 datasource db {
   provider          = "postgresql"
-  url               = env("XATA_DB")
-  shadowDatabaseUrl = env("XATA_SHADOW_DB")
+  url               = env("DATABASE_URL")
 }
 
 /**
@@ -1088,4 +1088,117 @@ model FeatureFlag {
 
   @@index([status])
   @@index([target])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Music System: Listening  History
+ * -----------------------------------------------------------------------------
+ * Tracks every song listened to by users for personalized recommendations.
+ * Redis: Last 50 songs per user (hot data)
+ * Prisma: Full history (cold storage)
+ */
+model ListeningHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  guildId   String
+  
+  // Track information
+  trackId   String   
+  title     String
+  author    String
+  duration  Int      
+  source    String   @default("youtube")
+  
+  // Listening metrics
+  playedAt     DateTime @default(now())
+  completedAt  DateTime?
+  listenedMs   Int      @default(0)
+  score        Int      @default(0)
+  skipped      Boolean  @default(false)
+  skipReason   String?
+  
+  @@index([userId, playedAt])
+  @@index([guildId, playedAt])
+  @@index([userId, score])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Music System: User Preferences
+ * -----------------------------------------------------------------------------
+ */
+model UserMusicPreferences {
+  userId  String @id
+  
+  favoriteArtists Json @default("[]")
+  skipPatterns Json @default("{}")
+  recentTrends Json @default("[]")
+  
+  autoplayEnabled Boolean @default(true)
+  
+  totalPlays      Int      @default(0)
+  totalSkips      Int      @default(0)
+  lastUpdated     DateTime @default(now())
+  
+  @@index([lastUpdated])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Music System: Playlists
+ * -----------------------------------------------------------------------------
+ */
+model MusicPlaylist {
+  id          String   @id @default(cuid())
+  userId      String
+  guildId     String
+  name        String
+  description String?
+  isDefault   Boolean  @default(false) // true for "Me gusta" playlist
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  tracks      PlaylistTrack[]
+  
+  @@unique([userId, guildId, name])
+  @@index([userId, guildId])
+  @@index([userId, isDefault])
+}
+
+model PlaylistTrack {
+  id          String   @id @default(cuid())
+  playlistId  String
+  trackId     String   // encoded track from Lavalink
+  title       String
+  author      String
+  duration    Int
+  thumbnail   String?
+  url         String?
+  addedAt     DateTime @default(now())
+  
+  playlist    MusicPlaylist @relation(fields: [playlistId], references: [id], onDelete: Cascade)
+  
+  @@index([playlistId])
+  @@index([trackId])
+}
+
+/**
+ * -----------------------------------------------------------------------------
+ * Music System: Track Likes
+ * -----------------------------------------------------------------------------
+ */
+model TrackLike {
+  id        String   @id @default(cuid())
+  userId    String
+  guildId   String
+  trackId   String
+  title     String
+  author    String
+  thumbnail String?
+  likedAt   DateTime @default(now())
+  
+  @@unique([userId, guildId, trackId])
+  @@index([userId, guildId])
+  @@index([trackId])
 }

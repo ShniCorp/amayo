@@ -1,3 +1,5 @@
+import { DisplayComponentV2Builder } from "./displayComponents/builders";
+
 export type DisplayBlock =
   | { kind: "text"; content: string }
   | { kind: "divider"; divider?: boolean; spacing?: number }
@@ -17,24 +19,17 @@ export const dividerBlock = (
 });
 
 export function buildDisplay(accentColor: number, blocks: DisplayBlock[]) {
-  return {
-    type: 17 as const,
-    accent_color: accentColor,
-    components: blocks.map((block) => {
-      if (block.kind === "text") {
-        return { type: 10 as const, content: block.content };
-      }
+  const builder = new DisplayComponentV2Builder().setAccentColor(accentColor);
 
-      if (block.kind === "image") {
-        // This component type will be translated by the renderer to an embed image
-        return { type: 12 as const, url: block.url } as any;
-      }
+  for (const block of blocks) {
+    if (block.kind === "text") {
+      builder.addText(block.content);
+    } else if (block.kind === "image") {
+      builder.addImage(block.url);
+    } else if (block.kind === "divider") {
+      builder.addSeparator(block.spacing, block.divider);
+    }
+  }
 
-      return {
-        type: 14 as const,
-        divider: block.divider ?? true,
-        ...(block.spacing !== undefined ? { spacing: block.spacing } : {}),
-      };
-    }),
-  };
+  return builder.toJSON();
 }

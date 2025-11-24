@@ -1,4 +1,4 @@
-import logger from "../../../core/lib/logger";
+
 // Comando para crear recordatorios con Appwrite: !recordar {texto} {fecha}
 // Ejemplos:
 //   !recordar hacer esto el miércoles a las 5pm
@@ -20,7 +20,7 @@ function formatRelativeEs(when: Date): string {
   if (diffSec < 60) {
     const s = Math.max(1, diffSec);
     return `en ${s} segundo${s === 1 ? '' : 's'}`;
-    }
+  }
   const diffMin = Math.round(diffSec / 60);
   if (diffMin < 60) {
     const m = Math.max(1, diffMin);
@@ -238,7 +238,7 @@ export const command: CommandMessage = {
       });
     } catch (e) {
       // @ts-ignore
-        logger.error('Error programando recordatorio:', e);
+      logger.error('Error programando recordatorio:', e);
       await message.reply('❌ No pude guardar el recordatorio. Revisa la configuración de Appwrite.');
       return;
     }

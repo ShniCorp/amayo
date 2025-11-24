@@ -5,6 +5,7 @@ import {
   Partials,
   ClientOptions,
 } from "discord.js";
+import { Shoukaku, Connectors } from "shoukaku";
 import { prisma, ensurePrismaConnection } from "./database/prisma";
 import logger from "./lib/logger";
 
@@ -27,6 +28,7 @@ class Amayo extends Client {
   public key: string;
   public prisma = prisma;
   public mode: string;
+  public music!: Shoukaku;
 
   constructor() {
     // Build options here so `this` can be referenced in the users.sweep filter
@@ -36,6 +38,7 @@ class Amayo extends Client {
         GatewayIntentBits.GuildMembers,
         GatewayIntentBits.GuildMessages,
         GatewayIntentBits.MessageContent,
+        GatewayIntentBits.GuildVoiceStates,
       ],
       partials: [Partials.Channel, Partials.Message],
       makeCache: Options.cacheWithLimits({
@@ -66,6 +69,42 @@ class Amayo extends Client {
 
     this.key = process.env.TOKEN ?? "";
     this.mode = process.env.MODE ?? "Normal";
+
+    // Inicializar Shoukaku para Lavalink v4
+    this.music = new Shoukaku(
+      new Connectors.DiscordJS(this),
+      [
+        {
+          name: "Main",
+          url: "192.168.0.150:2333",
+          auth: "youshallnotpass",
+        },
+      ],
+      {
+        moveOnDisconnect: false,
+        resumable: false,
+        resumableTimeout: 30,
+        reconnectTries: 2,
+        restTimeout: 10000,
+      }
+    );
+
+    // Configurar eventos de Shoukaku
+    this.music.on("ready", (name) => {
+      logger.info(`Lavalink node "${name}" conectado y listo.`);
+    });
+
+    this.music.on("error", (name, error) => {
+      logger.error({ err: error, node: name }, "Error en nodo Lavalink");
+    });
+
+    this.music.on("close", (name, code, reason) => {
+      logger.warn({ node: name, code, reason }, "Nodo Lavalink desconectado");
+    });
+
+    this.music.on("disconnect", (name, count) => {
+      logger.warn({ node: name, count }, "Nodo Lavalink desconectado");
+    });
   }
 
   /**
@@ -82,6 +121,7 @@ class Amayo extends Client {
       await ensurePrismaConnection();
       logger.info("Successfully connected to the database (singleton).");
       await this.login(this.key);
+      logger.info("Shoukaku music manager inicializado.");
     } catch (error) {
       logger.error(
         { err: error },

@@ -1,232 +1,337 @@
 // @ts-ignore
 import { CommandMessage } from "../../../core/types/commands";
 import { commands as registry } from "../../core/loaders/loader";
+import { registry as varRegistry } from "../../core/lib/variables/registry";
+import { DisplayComponentV2Builder } from "../../core/lib/displayComponents/builders";
+import { Message, ComponentType, ButtonStyle } from "discord.js";
 
 export const command: CommandMessage = {
-    name: 'ayuda',
-    type: "message",
-    aliases: ['help', 'comandos', 'cmds'],
-    cooldown: 5,
-    description: 'Muestra la lista de comandos y detalles por categoría.',
-    category: 'Utilidad',
-    usage: 'ayuda [comando] | [categoría] | vacío',
-    run: async (message: any, args: string[], client: any) => {
-        // Obtener información del servidor para mostrar el prefix actual
-        const server = await client.prisma.guild.findFirst({
-            where: { id: message.guild!.id }
-        });
-        const prefix = server?.prefix || "!";
+  name: "ayuda",
+  type: "message",
+  aliases: ["help", "comandos", "cmds", "variables", "vars"],
+  cooldown: 5,
+  description: "Centro de ayuda interactivo. Explora comandos y variables disponibles.",
+  category: "Utilidad",
+  usage: "ayuda [comando | variable]",
+  run: async (message: any, args: string[], client: any) => {
+    const server = await client.prisma.guild.findFirst({
+      where: { id: message.guild!.id },
+    });
+    const prefix = server?.prefix || "!";
 
-        // Construir lista de comandos únicos (sin duplicar aliases)
-        const seen = new Set<string>();
-        const allMsgCommands = [] as Array<{
-            name: string;
-            aliases: string[];
-            description: string;
-            category: string;
-            usage: string;
-            cooldown?: number;
-        }>;
+    // --- DATA GATHERING ---
 
-        for (const [, cmd] of registry) {
-            if (!cmd || cmd.type !== 'message') continue;
-            const baseName: string | undefined = cmd.name ?? cmd.data?.name;
-            if (!baseName) continue;
-            if (seen.has(baseName)) continue; // evitar duplicados por alias
-            seen.add(baseName);
+    // 1. Commands
+    const seen = new Set<string>();
+    const allMsgCommands = [] as Array<{
+      name: string;
+      aliases: string[];
+      description: string;
+      category: string;
+      usage: string;
+      featureFlag?: string;
+    }>;
 
-            const cdesc = (cmd.description ?? '').toString().trim();
-            const ccat = (cmd.category ?? 'Otros').toString();
-            const usage = (cmd.usage ? `${prefix}${cmd.usage}` : `${prefix}${baseName}`);
+    for (const [, cmd] of registry) {
+      if (!cmd || cmd.type !== "message") continue;
+      const baseName: string | undefined = cmd.name ?? cmd.data?.name;
+      if (!baseName) continue;
+      if (seen.has(baseName)) continue;
+      seen.add(baseName);
 
-            allMsgCommands.push({
-                name: baseName,
-                aliases: Array.isArray(cmd.aliases) ? cmd.aliases : [],
-                description: cdesc || 'Sin descripción',
-                category: ccat,
-                usage,
-                cooldown: typeof cmd.cooldown === 'number' ? cmd.cooldown : undefined
-            });
-        }
+      const cdesc = (cmd.description ?? "").toString().trim();
+      const ccat = (cmd.category ?? "Otros").toString();
+      const usage = cmd.usage
+        ? `${prefix}${cmd.usage}`
+        : `${prefix}${baseName}`;
 
-        // Si no hay comandos
-        if (allMsgCommands.length === 0) {
-            const emptyPanel = {
-                type: 17,
-                accent_color: 0xf04747,
-                components: [
-                    {
-                        type: 10,
-                        content: `### ❌ No hay comandos disponibles\n\nAún no se han cargado comandos de mensaje.`
-                    }
-                ]
-            };
-            await message.reply({ flags: 32768, components: [emptyPanel] });
-            return;
-        }
-
-        // Index para búsqueda rápida por nombre/alias
-        const findByNameOrAlias = (q: string) => {
-            const term = q.toLowerCase();
-            return allMsgCommands.find(c => c.name === term || c.aliases.map(a => a.toLowerCase()).includes(term));
-        };
-
-        // Agrupar por categoría
-        const byCategory = new Map<string, typeof allMsgCommands>();
-        for (const c of allMsgCommands) {
-            const cat = c.category || 'Otros';
-            if (!byCategory.has(cat)) byCategory.set(cat, [] as any);
-            // @ts-ignore
-            byCategory.get(cat)!.push(c);
-        }
-
-        // Ordenar categorías por nombre
-        const categories = Array.from(byCategory.keys()).sort((a, b) => a.localeCompare(b, 'es'));
-
-        // Si se solicita un comando concreto
-        if (args.length > 0) {
-            const query = args.join(' ').trim();
-            const found = findByNameOrAlias(query);
-            if (found) {
-                const panel = {
-                    type: 17,
-                    accent_color: 0x5865f2,
-                    components: [
-                        {
-                            type: 10,
-                            content: `### 📖 Ayuda: \`${found.name}\`\n\n` +
-                                     `• Categoría: **${found.category}**\n` +
-                                     `• Descripción: ${found.description}\n` +
-                                     `• Uso: \`${found.usage}\`\n` +
-                                     (found.aliases.length ? `• Aliases: ${found.aliases.map(a => `\`${prefix}${a}\``).join(', ')}` : '')
-                        }
-                    ]
-                };
-                const backRow = {
-                    type: 1,
-                    components: [
-                        { type: 2, style: 2, label: '↩️ Volver', custom_id: 'back_to_main' }
-                    ]
-                };
-                await message.reply({ flags: 32768, components: [panel, backRow] });
-                return;
-            }
-            // También permitir filtrar por categoría si coincide exacto (case-insensitive)
-            const matchCat = categories.find(c => c.toLowerCase() === query.toLowerCase());
-            if (matchCat) {
-                const cmds = byCategory.get(matchCat)!;
-                const catPanel = {
-                    type: 17,
-                    accent_color: 0x00a8ff,
-                    components: [
-                        { type: 10, content: `### 📂 Categoría: **${matchCat}** (${cmds.length})` },
-                        { type: 14, spacing: 2, divider: true },
-                        ...cmds.map(cmd => ({
-                            type: 10,
-                            content: `**${cmd.name}** — ${cmd.description}\n\`${cmd.usage}\``
-                        }))
-                    ]
-                };
-                const backRow = {
-                    type: 1,
-                    components: [ { type: 2, style: 2, label: '↩️ Volver', custom_id: 'back_to_main' } ]
-                };
-                await message.reply({ flags: 32768, components: [catPanel, backRow] });
-                return;
-            }
-        }
-
-        // Panel principal dinámico
-        const helpPanel: any = {
-            type: 17,
-            accent_color: 0x5865f2,
-            components: [
-                { type: 10, content: `### 📚 Centro de Ayuda — ${message.guild!.name}` },
-                { type: 14, spacing: 1, divider: true },
-                { type: 10, content: `**Prefix actual:** \`${prefix}\`\n**Total de comandos:** ${allMsgCommands.length}\n**Categorías disponibles:** ${categories.length}` },
-                { type: 14, spacing: 2, divider: false },
-                ...categories.map(cat => {
-                    const list = byCategory.get(cat)!;
-                    const names = list.map(c => `\`${c.name}\``).join(', ');
-                    return { type: 10, content: `🔹 **${cat}** (${list.length})\n${names}` };
-                })
-            ]
-        };
-
-        // Select de categorías + botón exportar
-        const categorySelectRow = {
-            type: 1,
-            components: [
-                {
-                    type: 3,
-                    custom_id: 'help_category_select',
-                    placeholder: '📂 Selecciona una categoría...',
-                    options: categories.slice(0, 25).map(c => ({ label: c, value: `cat:${c}` }))
-                }
-            ]
-        };
-        const exportRow = {
-            type: 1,
-            components: [
-                { type: 2, style: 3, label: '📋 Exportar', custom_id: 'export_commands' }
-            ]
-        };
-
-        const panelMessage = await message.reply({ flags: 32768, components: [helpPanel, categorySelectRow] });
-
-        const collector = panelMessage.createMessageComponentCollector({
-            time: 600000,
-            filter: (i: any) => i.user.id === message.author.id
-        });
-
-        collector.on('collect', async (interaction: any) => {
-            // Selección de categoría
-            if (interaction.customId === 'help_category_select' && interaction.isStringSelectMenu()) {
-                const val = interaction.values?.[0] ?? '';
-                const cat = val.startsWith('cat:') ? val.slice(4) : val;
-                const list = byCategory.get(cat) ?? [];
-
-                const catPanel = {
-                    type: 17,
-                    accent_color: 0x00a8ff,
-                    components: [
-                        { type: 10, content: `### 📂 Categoría: **${cat}** (${list.length})` },
-                        { type: 14, spacing: 2, divider: true },
-                        ...list.map(cmd => ({ type: 10, content: `**${cmd.name}** — ${cmd.description}\n\`${cmd.usage}\`` }))
-                    ]
-                };
-                const backRow = { type: 1, components: [ { type: 2, style: 2, label: '↩️ Volver', custom_id: 'back_to_main' } ] };
-                await interaction.update({ components: [catPanel, backRow] });
-                return;
-            }
-
-            if (interaction.customId === 'back_to_main' || interaction.customId === 'show_all_commands') {
-                await interaction.update({ components: [helpPanel, categorySelectRow, exportRow] });
-                return;
-            }
-
-            if (interaction.customId === 'export_commands') {
-                let exportText = `Comandos — ${message.guild!.name}\n\nPrefix: ${prefix}\n\n`;
-                for (const cat of categories) {
-                    const list = byCategory.get(cat)!;
-                    exportText += `${cat}\n`;
-                    for (const cmd of list) {
-                        exportText += `• ${cmd.name} — ${cmd.description}\n  Uso: ${cmd.usage}\n`;
-                        if (cmd.aliases.length) exportText += `  Aliases: ${cmd.aliases.join(', ')}\n`;
-                    }
-                    exportText += `\n`;
-                }
-                await interaction.reply({ content: `\`\`\`\n${exportText}\n\`\`\``, flags: 64 });
-                return;
-            }
-        });
-
-        collector.on('end', async (collected: any, reason: string) => {
-            if (reason === 'time') {
-                try {
-                    await panelMessage.edit({ components: [helpPanel] });
-                } catch {}
-            }
-        });
+      allMsgCommands.push({
+        name: baseName,
+        aliases: Array.isArray(cmd.aliases) ? cmd.aliases : [],
+        description: cdesc || "Sin descripción",
+        category: ccat,
+        usage,
+        featureFlag: cmd.featureFlag,
+      });
     }
+
+    const commandCategories = new Map<string, typeof allMsgCommands>();
+    for (const c of allMsgCommands) {
+      const cat = c.category || "Otros";
+      if (!commandCategories.has(cat)) commandCategories.set(cat, []);
+      commandCategories.get(cat)!.push(c);
+    }
+    const sortedCmdCategories = Array.from(commandCategories.keys()).sort((a, b) =>
+      a.localeCompare(b, "es")
+    );
+
+    // 2. Variables
+    const allVars = varRegistry.list();
+    const varCategories = new Map<string, string[]>();
+    for (const v of allVars) {
+      const [cat] = v.split(".");
+      const categoryName = cat.charAt(0).toUpperCase() + cat.slice(1); // Capitalize
+      if (!varCategories.has(categoryName)) varCategories.set(categoryName, []);
+      varCategories.get(categoryName)!.push(v);
+    }
+    const sortedVarCategories = Array.from(varCategories.keys()).sort((a, b) =>
+      a.localeCompare(b, "es")
+    );
+
+    // --- HELPERS ---
+
+    const buildHome = () => {
+      return new DisplayComponentV2Builder()
+        .setAccentColor(0x5865f2)
+        .addText(`### 📚 Centro de Ayuda — ${message.guild!.name}`)
+        .addSeparator(1, true)
+        .addText(
+          `Bienvenido al sistema de ayuda de **${client.user?.username}**.\n` +
+          `Aquí podrás encontrar información sobre todos los comandos y variables disponibles para configurar tu servidor.`
+        )
+        .addSeparator(2, false)
+        .addText(
+          `**Prefix:** \`${prefix}\`\n` +
+          `**Comandos:** ${allMsgCommands.length} en ${sortedCmdCategories.length} categorías\n` +
+          `**Variables:** ${allVars.length} en ${sortedVarCategories.length} categorías`
+        )
+        .toJSON();
+    };
+
+    const buildCommandCategoryList = (cat: string) => {
+      const cmds = commandCategories.get(cat) || [];
+      const builder = new DisplayComponentV2Builder()
+        .setAccentColor(0x00a8ff)
+        .addText(`### ⌨️ Comandos: ${cat}`)
+        .addSeparator(2, true);
+
+      if (cmds.length === 0) {
+        builder.addText("_No hay comandos en esta categoría._");
+      } else {
+        for (const cmd of cmds) {
+          let text = `**${cmd.name}**`;
+          if (cmd.featureFlag) text += " 🏁"; // Flag indicator
+          text += `\n${cmd.description}\n\`${cmd.usage}\``;
+          builder.addText(text);
+        }
+      }
+      return builder.toJSON();
+    };
+
+    const buildVariableCategoryList = (cat: string) => {
+      const vars = varCategories.get(cat) || [];
+      const builder = new DisplayComponentV2Builder()
+        .setAccentColor(0x2ecc71)
+        .addText(`### 💲 Variables: ${cat}`)
+        .addSeparator(2, true)
+        .addText(
+          "Estas variables pueden ser usadas en mensajes de bienvenida, despedida y otros textos configurables."
+        );
+
+      if (vars.length === 0) {
+        builder.addText("_No hay variables en esta categoría._");
+      } else {
+        // Group in chunks of 3 for better display if needed, or just list them
+        const list = vars.map((v) => `\`{${v}}\``).join(", ");
+        builder.addText(list);
+      }
+      return builder.toJSON();
+    };
+
+    const buildCommandDetail = (cmdName: string) => {
+      const cmd = allMsgCommands.find(
+        (c) =>
+          c.name === cmdName ||
+          c.aliases.includes(cmdName)
+      );
+      if (!cmd) return null;
+
+      const builder = new DisplayComponentV2Builder()
+        .setAccentColor(0x5865f2)
+        .addText(`### 📖 Comando: ${cmd.name}`)
+        .addSeparator(1, true)
+        .addText(`**Descripción:**\n${cmd.description}`)
+        .addText(`**Uso:**\n\`${cmd.usage}\``)
+        .addText(`**Categoría:** ${cmd.category}`);
+
+      if (cmd.aliases.length > 0) {
+        builder.addText(
+          `**Aliases:** ${cmd.aliases.map((a) => `\`${a}\``).join(", ")}`
+        );
+      }
+
+      if (cmd.featureFlag) {
+        builder.addText(`**Requiere Feature Flag:** \`${cmd.featureFlag}\``);
+      }
+
+      return builder.toJSON();
+    };
+
+    // --- NAVIGATION COMPONENTS ---
+
+    const getHomeRow = () => ({
+      type: 1,
+      components: [
+        {
+          type: 2,
+          style: ButtonStyle.Primary,
+          label: "Comandos",
+          emoji: "⌨️",
+          custom_id: "menu_commands",
+        },
+        {
+          type: 2,
+          style: ButtonStyle.Success,
+          label: "Variables",
+          emoji: "💲",
+          custom_id: "menu_variables",
+        },
+      ],
+    });
+
+    const getBackRow = (to: "home" | "commands" | "variables") => {
+      const components: any[] = [];
+
+      if (to === "home") {
+        components.push({
+          type: 2,
+          style: ButtonStyle.Secondary,
+          label: "Inicio",
+          emoji: "🏠",
+          custom_id: "menu_home",
+        });
+      } else if (to === "commands") {
+        components.push({
+          type: 2,
+          style: ButtonStyle.Secondary,
+          label: "Volver a Categorías",
+          emoji: "↩️",
+          custom_id: "menu_commands",
+        });
+      } else if (to === "variables") {
+        components.push({
+          type: 2,
+          style: ButtonStyle.Secondary,
+          label: "Volver a Variables",
+          emoji: "↩️",
+          custom_id: "menu_variables",
+        });
+      }
+
+      return { type: 1, components };
+    };
+
+    const getCategorySelectRow = (
+      type: "commands" | "variables",
+      categories: string[]
+    ) => ({
+      type: 1,
+      components: [
+        {
+          type: 3,
+          custom_id: type === "commands" ? "select_cmd_cat" : "select_var_cat",
+          placeholder: "Selecciona una categoría...",
+          options: categories.slice(0, 25).map((c) => ({
+            label: c,
+            value: c,
+            emoji: type === "commands" ? "📂" : "🏷️",
+          })),
+        },
+      ],
+    });
+
+    // --- INITIAL RESPONSE ---
+
+    // Check for arguments (direct lookup)
+    if (args.length > 0) {
+      const query = args[0].toLowerCase();
+      const detail = buildCommandDetail(query);
+      if (detail) {
+        await message.reply({
+          flags: 32768,
+          components: [detail, getBackRow("home")],
+        });
+        return;
+      }
+      // If not a command, maybe a variable category?
+      // For now, just default to home if not found
+    }
+
+    const msg = await message.reply({
+      flags: 32768,
+      components: [buildHome(), getHomeRow()],
+    });
+
+    // --- COLLECTOR ---
+
+    const collector = msg.createMessageComponentCollector({
+      filter: (i: any) => i.user.id === message.author.id,
+      time: 300000, // 5 mins
+    });
+
+    collector.on("collect", async (i: any) => {
+      try {
+        await i.deferUpdate();
+
+        // HOME
+        if (i.customId === "menu_home") {
+          await i.editReply({
+            components: [buildHome(), getHomeRow()],
+          });
+        }
+
+        // COMMANDS MENU
+        else if (i.customId === "menu_commands") {
+          await i.editReply({
+            components: [
+              buildHome(), // Keep header or maybe make a specific "Select Category" header?
+              // Let's use a simple text component for the header if we want
+              // For now reusing buildHome is okay, but maybe we want to show the select menu
+              getCategorySelectRow("commands", sortedCmdCategories),
+              getBackRow("home"),
+            ],
+          });
+        }
+
+        // VARIABLES MENU
+        else if (i.customId === "menu_variables") {
+          await i.editReply({
+            components: [
+              buildHome(),
+              getCategorySelectRow("variables", sortedVarCategories),
+              getBackRow("home"),
+            ],
+          });
+        }
+
+        // SELECT COMMAND CATEGORY
+        else if (i.customId === "select_cmd_cat") {
+          const cat = i.values[0];
+          await i.editReply({
+            components: [
+              buildCommandCategoryList(cat),
+              getBackRow("commands"),
+            ],
+          });
+        }
+
+        // SELECT VARIABLE CATEGORY
+        else if (i.customId === "select_var_cat") {
+          const cat = i.values[0];
+          await i.editReply({
+            components: [
+              buildVariableCategoryList(cat),
+              getBackRow("variables"),
+            ],
+          });
+        }
+      } catch (e) {
+        // Ignore interactions that fail (e.g. timeout)
+      }
+    });
+
+    collector.on("end", () => {
+      msg.edit({ components: [] }).catch(() => { });
+    });
+  },
 };

@@ -47,7 +47,7 @@ async function handleAIReply(message: any) {
 
     // Indicador de que está escribiendo
     const typingInterval = setInterval(() => {
-      message.channel.sendTyping().catch(() => {});
+      message.channel.sendTyping().catch(() => { });
     }, 5000);
 
     try {
@@ -216,9 +216,8 @@ async function handleAIReply(message: any) {
     } catch (error: any) {
       logger.error(`Error en respuesta automática AI:`, error);
       await message.reply({
-        content: `❌ **Error:** ${
-          error.message || "No pude procesar tu respuesta. Intenta de nuevo."
-        }`,
+        content: `❌ **Error:** ${error.message || "No pude procesar tu respuesta. Intenta de nuevo."
+          }`,
       });
     } finally {
       clearInterval(typingInterval);
@@ -272,6 +271,23 @@ bot.on(Events.MessageCreate, async (message) => {
   }
 
   try {
+    // 🔹 Feature Flag Check
+    if (command.featureFlag) {
+      const { isFeatureEnabledForInteraction } = await import(
+        "../core/lib/featureFlagHelpers"
+      );
+      const enabled = await isFeatureEnabledForInteraction(
+        command.featureFlag,
+        message
+      );
+
+      if (!enabled) {
+        return message.reply(
+          "⚠️ Esta funcionalidad no está disponible en este momento."
+        );
+      }
+    }
+
     await command.run(message, args, message.client);
   } catch (error) {
     logger.error({ err: error }, "Error ejecutando comando");

@@ -13,6 +13,7 @@ import {
   FeatureFlagStatus,
   FeatureFlagTarget,
   RolloutStrategy,
+  RolloutConfig,
 } from "../../../core/types/featureFlags";
 import logger from "../../../core/lib/logger";
 import { CommandSlash } from "../../../core/types/commands";
@@ -264,9 +265,8 @@ async function handleList(interaction: ChatInputCommandInteraction) {
   for (const flag of flags.slice(0, 25)) {
     embed.addFields({
       name: `${getStatusEmoji(flag.status)} ${flag.name}`,
-      value: `**Status:** ${flag.status}\n**Target:** ${flag.target}${
-        flag.description ? `\n${flag.description}` : ""
-      }  `,
+      value: `**Status:** ${flag.status}\n**Target:** ${flag.target}${flag.description ? `\n${flag.description}` : ""
+        }  `,
       inline: true,
     });
   }
@@ -320,11 +320,9 @@ async function handleInfo(interaction: ChatInputCommandInteraction) {
   if (stats) {
     embed.addFields({
       name: "📊 Estadísticas",
-      value: `Evaluaciones: ${stats.totalEvaluations}\nHabilitado: ${
-        stats.enabledCount
-      } (${stats.enablementRate.toFixed(1)}%)\nDeshabilitado: ${
-        stats.disabledCount
-      }`,
+      value: `Evaluaciones: ${stats.totalEvaluations}\nHabilitado: ${stats.enabledCount
+        } (${stats.enablementRate.toFixed(1)}%)\nDeshabilitado: ${stats.disabledCount
+        }`,
     });
   }
 
@@ -338,6 +336,7 @@ async function handleCreate(interaction: ChatInputCommandInteraction) {
     status: interaction.options.getString("status", true) as FeatureFlagStatus,
     target: interaction.options.getString("target", true) as FeatureFlagTarget,
     description: interaction.options.getString("description") || undefined,
+    rolloutConfig: {}, // Initialize empty config
   };
 
   await featureFlagService.setFlag(config);
@@ -380,15 +379,18 @@ async function handleRollout(interaction: ChatInputCommandInteraction) {
     "strategy",
     true
   ) as RolloutStrategy;
-  flag.rolloutConfig = flag.rolloutConfig || {};
+
+  // Ensure rolloutConfig exists
+  if (!flag.rolloutConfig) {
+    flag.rolloutConfig = {};
+  }
 
   const percentage = interaction.options.getInteger("percentage");
   if (percentage !== null) flag.rolloutConfig.percentage = percentage;
 
   await featureFlagService.setFlag(flag);
   await interaction.editReply(
-    `✅ Rollout configurado para "${flagName}"\nEstrategia: ${
-      flag.rolloutStrategy
+    `✅ Rollout configurado para "${flagName}"\nEstrategia: ${flag.rolloutStrategy
     } ${percentage !== null ? `\nPorcentaje: ${percentage}%` : ""}`
   );
 }
@@ -453,9 +455,8 @@ async function handleStats(interaction: ChatInputCommandInteraction) {
     for (const stats of allStats.slice(0, 10)) {
       embed.addFields({
         name: stats.flagName,
-        value: `Evaluaciones: ${
-          stats.totalEvaluations
-        }\nTasa: ${stats.enablementRate.toFixed(1)}%`,
+        value: `Evaluaciones: ${stats.totalEvaluations
+          }\nTasa: ${stats.enablementRate.toFixed(1)}%`,
         inline: true,
       });
     }

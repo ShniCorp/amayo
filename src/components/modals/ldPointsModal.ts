@@ -1,13 +1,13 @@
 import logger from "../../core/lib/logger";
-import { 
-  ModalSubmitInteraction, 
+import {
+  ModalSubmitInteraction,
   MessageFlags,
   EmbedBuilder,
   User,
   Collection,
-  Snowflake
-} from 'discord.js';
-import { prisma } from '../../core/database/prisma';
+  Snowflake,
+} from "discord.js";
+import { prisma } from "../../core/database/prisma";
 import { hasManageGuildOrStaff } from "../../core/lib/permissions";
 
 interface UserSelectComponent {
@@ -25,64 +25,67 @@ interface ComponentData {
 }
 
 export default {
-  customId: 'ld_points_modal',
+  customId: "ld_points_modal",
   run: async (interaction: ModalSubmitInteraction) => {
-    logger.info(`🔍 Modal ldPointsModal ejecutado. CustomId: ${interaction.customId}`);
+    logger.info(
+      `🔍 Modal ldPointsModal ejecutado. CustomId: ${interaction.customId}`
+    );
 
     if (!interaction.guild) {
-      return interaction.reply({ 
-        content: '❌ Solo disponible en servidores.', 
-        flags: MessageFlags.Ephemeral 
+      return interaction.reply({
+        content: "❌ Solo disponible en servidores.",
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     // Verificar permisos (ManageGuild o rol staff)
     const member = await interaction.guild.members.fetch(interaction.user.id);
-    const allowed = await hasManageGuildOrStaff(member, interaction.guild.id, prisma);
+    const allowed = await hasManageGuildOrStaff(
+      member,
+      interaction.guild.id,
+      prisma
+    );
     if (!allowed) {
       return interaction.reply({
-        content: '❌ Solo admins o staff pueden gestionar puntos.',
-        flags: MessageFlags.Ephemeral
+        content: "❌ Solo admins o staff pueden gestionar puntos.",
+        flags: MessageFlags.Ephemeral,
       });
     }
 
     try {
       // Obtener valores del modal con manejo seguro de errores
-      let totalInput: string = '';
-      let selectedUsers: ReturnType<typeof interaction.components.getSelectedUsers> = null;
-      let userId: string | undefined = undefined;
-      let userName: string | undefined = undefined;
-
+      let totalInput: string = "";
+      let selectedUsers: ReturnType<
+        typeof interaction.components.getSelectedUsers
+      > = null;
       try {
-        totalInput = interaction.components.getTextInputValue('points_input').trim();
-      } catch (error) {
-        // @ts-ignore
-          logger.error('Error obteniendo points_input:', String(error));
-        return interaction.reply({
-          content: '❌ Error al obtener el valor de puntos del modal.',
-          flags: MessageFlags.Ephemeral
-        });
-      }
-
-      // Manejo seguro del UserSelect con fallback
-      try {
-        selectedUsers = interaction.components.getSelectedUsers('user_select');
+        selectedUsers = interaction.components.getSelectedUsers("user_select");
 
         if (!selectedUsers || selectedUsers.size === 0) {
           // Fallback: intentar obtener los IDs directamente de los datos raw
-          const rawData = (interaction as any).data?.components as ComponentData[] | undefined;
+          const rawData = (interaction as any).data?.components as
+            | ComponentData[]
+            | undefined;
           if (rawData) {
-            const userSelectComponent = findUserSelectComponent(rawData, 'user_select');
-            if (userSelectComponent?.values?.length && userSelectComponent.values.length > 0) {
+            const userSelectComponent = findUserSelectComponent(
+              rawData,
+              "user_select"
+            );
+            if (
+              userSelectComponent?.values?.length &&
+              userSelectComponent.values.length > 0
+            ) {
               userId = userSelectComponent.values[0];
-              logger.info(`🔄 Fallback: UserId extraído de datos raw: ${userId}`);
+              logger.info(
+                `🔄 Fallback: UserId extraído de datos raw: ${userId}`
+              );
             }
           }
 
           if (!userId) {
             return interaction.reply({
-              content: '❌ Debes seleccionar un usuario del leaderboard.',
-              flags: MessageFlags.Ephemeral
+              content: "❌ Debes seleccionar un usuario del leaderboard.",
+              flags: MessageFlags.Ephemeral,
             });
           }
         } else {
@@ -94,25 +97,37 @@ export default {
         }
       } catch (error) {
         // @ts-ignore
-          logger.error('Error procesando UserSelect, intentando fallback:', String(error));
+        logger.error(
+          "Error procesando UserSelect, intentando fallback:",
+          String(error)
+        );
 
         // Fallback más agresivo: obtener directamente de los datos raw
         try {
-          const rawData = (interaction as any).data?.components as ComponentData[] | undefined;
-          const userSelectComponent = findUserSelectComponent(rawData, 'user_select');
+          const rawData = (interaction as any).data?.components as
+            | ComponentData[]
+            | undefined;
+          const userSelectComponent = findUserSelectComponent(
+            rawData,
+            "user_select"
+          );
 
-          if (userSelectComponent?.values?.length && userSelectComponent.values.length > 0) {
+          if (
+            userSelectComponent?.values?.length &&
+            userSelectComponent.values.length > 0
+          ) {
             userId = userSelectComponent.values[0];
             logger.info(`🔄 Fallback agresivo: UserId extraído: ${userId}`);
           } else {
-            throw new Error('No se pudo extraer userId de los datos raw');
+            throw new Error("No se pudo extraer userId de los datos raw");
           }
         } catch (fallbackError) {
           // @ts-ignore
-            logger.error('Falló el fallback:', String(fallbackError));
+          logger.error("Falló el fallback:", String(fallbackError));
           return interaction.reply({
-            content: '❌ Error procesando la selección de usuario. Inténtalo de nuevo.',
-            flags: MessageFlags.Ephemeral
+            content:
+              "❌ Error procesando la selección de usuario. Inténtalo de nuevo.",
+            flags: MessageFlags.Ephemeral,
           });
         }
       }
@@ -122,15 +137,15 @@ export default {
 
       if (!totalInput) {
         return interaction.reply({
-          content: '❌ Debes ingresar un valor para modificar.',
-          flags: MessageFlags.Ephemeral
+          content: "❌ Debes ingresar un valor para modificar.",
+          flags: MessageFlags.Ephemeral,
         });
       }
 
       if (!userId) {
         return interaction.reply({
-          content: '❌ Error al identificar el usuario seleccionado.',
-          flags: MessageFlags.Ephemeral
+          content: "❌ Error al identificar el usuario seleccionado.",
+          flags: MessageFlags.Ephemeral,
         });
       }
 
@@ -141,7 +156,10 @@ export default {
           userName = targetMember.displayName || targetMember.user.username;
         } catch (error) {
           // @ts-ignore
-            logger.warn(`No se pudo obtener info del usuario ${userId}:`, String(error));
+          logger.warn(
+            `No se pudo obtener info del usuario ${userId}:`,
+            String(error)
+          );
           userName = `Usuario ${userId}`;
         }
       }
@@ -150,7 +168,7 @@ export default {
       await prisma.user.upsert({
         where: { id: userId },
         update: {}, // No actualizar nada si ya existe
-        create: { id: userId } // Crear si no existe
+        create: { id: userId }, // Crear si no existe
       });
 
       logger.info(`✅ User verificado/creado en BD: ${userId}`);
@@ -160,13 +178,15 @@ export default {
         where: {
           userId_guildId: {
             userId,
-            guildId: interaction.guild.id
-          }
-        }
+            guildId: interaction.guild.id,
+          },
+        },
       });
 
       if (!stats) {
-        logger.info(`🔍 Creando nuevo registro de stats para userId: ${userId}`);
+        logger.info(
+          `🔍 Creando nuevo registro de stats para userId: ${userId}`
+        );
         // Crear nuevo registro si no existe
         stats = await prisma.partnershipStats.create({
           data: {
@@ -174,26 +194,31 @@ export default {
             guildId: interaction.guild.id,
             totalPoints: 0,
             weeklyPoints: 0,
-            monthlyPoints: 0
-          }
+            monthlyPoints: 0,
+          },
         });
       }
 
-      logger.info(`🔍 Stats actuales - Total: ${stats.totalPoints}, Semanal: ${stats.weeklyPoints}, Mensual: ${stats.monthlyPoints}`);
+      logger.info(
+        `🔍 Stats actuales - Total: ${stats.totalPoints}, Semanal: ${stats.weeklyPoints}, Mensual: ${stats.monthlyPoints}`
+      );
 
       // Función para parsear el input y calcular el nuevo valor
-      const calculateNewValue = (input: string, currentValue: number): number => {
+      const calculateNewValue = (
+        input: string,
+        currentValue: number
+      ): number => {
         const firstChar = input[0];
 
-        if (firstChar === '+') {
+        if (firstChar === "+") {
           // Añadir puntos
           const numValue = parseInt(input.substring(1)) || 0;
           return Math.max(0, currentValue + numValue);
-        } else if (firstChar === '-') {
+        } else if (firstChar === "-") {
           // Quitar puntos (los últimos N puntos añadidos)
           const numValue = parseInt(input.substring(1)) || 0;
           return Math.max(0, currentValue - numValue);
-        } else if (firstChar === '=') {
+        } else if (firstChar === "=") {
           // Establecer valor absoluto
           const numValue = parseInt(input.substring(1)) || 0;
           return Math.max(0, numValue);
@@ -208,25 +233,31 @@ export default {
       const newTotalPoints = calculateNewValue(totalInput, stats.totalPoints);
       const totalDifference = newTotalPoints - stats.totalPoints;
 
-      logger.info(`🔍 Nuevo total calculado: ${newTotalPoints} (diferencia: ${totalDifference})`);
+      logger.info(
+        `🔍 Nuevo total calculado: ${newTotalPoints} (diferencia: ${totalDifference})`
+      );
 
       // Calcular nuevos puntos semanales y mensuales
       let newWeeklyPoints = stats.weeklyPoints;
       let newMonthlyPoints = stats.monthlyPoints;
 
-      if (totalInput[0] === '+') {
+      if (totalInput[0] === "+") {
         // Si añadimos puntos, sumar a semanal y mensual también
         const pointsToAdd = parseInt(totalInput.substring(1)) || 0;
         newWeeklyPoints = stats.weeklyPoints + pointsToAdd;
         newMonthlyPoints = stats.monthlyPoints + pointsToAdd;
-        logger.info(`➕ Añadiendo ${pointsToAdd} puntos a todas las categorías`);
-      } else if (totalInput[0] === '-') {
+        logger.info(
+          `➕ Añadiendo ${pointsToAdd} puntos a todas las categorías`
+        );
+      } else if (totalInput[0] === "-") {
         // Si quitamos puntos, restar proporcionalmente de semanal y mensual
         const pointsToRemove = parseInt(totalInput.substring(1)) || 0;
         newWeeklyPoints = Math.max(0, stats.weeklyPoints - pointsToRemove);
         newMonthlyPoints = Math.max(0, stats.monthlyPoints - pointsToRemove);
-        logger.info(`➖ Quitando ${pointsToRemove} puntos de todas las categorías`);
-      } else if (totalInput[0] === '=') {
+        logger.info(
+          `➖ Quitando ${pointsToRemove} puntos de todas las categorías`
+        );
+      } else if (totalInput[0] === "=") {
         // Si establecemos un valor absoluto, ajustar semanal y mensual proporcionalmente
         const targetTotal = parseInt(totalInput.substring(1)) || 0;
 
@@ -240,28 +271,36 @@ export default {
           newWeeklyPoints = 0;
           newMonthlyPoints = 0;
         }
-        logger.info(`🎯 Estableciendo total a ${targetTotal} y ajustando proporcionalmente`);
+        logger.info(
+          `🎯 Estableciendo total a ${targetTotal} y ajustando proporcionalmente`
+        );
       }
 
       // Asegurar que semanal no exceda mensual, y mensual no exceda total
-      newWeeklyPoints = Math.min(newWeeklyPoints, newMonthlyPoints, newTotalPoints);
+      newWeeklyPoints = Math.min(
+        newWeeklyPoints,
+        newMonthlyPoints,
+        newTotalPoints
+      );
       newMonthlyPoints = Math.min(newMonthlyPoints, newTotalPoints);
 
-      logger.info(`🔍 Nuevos valores calculados - Total: ${newTotalPoints}, Semanal: ${newWeeklyPoints}, Mensual: ${newMonthlyPoints}`);
+      logger.info(
+        `🔍 Nuevos valores calculados - Total: ${newTotalPoints}, Semanal: ${newWeeklyPoints}, Mensual: ${newMonthlyPoints}`
+      );
 
       // Actualizar en base de datos (todos los puntos)
       await prisma.partnershipStats.update({
         where: {
           userId_guildId: {
             userId,
-            guildId: interaction.guild.id
-          }
+            guildId: interaction.guild.id,
+          },
         },
         data: {
           totalPoints: newTotalPoints,
           weeklyPoints: newWeeklyPoints,
-          monthlyPoints: newMonthlyPoints
-        }
+          monthlyPoints: newMonthlyPoints,
+        },
       });
 
       logger.info(`✅ Puntos actualizados exitosamente en la base de datos`);
@@ -272,29 +311,31 @@ export default {
       const monthlyDiff = newMonthlyPoints - stats.monthlyPoints;
 
       const totalDiffText = totalDiff > 0 ? `+${totalDiff}` : `${totalDiff}`;
-      const weeklyDiffText = weeklyDiff > 0 ? `+${weeklyDiff}` : `${weeklyDiff}`;
-      const monthlyDiffText = monthlyDiff > 0 ? `+${monthlyDiff}` : `${monthlyDiff}`;
+      const weeklyDiffText =
+        weeklyDiff > 0 ? `+${weeklyDiff}` : `${weeklyDiff}`;
+      const monthlyDiffText =
+        monthlyDiff > 0 ? `+${monthlyDiff}` : `${monthlyDiff}`;
 
       // Crear embed de confirmación
       const embed = new EmbedBuilder()
         .setColor(totalDiff >= 0 ? 0x00ff00 : 0xff9900)
-        .setTitle('✅ Puntos Actualizados')
+        .setTitle("✅ Puntos Actualizados")
         .setDescription(`Se han actualizado los puntos de **${userName}**`)
         .addFields(
-          { 
-            name: '📊 Puntos Totales', 
+          {
+            name: "📊 Puntos Totales",
             value: `${stats.totalPoints} → **${newTotalPoints}** (${totalDiffText})`,
-            inline: true
+            inline: true,
           },
           {
-            name: '🗓️ Puntos Mensuales',
+            name: "🗓️ Puntos Mensuales",
             value: `${stats.monthlyPoints} → **${newMonthlyPoints}** (${monthlyDiffText})`,
-            inline: true
+            inline: true,
           },
           {
-            name: '📅 Puntos Semanales',
+            name: "📅 Puntos Semanales",
             value: `${stats.weeklyPoints} → **${newWeeklyPoints}** (${weeklyDiffText})`,
-            inline: true
+            inline: true,
           }
         )
         .setFooter({ text: `Actualizado por ${interaction.user.username}` })
@@ -302,26 +343,29 @@ export default {
 
       await interaction.reply({
         embeds: [embed],
-        flags: MessageFlags.Ephemeral
+        flags: MessageFlags.Ephemeral,
       });
-
     } catch (error) {
       // @ts-ignore
-        // @ts-ignore
-        logger.error('❌ Error en ldPointsModal:', String(error));
+      // @ts-ignore
+      logger.error("❌ Error en ldPointsModal:", String(error));
 
       if (!interaction.replied && !interaction.deferred) {
         await interaction.reply({
-          content: '❌ Error interno al procesar la solicitud. Revisa los logs para más detalles.',
-          flags: MessageFlags.Ephemeral
+          content:
+            "❌ Error interno al procesar la solicitud. Revisa los logs para más detalles.",
+          flags: MessageFlags.Ephemeral,
         });
       }
     }
-  }
+  },
 };
 
 // Función auxiliar para buscar componentes UserSelect en datos raw
-function findUserSelectComponent(components: ComponentData[] | undefined, customId: string): UserSelectComponent | null {
+function findUserSelectComponent(
+  components: ComponentData[] | undefined,
+  customId: string
+): UserSelectComponent | null {
   if (!components) return null;
 
   for (const comp of components) {

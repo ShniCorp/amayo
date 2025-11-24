@@ -304,9 +304,7 @@ class SecureImageDownloader {
                     'Upgrade-Insecure-Requests': '1',
                 },
                 // Limitar redirecciones para evitar ataques de redirección
-                redirect: 'follow',
-                // Verificar tamaño del contenido antes de descargar
-                size: IMAGE_SECURITY_CONFIG.maxFileSize + 1024 // Un poco más que el límite para permitir headers
+                redirect: 'follow'
             });
 
             clearTimeout(timeoutId);
@@ -335,7 +333,7 @@ class SecureImageDownloader {
             }
 
             // Descargar el contenido en chunks para validar el tamaño real
-            const chunks: Buffer[] = [];
+            const chunks: Uint8Array[] = [];
             let totalSize = 0;
 
             const reader = response.body?.getReader();
